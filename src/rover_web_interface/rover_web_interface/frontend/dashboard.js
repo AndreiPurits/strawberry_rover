@@ -226,6 +226,7 @@ function renderControl(state) {
   }
   if (stopBtn) {
     stopBtn.disabled = !c.started;
+    stopBtn.classList.toggle("active", !c.started);
   }
   const sourceEl = document.getElementById("controlSource");
   if (sourceEl) {
@@ -413,6 +414,12 @@ async function postControl(url, payload) {
   return res.json();
 }
 
+function applyControlResponse(resp) {
+  if (!resp || !resp.control || !stateStore.state) return;
+  stateStore.state.control = resp.control;
+  renderControl(stateStore.state);
+}
+
 async function postJson(url, payload) {
   const res = await fetch(url, {
     method: "POST",
@@ -596,12 +603,14 @@ function initUi() {
   });
 
   document.getElementById("btnStart").addEventListener("click", async () => {
-    await postControl("/api/control/start");
+    const resp = await postControl("/api/control/start");
+    applyControlResponse(resp);
   });
   document.getElementById("btnStop").addEventListener("click", async () => {
     stateStore.keysDown.clear();
     stateStore.gamepad.active = false;
-    await postControl("/api/control/stop");
+    const resp = await postControl("/api/control/stop");
+    applyControlResponse(resp);
   });
   document.getElementById("btnModeToggle").addEventListener("click", async () => {
     const mode = controlSnapshot(stateStore.state).mode === "manual" ? "auto" : "manual";
@@ -609,7 +618,8 @@ function initUi() {
     if (mode === "auto" && stateStore.lastControlSource === "joystick") {
       stopManualJoystick("mode_auto");
     }
-    await postControl("/api/control/mode", { mode });
+    const resp = await postControl("/api/control/mode", { mode });
+    applyControlResponse(resp);
   });
   document.getElementById("btnRouteStart").addEventListener("click", async () => {
     await postControl("/api/routes/start");

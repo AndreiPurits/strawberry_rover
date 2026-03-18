@@ -18,10 +18,10 @@
     .app-shell {
       width: 100vw;
       height: 100vh;
-      padding: 10px;
+      padding: 12px;
       display: grid;
-      grid-template-columns: 58% 42%;
-      gap: 10px;
+      grid-template-columns: 50% 50%;
+      gap: 12px;
     }
     .card {
       background: #1b1b1b;
@@ -33,14 +33,14 @@
     }
     .left-pane {
       display: grid;
-      grid-template-rows: auto 1fr auto;
-      gap: 8px;
+      grid-template-rows: auto minmax(0, 1.25fr) minmax(0, 1.05fr);
+      gap: 10px;
       min-height: 0;
     }
     .right-pane {
       display: grid;
-      grid-template-rows: 1fr 1fr 1fr auto;
-      gap: 8px;
+      grid-template-rows: 1fr auto;
+      gap: 10px;
       min-height: 0;
     }
     h2, h3, h4 { margin: 0 0 6px 0; }
@@ -66,6 +66,18 @@
     }
     .field-canvas-wrap {
       flex: 1;
+      min-height: 0;
+    }
+    .cam-stack {
+      display: grid;
+      grid-template-rows: 1.35fr 0.85fr;
+      gap: 10px;
+      min-height: 0;
+    }
+    .cam-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
       min-height: 0;
     }
     .cam-card {
@@ -95,17 +107,19 @@
       gap: 8px;
     }
     .group-title {
-      font-size: 12px;
+      font-size: 11px;
       opacity: 0.85;
       margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .button-grid {
       display: grid;
       gap: 6px;
     }
     button {
-      min-height: 40px;
-      font-size: 14px;
+      min-height: 56px;
+      font-size: 16px;
       font-weight: 600;
       border-radius: 8px;
       border: 1px solid #555;
@@ -122,6 +136,16 @@
       box-shadow: 0 0 0 2px rgba(119, 201, 255, 0.25);
       background: #2f3d4a;
     }
+    .btn-start {
+      background: linear-gradient(180deg, #2cae4d, #1f7e36);
+      border-color: #3ec965;
+      color: #f5fff8;
+    }
+    .btn-stop {
+      background: linear-gradient(180deg, #c74141, #8f2b2b);
+      border-color: #dc5959;
+      color: #fff4f4;
+    }
     .kv { font-size: 12px; line-height: 1.35; }
     .tiny { font-size: 11px; line-height: 1.25; opacity: 0.9; }
     .route-manager {
@@ -132,6 +156,7 @@
       grid-template-columns: 1.2fr 1fr;
       gap: 8px;
       min-height: 0;
+      overflow: auto;
     }
     .route-list {
       border: 1px solid #333;
@@ -181,57 +206,56 @@
     .status-stopped { color: #ffacac; }
     .recording-on { color: #ff6b6b; font-weight: 700; }
     .recording-off { color: #8f8f8f; }
+    .telemetry-card {
+      min-height: 0;
+      overflow: auto;
+    }
+    .control-primary {
+      grid-template-columns: 1fr 1fr;
+    }
+    .control-secondary {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .cam-label {
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0.95;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .route-manager button {
+      min-height: 44px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="app-shell">
     <section class="left-pane">
       <div class="card">
-        <h2>Strawberry Rover Dashboard</h2>
+        <h2>Control Console</h2>
         <div class="layer-row">
           <label><input type="checkbox" id="layerSensors" checked> Sensor</label>
           <label><input type="checkbox" id="layerAnalytics" checked> Analytics</label>
           <label><input type="checkbox" id="layerTrail" checked> Trail</label>
           <span id="routeRecordStatus" class="recording-off">Recording: idle</span>
         </div>
-      </div>
-      <div class="card field-wrap">
-        <div class="field-canvas-wrap">
-          <canvas id="fieldCanvas" width="1100" height="760"></canvas>
-        </div>
-      </div>
-      <div class="card kv" id="fieldStats"></div>
-    </section>
-
-    <section class="right-pane">
-      <div class="card cam-card">
-        <h4>Front Camera</h4>
-        <canvas id="camFront" class="cam" width="640" height="480"></canvas>
-      </div>
-      <div class="card cam-card">
-        <h4>Bottom Camera</h4>
-        <canvas id="camBottom" class="cam" width="640" height="480"></canvas>
-      </div>
-      <div class="card cam-card">
-        <h4>Stereo (combined)</h4>
-        <canvas id="camStereo" class="cam" width="640" height="480"></canvas>
-      </div>
-      <div class="card">
-        <div class="control-groups">
+        <div class="control-groups" style="margin-top: 8px;">
           <div>
             <div class="group-title">Mode + Motion</div>
-            <div class="button-grid">
+            <div class="button-grid control-primary">
               <button id="btnModeToggle">Switch to Manual</button>
-              <button id="btnStart">Start</button>
-              <button id="btnStop">Stop</button>
+              <button id="btnStart" class="btn-start">Start</button>
+              <button id="btnStop" class="btn-stop">Stop</button>
             </div>
           </div>
           <div>
             <div class="group-title">Route Recording</div>
-            <div class="button-grid">
-              <button id="btnRouteStart">Start Recording</button>
-              <button id="btnRouteStop">Stop Recording</button>
-              <button id="btnRouteSave">Save Route</button>
+            <div class="button-grid control-secondary">
+              <button id="btnRouteStart">Record</button>
+              <button id="btnRouteStop">Stop Rec</button>
+              <button id="btnRouteSave">Save</button>
             </div>
           </div>
           <div class="status-grid">
@@ -241,15 +265,31 @@
             <div class="kv" id="scanPanel">LiDAR: waiting...</div>
           </div>
         </div>
-        <div class="kv" style="margin-top: 8px;">
-          Keyboard: W/S/A/D + Space
+      </div>
+      <div class="cam-stack">
+        <div class="card cam-card">
+          <div class="cam-label">Front Camera</div>
+          <canvas id="camFront" class="cam" width="640" height="480"></canvas>
         </div>
-        <div class="kv" id="routeStats" style="margin-top: 6px;">Routes: 0 saved</div>
+        <div class="cam-row">
+          <div class="card cam-card">
+            <div class="cam-label">Bottom Camera</div>
+            <canvas id="camBottom" class="cam" width="640" height="480"></canvas>
+          </div>
+          <div class="card cam-card">
+            <div class="cam-label">Stereo</div>
+            <canvas id="camStereo" class="cam" width="640" height="480"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card telemetry-card">
+        <div class="kv" style="margin-bottom: 4px;">Keyboard: W/S/A/D + Space</div>
+        <div class="kv" id="routeStats">Routes: 0 saved</div>
         <div class="route-manager">
           <div>
             <div class="group-title">Saved Routes</div>
             <div id="routeList" class="route-list tiny">No saved routes</div>
-            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr 1fr; display: grid;">
+            <div class="button-grid control-secondary" style="margin-top: 6px;">
               <button id="btnRouteSelect">Select</button>
               <button id="btnRouteDelete">Delete</button>
               <button id="btnRouteTrim">Trim Last</button>
@@ -263,19 +303,28 @@
               <input id="routeRowsInput" placeholder="Row count" type="number" min="0" step="1">
               <input id="routeSpacingInput" placeholder="Spacing (m)" type="number" step="0.1">
             </div>
-            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr 1fr; display: grid;">
+            <div class="button-grid control-secondary" style="margin-top: 6px;">
               <button id="btnRouteRename">Rename</button>
               <button id="btnRouteMetaSave">Save Meta</button>
               <button id="btnRowAdd">Add Row</button>
             </div>
-            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr; display: grid;">
+            <div class="button-grid control-primary" style="margin-top: 6px;">
               <button id="btnRowRemove">Remove Row</button>
               <span class="tiny" id="selectedRouteInfo">Selected: none</span>
             </div>
           </div>
         </div>
-        <div class="kv" id="telemetryPanel" style="margin-top: 6px;">Waiting for data...</div>
       </div>
+    </section>
+
+    <section class="right-pane">
+      <div class="card field-wrap">
+        <div class="field-canvas-wrap">
+          <canvas id="fieldCanvas" width="1100" height="760"></canvas>
+        </div>
+      </div>
+      <div class="card kv" id="fieldStats"></div>
+      <div class="card kv" id="telemetryPanel">Waiting for data...</div>
     </section>
   </div>
 

@@ -39,6 +39,10 @@ Strawberry Rover — это программно-аппаратная систе
 - UI переразложен под single-screen operator view: map/cameras/controls/telemetry помещаются в один экран без вертикального скролла, кнопки увеличены и сгруппированы по режимам.
 - Реализован Stage 6.3 route editing / map management (MVP): список сохраненных маршрутов, выбор active route, rename/delete, metadata editor и базовое управление row metadata.
 - Выбранный active route визуально выделяется на карте; добавлен lightweight edit action `trim last points`.
+- Выполнен regression-fix Stage 6 web control/UI:
+  - ручное управление стабилизировано (Manual+Start+WASD двигает ровер, Stop дает немедленный ноль, в Auto ручные команды не применяются);
+  - удалено неявное автопереключение в manual при нажатии `WASD`;
+  - layout route-management блока исправлен: нижние кнопки больше не обрезаются и доступны через внутренний scroll панели.
 
 ## Оборудование, которое уже есть
 - Jetson AGX Orin

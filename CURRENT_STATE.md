@@ -76,6 +76,11 @@
   - в UI добавлена панель `Saved Routes` со списком маршрутов и базовыми действиями управления;
   - добавлен editor route metadata (`name`, `notes`, `row_count`, `spacing_m`) и базовый row metadata management;
   - выбранный маршрут подсвечивается на карте отдельным стилем.
+- Исправлены регрессии Stage 6 web control/UI (минимальный patch, без изменения архитектуры):
+  - устранен разрыв keyboard-control chain в frontend: удален auto-bootstrap manual/start по `WASD`, чтобы `auto` больше не переключался неявно в `manual` от нажатия клавиш;
+  - добавлена мгновенная синхронизация frontend control-state после `Start/Stop/Mode` (через REST response), чтобы ручная команда не терялась из-за задержки WS state update;
+  - подтверждена end-to-end цепочка `frontend -> backend -> /cmd_vel -> rover_pose_simulator` для сценариев manual/start/move, stop-immediate и auto-ignore-manual;
+  - исправлена обрезка нижних route-кнопок в layout: переразложены высоты левой панели, включен внутренний scroll в telemetry/route area, уменьшены размеры route-action кнопок.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).

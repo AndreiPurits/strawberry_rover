@@ -19,6 +19,10 @@ Visualization & Monitoring Agent
   - metadata editor (`notes`, `row_count`, `spacing_m`);
   - row metadata management (`rows add/remove`);
   - active route highlight on field map.
+- Stage 6 regression-fix pass выполнен:
+  - manual/start/stop/auto web-control path стабилизирован;
+  - устранено неявное переключение `auto -> manual` от `WASD`;
+  - устранена обрезка нижнего route action блока (кнопки полностью доступны).
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;
