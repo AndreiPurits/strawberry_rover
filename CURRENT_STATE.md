@@ -89,6 +89,11 @@
   - верхние control-кнопки собраны в одну компактную горизонтальную строку (Start рядом со Stop);
   - camera block перестроен на 3 одновременные панели (Front/Bottom/Stereo) без strip-like высот;
   - для camera preview задана более читаемая пропорция (приближенно 3:4) при сохранении single-screen operator style.
+- Выполнен дополнительный stabilization/fix-pass (без смены архитектуры):
+  - уменьшена oscillation в Auto `FOLLOW_ROW`: введен deadband around bed centerline и ослаблены чрезмерные steering-веса (`bed_center_gain`, `follow_row_lidar_steer_weight/max`);
+  - исправлен приоритет `Stop` в Auto: web-control состояние (`started/mode`) публикуется в ROS (`/web/control/started`, `/web/control/mode`), а `rover_navigation_node` уважает gate и при stop/manual выдает zero command;
+  - переработано отображение камер в dashboard: устранен letterbox-эффект черных полос за счет fill/crop рендера (`cover`) и 4:3 preview-панелей;
+  - сохранен one-screen layout: увеличена доля камеры-блока и уменьшены вторичные блоки (stats/metadata), ключевые controls остаются доступны.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).

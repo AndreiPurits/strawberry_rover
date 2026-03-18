@@ -374,12 +374,12 @@ function renderTelemetry(state) {
 function drawBgrToCanvas(canvas, frame) {
   if (!canvas || !frame || !frame.data_b64) return;
   const ctx = canvas.getContext("2d");
-  const width = frame.width;
-  const height = frame.height;
+  const srcWidth = frame.width;
+  const srcHeight = frame.height;
   const raw = atob(frame.data_b64);
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-  const imageData = ctx.createImageData(width, height);
+  const imageData = ctx.createImageData(srcWidth, srcHeight);
   let si = 0;
   let di = 0;
   while (si + 2 < bytes.length && di + 3 < imageData.data.length) {
@@ -393,9 +393,37 @@ function drawBgrToCanvas(canvas, frame) {
     si += 3;
     di += 4;
   }
-  if (canvas.width !== width) canvas.width = width;
-  if (canvas.height !== height) canvas.height = height;
-  ctx.putImageData(imageData, 0, 0);
+  if (canvas.width === 0 || canvas.height === 0) return;
+
+  // Draw with "cover" behavior to avoid letterboxing bars.
+  const frameCanvas = document.createElement("canvas");
+  frameCanvas.width = srcWidth;
+  frameCanvas.height = srcHeight;
+  const frameCtx = frameCanvas.getContext("2d");
+  frameCtx.putImageData(imageData, 0, 0);
+
+  const destW = canvas.width;
+  const destH = canvas.height;
+  const srcAspect = srcWidth / Math.max(1, srcHeight);
+  const destAspect = destW / Math.max(1, destH);
+
+  let sx = 0;
+  let sy = 0;
+  let sw = srcWidth;
+  let sh = srcHeight;
+
+  if (srcAspect > destAspect) {
+    // source too wide -> crop left/right
+    sw = Math.max(1, Math.round(srcHeight * destAspect));
+    sx = Math.max(0, Math.round((srcWidth - sw) / 2));
+  } else if (srcAspect < destAspect) {
+    // source too tall -> crop top/bottom
+    sh = Math.max(1, Math.round(srcWidth / destAspect));
+    sy = Math.max(0, Math.round((srcHeight - sh) / 2));
+  }
+
+  ctx.clearRect(0, 0, destW, destH);
+  ctx.drawImage(frameCanvas, sx, sy, sw, sh, 0, 0, destW, destH);
 }
 
 async function fetchCamera(name, canvasId) {

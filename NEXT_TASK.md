@@ -26,6 +26,10 @@ Visualization & Monitoring Agent
 - Дополнительно выполнены точечные улучшения перед Stage 6.4:
   - в `rover_navigation_node` добавлен deterministic auto-recovery возврата к centerline грядки после manual-deviation;
   - dashboard control-row и camera layout переразложены для более читаемого single-screen вида (Start/Stop рядом, 3 камеры без strip-like панелей).
+  - выполнен stabilization/fix-pass:
+    - уменьшена sinusoid-weaving в Auto `FOLLOW_ROW` (deadband + мягче steering weights);
+    - `Stop` теперь гарантированно останавливает и Auto (navigation gate по `/web/control/started|mode`);
+    - camera previews увеличены, letterboxing минимизирован, one-screen layout сохранен за счет сжатия вторичных блоков.
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;

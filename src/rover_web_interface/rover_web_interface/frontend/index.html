@@ -17,12 +17,12 @@
     }
     .app-shell {
       width: 100vw;
-      min-height: 100vh;
-      height: auto;
+      height: 100vh;
       padding: 12px;
       display: grid;
-      grid-template-columns: 50% 50%;
+      grid-template-columns: 58% 42%;
       gap: 12px;
+      overflow: hidden;
     }
     .card {
       background: #1b1b1b;
@@ -34,17 +34,17 @@
     }
     .left-pane {
       display: grid;
-      grid-template-rows: auto minmax(0, 1.2fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1.45fr) minmax(0, 0.70fr);
       gap: 10px;
       min-height: 0;
-      overflow: auto;
+      overflow: hidden;
     }
     .right-pane {
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto auto;
       gap: 10px;
       min-height: 0;
-      overflow: auto;
+      overflow: hidden;
     }
     h2, h3, h4 { margin: 0 0 6px 0; }
     .layer-row {
@@ -73,11 +73,14 @@
     }
     .cam-stack {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-rows: minmax(0, 1fr);
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
       gap: 10px;
       min-height: 0;
-      overflow: auto;
+      overflow: hidden;
+    }
+    .cam-front {
+      grid-column: 1 / 3;
     }
     .cam-card {
       display: grid;
@@ -88,9 +91,8 @@
     canvas.cam {
       width: 100%;
       height: 100%;
-      min-height: 210px;
-      aspect-ratio: 3 / 4;
-      object-fit: contain;
+      min-height: 180px;
+      aspect-ratio: 4 / 3;
       background: #000;
       border: 1px solid #333;
       border-radius: 6px;
@@ -107,7 +109,7 @@
       margin-top: 8px;
       display: grid;
       grid-template-columns: 1.6fr 1.3fr 1fr;
-      gap: 8px;
+      gap: 6px;
       align-items: stretch;
     }
     .control-group-box {
@@ -119,13 +121,13 @@
     .group-title {
       font-size: 11px;
       opacity: 0.85;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
     .button-grid {
       display: grid;
-      gap: 6px;
+      gap: 4px;
     }
     button {
       min-height: 56px;
@@ -157,14 +159,14 @@
       color: #fff4f4;
     }
     .kv { font-size: 12px; line-height: 1.35; }
-    .tiny { font-size: 11px; line-height: 1.25; opacity: 0.9; }
+    .tiny { font-size: 10px; line-height: 1.2; opacity: 0.9; }
     .route-manager {
       margin-top: 8px;
       border-top: 1px solid #2d2d2d;
-      padding-top: 7px;
+      padding-top: 6px;
       display: grid;
       grid-template-columns: 1.2fr 1fr;
-      gap: 8px;
+      gap: 6px;
       min-height: 0;
       overflow: auto;
     }
@@ -172,8 +174,8 @@
       border: 1px solid #333;
       border-radius: 6px;
       padding: 6px;
-      min-height: 92px;
-      max-height: 130px;
+      min-height: 72px;
+      max-height: 96px;
       overflow: auto;
     }
     .route-item {
@@ -235,25 +237,26 @@
       letter-spacing: 0.04em;
     }
     .route-manager button {
-      min-height: 44px;
-      font-size: 14px;
+      min-height: 34px;
+      font-size: 12px;
     }
     .top-control-row button {
-      min-height: 42px;
-      font-size: 14px;
+      min-height: 36px;
+      font-size: 13px;
     }
     @media (max-width: 1500px) {
       .app-shell {
-        grid-template-columns: 46% 54%;
+        grid-template-columns: 56% 44%;
       }
       .top-control-row {
         grid-template-columns: 1fr;
       }
       .cam-stack {
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
       }
       canvas.cam {
-        min-height: 180px;
+        min-height: 150px;
       }
     }
   </style>
@@ -297,7 +300,7 @@
         </div>
       </div>
       <div class="cam-stack">
-        <div class="card cam-card">
+        <div class="card cam-card cam-front">
           <div class="cam-label">Front Camera</div>
           <canvas id="camFront" class="cam" width="640" height="480"></canvas>
         </div>
@@ -351,8 +354,8 @@
           <canvas id="fieldCanvas" width="1100" height="760"></canvas>
         </div>
       </div>
-      <div class="card kv" id="fieldStats"></div>
-      <div class="card kv" id="telemetryPanel">Waiting for data...</div>
+      <div class="card kv tiny" id="fieldStats"></div>
+      <div class="card kv tiny" id="telemetryPanel">Waiting for data...</div>
     </section>
   </div>
 

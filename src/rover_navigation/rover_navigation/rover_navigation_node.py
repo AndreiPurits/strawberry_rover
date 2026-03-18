@@ -7,6 +7,8 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float32
+from std_msgs.msg import Bool
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker
 
 
@@ -58,10 +60,13 @@ class RoverNavigationNode(Node):
         self.declare_parameter("follow_row_lidar_steer_weight", 0.15)
         self.declare_parameter("low_conf_lidar_steer_weight", 0.05)
         self.declare_parameter("follow_row_lidar_steer_max", 0.30)
+        self.declare_parameter("bed_center_deadband", 0.10)
         self.declare_parameter("recovery_trigger_distance", 0.75)
         self.declare_parameter("recovery_keep_current_distance", 0.45)
         self.declare_parameter("recovery_speed", 0.14)
         self.declare_parameter("recovery_target_x_margin", 0.8)
+        self.declare_parameter("web_control_started_topic", "/web/control/started")
+        self.declare_parameter("web_control_mode_topic", "/web/control/mode")
 
         self._scan_topic = str(self.get_parameter("scan_topic").value)
         self._cmd_vel_topic = str(self.get_parameter("cmd_vel_topic").value)
@@ -156,6 +161,9 @@ class RoverNavigationNode(Node):
         self._follow_row_lidar_steer_max = max(
             0.0, float(self.get_parameter("follow_row_lidar_steer_max").value)
         )
+        self._bed_center_deadband = max(
+            0.0, float(self.get_parameter("bed_center_deadband").value)
+        )
         self._recovery_trigger_distance = max(
             0.15, float(self.get_parameter("recovery_trigger_distance").value)
         )
@@ -167,6 +175,12 @@ class RoverNavigationNode(Node):
         )
         self._recovery_target_x_margin = max(
             0.0, float(self.get_parameter("recovery_target_x_margin").value)
+        )
+        self._web_control_started_topic = str(
+            self.get_parameter("web_control_started_topic").value
+        )
+        self._web_control_mode_topic = str(
+            self.get_parameter("web_control_mode_topic").value
         )
 
         self._last_scan: Optional[LaserScan] = None
@@ -186,9 +200,14 @@ class RoverNavigationNode(Node):
         self._align_phase = "CROSS_ROW"
         self._recover_row_index = 0
         self._row_initialized = False
+        # If web control bridge is not running, autonomous navigation stays enabled.
+        self._web_control_started = True
+        self._web_control_mode = "auto"
 
         self.create_subscription(LaserScan, self._scan_topic, self._on_scan, 10)
         self.create_subscription(PoseStamped, self._sim_pose_topic, self._on_pose, 10)
+        self.create_subscription(Bool, self._web_control_started_topic, self._on_web_started, 10)
+        self.create_subscription(String, self._web_control_mode_topic, self._on_web_mode, 10)
         self._cmd_pub = self.create_publisher(Twist, self._cmd_vel_topic, 10)
         self._debug_pub = self.create_publisher(Float32, self._debug_topic, 10)
         self._centerline_pub = self.create_publisher(
@@ -227,6 +246,18 @@ class RoverNavigationNode(Node):
             self._row_direction = -1 if abs(self._normalize_angle(self._sim_yaw - math.pi)) < 1.4 else 1
             self._row_initialized = True
             self._start_recovery_if_needed()
+
+    def _on_web_started(self, msg: Bool) -> None:
+        self._web_control_started = bool(msg.data)
+        if not self._web_control_started:
+            self._cmd_pub.publish(Twist())
+
+    def _on_web_mode(self, msg: String) -> None:
+        mode = str(msg.data).strip().lower()
+        if mode in ("manual", "auto"):
+            self._web_control_mode = mode
+            if mode != "auto":
+                self._cmd_pub.publish(Twist())
 
     def _on_timer(self) -> None:
         if self._last_scan is None or not self._has_pose:
@@ -283,6 +314,9 @@ class RoverNavigationNode(Node):
 
     def _compute_fsm_command(self) -> Twist:
         cmd = Twist()
+        if not self._web_control_started or self._web_control_mode != "auto":
+            return cmd
+
         end_x = self._target_end_x(self._row_direction)
 
         if self._nav_state == "FOLLOW_ROW":
@@ -294,6 +328,8 @@ class RoverNavigationNode(Node):
 
             row_center_y = self._row_index * self._row_spacing
             y_error = row_center_y - self._sim_y
+            if abs(y_error) <= self._bed_center_deadband:
+                y_error = 0.0
             row_center_steer = self._clamp(
                 self._bed_center_gain
                 * y_error

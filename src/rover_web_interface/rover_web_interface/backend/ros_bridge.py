@@ -11,6 +11,8 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 
@@ -49,6 +51,8 @@ class RosWebBridge(Node):
         self._trail: Deque[Tuple[float, float]] = deque(maxlen=self._trail_max_points)
         self._beds: List[Dict[str, float]] = []
         self._cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._control_started_pub = self.create_publisher(Bool, "/web/control/started", 10)
+        self._control_mode_pub = self.create_publisher(String, "/web/control/mode", 10)
 
         self._pose = {"x": 0.0, "y": 0.0, "z": 0.0}
         self._heading_rad = 0.0
@@ -121,6 +125,7 @@ class RosWebBridge(Node):
             10,
         )
         self.create_timer(self._control_publish_period_s, self._control_publish_tick)
+        self._publish_control_state()
 
         self.get_logger().info("rover_web_bridge started.")
 
@@ -534,6 +539,8 @@ class RosWebBridge(Node):
             if zero_once:
                 self._force_zero_once = False
 
+        self._publish_control_state()
+
         if zero_once:
             twist = Twist()
             self._cmd_pub.publish(twist)
@@ -549,11 +556,14 @@ class RosWebBridge(Node):
         with self._lock:
             self._control_started = True
             self._last_cmd["stamp"] = time.time()
+        self._publish_control_state()
+        with self._lock:
             return self._build_control_snapshot()
 
     def stop_control(self) -> Dict[str, Any]:
         with self._lock:
             self._control_started = False
+        self._publish_control_state()
         self.publish_zero_cmd(source="stop")
         with self._lock:
             return self._build_control_snapshot()
@@ -564,6 +574,7 @@ class RosWebBridge(Node):
             raise ValueError("mode must be 'manual' or 'auto'")
         with self._lock:
             self._control_mode = cleaned
+        self._publish_control_state()
         if cleaned != "manual":
             # Safety rule: leaving manual mode immediately zeroes manual motion.
             self.publish_zero_cmd(source="mode_auto")
@@ -608,6 +619,17 @@ class RosWebBridge(Node):
                 "stamp": time.time(),
             }
             return self._build_control_snapshot()
+
+    def _publish_control_state(self) -> None:
+        with self._lock:
+            started = bool(self._control_started)
+            mode = str(self._control_mode)
+        started_msg = Bool()
+        started_msg.data = started
+        mode_msg = String()
+        mode_msg.data = mode
+        self._control_started_pub.publish(started_msg)
+        self._control_mode_pub.publish(mode_msg)
 
     @staticmethod
     def _normalize_angle(angle: float) -> float:

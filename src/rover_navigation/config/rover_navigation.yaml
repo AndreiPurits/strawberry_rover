@@ -38,11 +38,14 @@
     align_xy_tolerance: 0.12
     align_heading_tolerance_deg: 8.0
     transition_backoff: 0.8
-    bed_center_gain: 0.70
-    follow_row_lidar_steer_weight: 0.12
+    bed_center_gain: 0.55
+    bed_center_deadband: 0.10
+    follow_row_lidar_steer_weight: 0.08
     low_conf_lidar_steer_weight: 0.04
-    follow_row_lidar_steer_max: 0.30
+    follow_row_lidar_steer_max: 0.22
     recovery_trigger_distance: 0.75
     recovery_keep_current_distance: 0.45
     recovery_speed: 0.14
     recovery_target_x_margin: 0.8
+    web_control_started_topic: "/web/control/started"
+    web_control_mode_topic: "/web/control/mode"
