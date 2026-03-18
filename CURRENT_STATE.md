@@ -99,6 +99,11 @@
   - подтверждена цепочка `Manual -> Start -> WASD/joystick -> /cmd_vel -> rover_pose_simulator`;
   - camera preview переведен с `cover` на full-frame `contain`: кадры front/bottom/stereo больше не обрезаются по краям;
   - layout ослаблен под full-frame приоритет: camera-блок может занимать больше места, допускается более высокий page.
+- Выполнен UI rollback/refinement pass (только layout, без изменения control/navigation/route logic):
+  - восстановлен более компактный операторский баланс dashboard (карта и панели возвращены к прежней пропорции размещения);
+  - camera layout оставлен в прежней удачной схеме (front wide + bottom/stereo ниже), без «растянутого» page-flow;
+  - вертикальный размер camera preview увеличен примерно в 2 раза относительно компактной базы (`min-height` около `180 -> 340`);
+  - full-frame `contain` сохранен (без crop), допускается ограниченный внутренний scroll левой панели.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).

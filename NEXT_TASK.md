@@ -34,6 +34,10 @@ Visualization & Monitoring Agent
     - восстановлено реальное движение в Manual (устранено zero-overwrite от nav вне Auto);
     - camera rendering переключен на full-frame (`contain`) без crop;
     - для full-frame камер ослаблено ограничение strict one-screen (допускается более высокий layout).
+  - выполнен дополнительный UI rollback/refinement:
+    - возвращен более компактный dashboard-баланс карты и камер;
+    - сохранен full-frame camera render без crop;
+    - увеличена вертикальная читаемость камер (примерно 2x от компактной базы) с допустимым минимальным scroll.
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;
