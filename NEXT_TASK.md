@@ -30,6 +30,10 @@ Visualization & Monitoring Agent
     - уменьшена sinusoid-weaving в Auto `FOLLOW_ROW` (deadband + мягче steering weights);
     - `Stop` теперь гарантированно останавливает и Auto (navigation gate по `/web/control/started|mode`);
     - camera previews увеличены, letterboxing минимизирован, one-screen layout сохранен за счет сжатия вторичных блоков.
+  - выполнен дополнительный bugfix-pass:
+    - восстановлено реальное движение в Manual (устранено zero-overwrite от nav вне Auto);
+    - camera rendering переключен на full-frame (`contain`) без crop;
+    - для full-frame камер ослаблено ограничение strict one-screen (допускается более высокий layout).
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;

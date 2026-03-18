@@ -395,7 +395,7 @@ function drawBgrToCanvas(canvas, frame) {
   }
   if (canvas.width === 0 || canvas.height === 0) return;
 
-  // Draw with "cover" behavior to avoid letterboxing bars.
+  // Draw with "contain" behavior to preserve the full frame.
   const frameCanvas = document.createElement("canvas");
   frameCanvas.width = srcWidth;
   frameCanvas.height = srcHeight;
@@ -407,23 +407,20 @@ function drawBgrToCanvas(canvas, frame) {
   const srcAspect = srcWidth / Math.max(1, srcHeight);
   const destAspect = destW / Math.max(1, destH);
 
-  let sx = 0;
-  let sy = 0;
-  let sw = srcWidth;
-  let sh = srcHeight;
-
+  let drawW = destW;
+  let drawH = destH;
   if (srcAspect > destAspect) {
-    // source too wide -> crop left/right
-    sw = Math.max(1, Math.round(srcHeight * destAspect));
-    sx = Math.max(0, Math.round((srcWidth - sw) / 2));
+    drawH = Math.max(1, Math.round(destW / srcAspect));
   } else if (srcAspect < destAspect) {
-    // source too tall -> crop top/bottom
-    sh = Math.max(1, Math.round(srcWidth / destAspect));
-    sy = Math.max(0, Math.round((srcHeight - sh) / 2));
+    drawW = Math.max(1, Math.round(destH * srcAspect));
   }
+  const dx = Math.round((destW - drawW) / 2);
+  const dy = Math.round((destH - drawH) / 2);
 
+  ctx.fillStyle = "#000";
   ctx.clearRect(0, 0, destW, destH);
-  ctx.drawImage(frameCanvas, sx, sy, sw, sh, 0, 0, destW, destH);
+  ctx.fillRect(0, 0, destW, destH);
+  ctx.drawImage(frameCanvas, 0, 0, srcWidth, srcHeight, dx, dy, drawW, drawH);
 }
 
 async function fetchCamera(name, canvasId) {

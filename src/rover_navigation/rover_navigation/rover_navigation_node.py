@@ -203,6 +203,7 @@ class RoverNavigationNode(Node):
         # If web control bridge is not running, autonomous navigation stays enabled.
         self._web_control_started = True
         self._web_control_mode = "auto"
+        self._auto_cmd_enabled_last = True
 
         self.create_subscription(LaserScan, self._scan_topic, self._on_scan, 10)
         self.create_subscription(PoseStamped, self._sim_pose_topic, self._on_pose, 10)
@@ -255,8 +256,9 @@ class RoverNavigationNode(Node):
     def _on_web_mode(self, msg: String) -> None:
         mode = str(msg.data).strip().lower()
         if mode in ("manual", "auto"):
+            prev_mode = self._web_control_mode
             self._web_control_mode = mode
-            if mode != "auto":
+            if prev_mode == "auto" and mode != "auto":
                 self._cmd_pub.publish(Twist())
 
     def _on_timer(self) -> None:
@@ -295,8 +297,16 @@ class RoverNavigationNode(Node):
         )
 
         cmd = self._compute_fsm_command()
-
-        self._cmd_pub.publish(cmd)
+        auto_cmd_enabled = bool(
+            self._web_control_started and self._web_control_mode == "auto"
+        )
+        if auto_cmd_enabled:
+            self._cmd_pub.publish(cmd)
+        elif self._auto_cmd_enabled_last:
+            # Publish one zero command when leaving auto control, then stop
+            # publishing so manual web commands are not overridden.
+            self._cmd_pub.publish(Twist())
+        self._auto_cmd_enabled_last = auto_cmd_enabled
 
         dbg = Float32()
         dbg.data = self._steering_cmd

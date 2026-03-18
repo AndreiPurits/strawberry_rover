@@ -94,6 +94,11 @@
   - исправлен приоритет `Stop` в Auto: web-control состояние (`started/mode`) публикуется в ROS (`/web/control/started`, `/web/control/mode`), а `rover_navigation_node` уважает gate и при stop/manual выдает zero command;
   - переработано отображение камер в dashboard: устранен letterbox-эффект черных полос за счет fill/crop рендера (`cover`) и 4:3 preview-панелей;
   - сохранен one-screen layout: увеличена доля камеры-блока и уменьшены вторичные блоки (stats/metadata), ключевые controls остаются доступны.
+- Выполнен targeted bugfix-pass (без архитектурных изменений):
+  - исправлена регрессия manual no-motion: `rover_navigation_node` больше не затирает manual `/cmd_vel` постоянным zero-паблишем вне Auto (zero публикуется только on-transition);
+  - подтверждена цепочка `Manual -> Start -> WASD/joystick -> /cmd_vel -> rover_pose_simulator`;
+  - camera preview переведен с `cover` на full-frame `contain`: кадры front/bottom/stereo больше не обрезаются по краям;
+  - layout ослаблен под full-frame приоритет: camera-блок может занимать больше места, допускается более высокий page.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).
