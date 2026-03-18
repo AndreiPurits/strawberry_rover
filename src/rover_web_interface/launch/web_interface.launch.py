@@ -28,7 +28,7 @@ def generate_launch_description() -> LaunchDescription:
         cmd=[
             "bash",
             "-lc",
-            "pkill -f 'rover_web_interface/lib/rover_web_interface/rover_web_server' || true",
+            "pkill -f '[r]over_web_interface/lib/rover_web_interface/rover_web_server' || true",
         ],
         output="screen",
         condition=IfCondition(LaunchConfiguration("auto_cleanup_before_start")),
