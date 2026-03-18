@@ -81,6 +81,14 @@
   - добавлена мгновенная синхронизация frontend control-state после `Start/Stop/Mode` (через REST response), чтобы ручная команда не терялась из-за задержки WS state update;
   - подтверждена end-to-end цепочка `frontend -> backend -> /cmd_vel -> rover_pose_simulator` для сценариев manual/start/move, stop-immediate и auto-ignore-manual;
   - исправлена обрезка нижних route-кнопок в layout: переразложены высоты левой панели, включен внутренний scroll в telemetry/route area, уменьшены размеры route-action кнопок.
+- Добавлен deterministic auto-recovery в `rover_navigation_node` для возврата к грядке после ручного отклонения:
+  - введен recovery-state `RECOVER_ROW` c фазами `RETURN_CENTER -> ALIGN_HEADING`;
+  - при off-bed отклонении узел выбирает целевую грядку детерминированно (текущая, если близко; иначе nearest row);
+  - ровер возвращается к centerline целевой грядки, выравнивает курс по направлению прохода и затем продолжает штатный `FOLLOW_ROW` + обычный FSM переходов.
+- Выполнен targeted UI refinement dashboard:
+  - верхние control-кнопки собраны в одну компактную горизонтальную строку (Start рядом со Stop);
+  - camera block перестроен на 3 одновременные панели (Front/Bottom/Stereo) без strip-like высот;
+  - для camera preview задана более читаемая пропорция (приближенно 3:4) при сохранении single-screen operator style.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).

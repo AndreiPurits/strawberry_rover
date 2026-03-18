@@ -23,6 +23,9 @@ Visualization & Monitoring Agent
   - manual/start/stop/auto web-control path стабилизирован;
   - устранено неявное переключение `auto -> manual` от `WASD`;
   - устранена обрезка нижнего route action блока (кнопки полностью доступны).
+- Дополнительно выполнены точечные улучшения перед Stage 6.4:
+  - в `rover_navigation_node` добавлен deterministic auto-recovery возврата к centerline грядки после manual-deviation;
+  - dashboard control-row и camera layout переразложены для более читаемого single-screen вида (Start/Stop рядом, 3 камеры без strip-like панелей).
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;

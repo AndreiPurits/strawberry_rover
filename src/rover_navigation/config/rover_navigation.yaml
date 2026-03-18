@@ -42,3 +42,7 @@
     follow_row_lidar_steer_weight: 0.12
     low_conf_lidar_steer_weight: 0.04
     follow_row_lidar_steer_max: 0.30
+    recovery_trigger_distance: 0.75
+    recovery_keep_current_distance: 0.45
+    recovery_speed: 0.14
+    recovery_target_x_margin: 0.8
