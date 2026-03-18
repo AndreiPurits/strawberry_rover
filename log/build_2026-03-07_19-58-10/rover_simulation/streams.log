@@ -1,0 +1,41 @@
+[6.053s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_simulation': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_simulation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log --single-version-externally-managed install_data
+[7.130s] running egg_info
+[7.132s] creating ../../build/rover_simulation/rover_simulation.egg-info
+[7.132s] writing ../../build/rover_simulation/rover_simulation.egg-info/PKG-INFO
+[7.135s] writing dependency_links to ../../build/rover_simulation/rover_simulation.egg-info/dependency_links.txt
+[7.135s] writing entry points to ../../build/rover_simulation/rover_simulation.egg-info/entry_points.txt
+[7.135s] writing requirements to ../../build/rover_simulation/rover_simulation.egg-info/requires.txt
+[7.136s] writing top-level names to ../../build/rover_simulation/rover_simulation.egg-info/top_level.txt
+[7.136s] writing manifest file '../../build/rover_simulation/rover_simulation.egg-info/SOURCES.txt'
+[7.897s] reading manifest file '../../build/rover_simulation/rover_simulation.egg-info/SOURCES.txt'
+[7.897s] writing manifest file '../../build/rover_simulation/rover_simulation.egg-info/SOURCES.txt'
+[7.897s] running build
+[7.897s] running build_py
+[7.897s] creating /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build
+[7.898s] creating /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib
+[7.898s] creating /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation
+[7.898s] copying rover_simulation/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation
+[7.898s] copying rover_simulation/rover_pose_simulator.py -> /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation
+[7.898s] running install
+[7.898s] running install_lib
+[7.898s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation
+[7.898s] copying /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation
+[7.899s] copying /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation/rover_pose_simulator.py -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation
+[7.899s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation/__init__.py to __init__.cpython-38.pyc
+[7.899s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation/rover_pose_simulator.py to rover_pose_simulator.cpython-38.pyc
+[7.899s] running install_data
+[7.899s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/ament_index
+[7.899s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/ament_index/resource_index
+[7.899s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/ament_index/resource_index/packages
+[7.900s] copying resource/rover_simulation -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/ament_index/resource_index/packages
+[7.900s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation
+[7.900s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation/launch
+[7.900s] copying launch/rover_pose_simulator.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation/launch
+[7.900s] creating /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation/config
+[7.900s] copying config/rover_pose_simulator.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation/config
+[7.900s] running install_egg_info
+[7.900s] Copying ../../build/rover_simulation/rover_simulation.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation-0.0.0-py3.8.egg-info
+[7.901s] running install_scripts
+[7.901s] Installing rover_pose_simulator script to /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/rover_simulation
+[7.901s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log'
+[8.002s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_simulation' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_simulation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log --single-version-externally-managed install_data

@@ -1,0 +1,13 @@
+README.md
+package.xml
+setup.cfg
+setup.py
+../../build/rover_state/rover_state.egg-info/PKG-INFO
+../../build/rover_state/rover_state.egg-info/SOURCES.txt
+../../build/rover_state/rover_state.egg-info/dependency_links.txt
+../../build/rover_state/rover_state.egg-info/entry_points.txt
+../../build/rover_state/rover_state.egg-info/requires.txt
+../../build/rover_state/rover_state.egg-info/top_level.txt
+../../build/rover_state/rover_state.egg-info/zip-safe
+resource/rover_state
+rover_state/__init__.py

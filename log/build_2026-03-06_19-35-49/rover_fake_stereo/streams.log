@@ -1,0 +1,35 @@
+[5.794s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_stereo build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log --single-version-externally-managed install_data
+[6.487s] running egg_info
+[6.488s] creating ../../build/rover_fake_stereo/rover_fake_stereo.egg-info
+[6.488s] writing ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/PKG-INFO
+[6.491s] writing dependency_links to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/dependency_links.txt
+[6.498s] writing entry points to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/entry_points.txt
+[6.498s] writing requirements to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/requires.txt
+[6.499s] writing top-level names to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/top_level.txt
+[6.505s] writing manifest file '../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt'
+[6.579s] reading manifest file '../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt'
+[6.580s] writing manifest file '../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt'
+[6.581s] running build
+[6.582s] running build_py
+[6.582s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build
+[6.588s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib
+[6.588s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib/rover_fake_stereo
+[6.588s] copying rover_fake_stereo/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib/rover_fake_stereo
+[6.588s] running install
+[6.591s] running install_lib
+[6.600s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo
+[6.600s] copying /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib/rover_fake_stereo/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo
+[6.610s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo/__init__.py to __init__.cpython-38.pyc
+[6.614s] running install_data
+[6.614s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/ament_index
+[6.614s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/ament_index/resource_index
+[6.615s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/ament_index/resource_index/packages
+[6.615s] copying resource/rover_fake_stereo -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/ament_index/resource_index/packages
+[6.615s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo
+[6.615s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/launch
+[6.616s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/config
+[6.616s] running install_egg_info
+[6.629s] Copying ../../build/rover_fake_stereo/rover_fake_stereo.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo-0.0.0-py3.8.egg-info
+[6.630s] running install_scripts
+[6.684s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log'
+[7.639s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_stereo build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log --single-version-externally-managed install_data

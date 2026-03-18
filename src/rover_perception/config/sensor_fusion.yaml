@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    scan_topic: "/scan"
+    edges_topic: "/camera/preprocessed/edges"
+    plant_candidates_topic: "/perception/plant_candidates"
+    fusion_score_topic: "/perception/fusion_score"
+    fusion_rate: 10.0
+    fov_half_angle_deg: 30.0
+    max_scan_for_scoring: 5.0
+    edges_threshold: 0.08
+    marker_frame_id: "lidar_link"

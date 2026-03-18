@@ -1,0 +1,10 @@
+Metadata-Version: 1.2
+Name: rover-state
+Version: 0.0.0
+Summary: Shared rover state representation and related nodes for the strawberry rover.
+Home-page: UNKNOWN
+Maintainer: TODO
+Maintainer-email: todo@example.com
+License: Apache-2.0
+Description: UNKNOWN
+Platform: UNKNOWN

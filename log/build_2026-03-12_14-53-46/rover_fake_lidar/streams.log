@@ -1,0 +1,21 @@
+[4.489s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_lidar build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/install.log --single-version-externally-managed install_data
+[5.028s] running egg_info
+[5.032s] writing ../../build/rover_fake_lidar/rover_fake_lidar.egg-info/PKG-INFO
+[5.034s] writing dependency_links to ../../build/rover_fake_lidar/rover_fake_lidar.egg-info/dependency_links.txt
+[5.036s] writing entry points to ../../build/rover_fake_lidar/rover_fake_lidar.egg-info/entry_points.txt
+[5.038s] writing requirements to ../../build/rover_fake_lidar/rover_fake_lidar.egg-info/requires.txt
+[5.039s] writing top-level names to ../../build/rover_fake_lidar/rover_fake_lidar.egg-info/top_level.txt
+[5.114s] reading manifest file '../../build/rover_fake_lidar/rover_fake_lidar.egg-info/SOURCES.txt'
+[5.118s] writing manifest file '../../build/rover_fake_lidar/rover_fake_lidar.egg-info/SOURCES.txt'
+[5.120s] running build
+[5.121s] running build_py
+[5.121s] running install
+[5.126s] running install_lib
+[5.134s] running install_data
+[5.136s] running install_egg_info
+[5.147s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages/rover_fake_lidar-0.0.0-py3.8.egg-info' (and everything under it)
+[5.150s] Copying ../../build/rover_fake_lidar/rover_fake_lidar.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages/rover_fake_lidar-0.0.0-py3.8.egg-info
+[5.158s] running install_scripts
+[5.221s] Installing fake_lidar_node script to /home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/rover_fake_lidar
+[5.228s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/install.log'
+[5.369s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_lidar build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/install.log --single-version-externally-managed install_data

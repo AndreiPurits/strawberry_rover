@@ -1,0 +1,24 @@
+[1.411s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_web_interface': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_web_interface build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log --install-scripts $base/lib/rover_web_interface --single-version-externally-managed install_data
+[1.866s] running egg_info
+[1.866s] writing ../../build/rover_web_interface/rover_web_interface.egg-info/PKG-INFO
+[1.867s] writing dependency_links to ../../build/rover_web_interface/rover_web_interface.egg-info/dependency_links.txt
+[1.867s] writing entry points to ../../build/rover_web_interface/rover_web_interface.egg-info/entry_points.txt
+[1.868s] writing requirements to ../../build/rover_web_interface/rover_web_interface.egg-info/requires.txt
+[1.870s] writing top-level names to ../../build/rover_web_interface/rover_web_interface.egg-info/top_level.txt
+[1.934s] reading manifest file '../../build/rover_web_interface/rover_web_interface.egg-info/SOURCES.txt'
+[1.936s] writing manifest file '../../build/rover_web_interface/rover_web_interface.egg-info/SOURCES.txt'
+[1.936s] running build
+[1.936s] running build_py
+[1.936s] copying rover_web_interface/backend/ros_bridge.py -> /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend
+[1.942s] running install
+[1.944s] running install_lib
+[1.947s] copying /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend/ros_bridge.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend
+[1.949s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend/ros_bridge.py to ros_bridge.cpython-38.pyc
+[1.957s] running install_data
+[1.960s] running install_egg_info
+[1.963s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface-0.0.0-py3.8.egg-info' (and everything under it)
+[1.964s] Copying ../../build/rover_web_interface/rover_web_interface.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface-0.0.0-py3.8.egg-info
+[1.966s] running install_scripts
+[2.004s] Installing rover_web_server script to /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/rover_web_interface
+[2.007s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log'
+[2.091s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_web_interface' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_web_interface build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log --install-scripts $base/lib/rover_web_interface --single-version-externally-managed install_data

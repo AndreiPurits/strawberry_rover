@@ -1,0 +1,50 @@
+[1.540s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_web_interface': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_web_interface build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log --install-scripts $base/lib/rover_web_interface --single-version-externally-managed install_data
+[2.076s] running egg_info
+[2.076s] creating ../../build/rover_web_interface/rover_web_interface.egg-info
+[2.077s] writing ../../build/rover_web_interface/rover_web_interface.egg-info/PKG-INFO
+[2.077s] writing dependency_links to ../../build/rover_web_interface/rover_web_interface.egg-info/dependency_links.txt
+[2.078s] writing entry points to ../../build/rover_web_interface/rover_web_interface.egg-info/entry_points.txt
+[2.079s] writing requirements to ../../build/rover_web_interface/rover_web_interface.egg-info/requires.txt
+[2.079s] writing top-level names to ../../build/rover_web_interface/rover_web_interface.egg-info/top_level.txt
+[2.083s] writing manifest file '../../build/rover_web_interface/rover_web_interface.egg-info/SOURCES.txt'
+[2.152s] reading manifest file '../../build/rover_web_interface/rover_web_interface.egg-info/SOURCES.txt'
+[2.154s] writing manifest file '../../build/rover_web_interface/rover_web_interface.egg-info/SOURCES.txt'
+[2.155s] running build
+[2.155s] running build_py
+[2.156s] creating /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build
+[2.156s] creating /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib
+[2.158s] creating /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface
+[2.158s] copying rover_web_interface/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface
+[2.160s] creating /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend
+[2.160s] copying rover_web_interface/backend/ros_bridge.py -> /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend
+[2.160s] copying rover_web_interface/backend/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend
+[2.160s] copying rover_web_interface/backend/api_server.py -> /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend
+[2.161s] running install
+[2.164s] running install_lib
+[2.166s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface
+[2.167s] copying /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface
+[2.167s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend
+[2.167s] copying /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend/ros_bridge.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend
+[2.167s] copying /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend
+[2.167s] copying /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build/lib/rover_web_interface/backend/api_server.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend
+[2.169s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/__init__.py to __init__.cpython-38.pyc
+[2.171s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend/ros_bridge.py to ros_bridge.cpython-38.pyc
+[2.175s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend/__init__.py to __init__.cpython-38.pyc
+[2.176s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface/backend/api_server.py to api_server.cpython-38.pyc
+[2.177s] running install_data
+[2.178s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/ament_index
+[2.178s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/ament_index/resource_index
+[2.178s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/ament_index/resource_index/packages
+[2.178s] copying resource/rover_web_interface -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/ament_index/resource_index/packages
+[2.179s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface
+[2.179s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface/launch
+[2.179s] copying launch/web_interface.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface/launch
+[2.179s] creating /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface/frontend
+[2.179s] copying rover_web_interface/frontend/index.html -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface/frontend
+[2.180s] copying rover_web_interface/frontend/dashboard.js -> /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/share/rover_web_interface/frontend
+[2.180s] running install_egg_info
+[2.186s] Copying ../../build/rover_web_interface/rover_web_interface.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages/rover_web_interface-0.0.0-py3.8.egg-info
+[2.188s] running install_scripts
+[2.229s] Installing rover_web_server script to /home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/rover_web_interface
+[2.229s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log'
+[2.331s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_web_interface' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_web_interface/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_web_interface/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_web_interface build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_web_interface/install.log --install-scripts $base/lib/rover_web_interface --single-version-externally-managed install_data

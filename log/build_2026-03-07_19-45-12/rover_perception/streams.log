@@ -1,0 +1,21 @@
+[1.897s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data
+[2.351s] running egg_info
+[2.353s] writing ../../build/rover_perception/rover_perception.egg-info/PKG-INFO
+[2.356s] writing dependency_links to ../../build/rover_perception/rover_perception.egg-info/dependency_links.txt
+[2.357s] writing entry points to ../../build/rover_perception/rover_perception.egg-info/entry_points.txt
+[2.360s] writing requirements to ../../build/rover_perception/rover_perception.egg-info/requires.txt
+[2.363s] writing top-level names to ../../build/rover_perception/rover_perception.egg-info/top_level.txt
+[2.437s] reading manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[2.438s] writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[2.440s] running build
+[2.440s] running build_py
+[2.442s] running install
+[2.447s] running install_lib
+[2.451s] running install_data
+[2.452s] running install_egg_info
+[2.460s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info' (and everything under it)
+[2.461s] Copying ../../build/rover_perception/rover_perception.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info
+[2.464s] running install_scripts
+[2.506s] Installing rgb_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+[2.509s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log'
+[2.605s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data

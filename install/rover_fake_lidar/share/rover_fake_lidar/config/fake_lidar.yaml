@@ -1,0 +1,23 @@
+/**:
+  ros__parameters:
+    publish_rate: 10.0
+    angle_min: -3.14159
+    angle_max: 3.14159
+    angle_increment: 0.0174533
+    range_min: 0.1
+    range_max: 10.0
+    scene_type: "field_rows"
+    scene_frame_id: "sim_world"
+    scene_markers_topic: "/sim/scene_markers"
+    field_length: 22.0
+    start_side_extension: 1.5
+    row_count: 5
+    row_spacing: 1.8
+    bed_width: 0.8
+    bed_height: 0.2
+    rover_length: 1.3
+    rover_width: 1.2
+    rover_height: 1.2
+    include_explicit_obstacles: false
+    rover_pose_topic: "/sim/rover_pose"
+

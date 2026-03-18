@@ -1,0 +1,28 @@
+[1.400s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data
+[1.842s] running egg_info
+[1.844s] writing ../../build/rover_perception/rover_perception.egg-info/PKG-INFO
+[1.844s] writing dependency_links to ../../build/rover_perception/rover_perception.egg-info/dependency_links.txt
+[1.848s] writing entry points to ../../build/rover_perception/rover_perception.egg-info/entry_points.txt
+[1.848s] writing requirements to ../../build/rover_perception/rover_perception.egg-info/requires.txt
+[1.849s] writing top-level names to ../../build/rover_perception/rover_perception.egg-info/top_level.txt
+[1.913s] reading manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[1.913s] writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[1.913s] running build
+[1.913s] running build_py
+[1.913s] copying rover_perception/camera_preprocess_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception
+[1.915s] running install
+[1.920s] running install_lib
+[1.922s] copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/camera_preprocess_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception
+[1.923s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/camera_preprocess_node.py to camera_preprocess_node.cpython-38.pyc
+[1.927s] running install_data
+[1.927s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception
+[1.927s] copying launch/camera_preprocess.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch
+[1.928s] copying config/camera_preprocess.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config
+[1.928s] running install_egg_info
+[1.933s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info' (and everything under it)
+[1.933s] Copying ../../build/rover_perception/rover_perception.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info
+[1.940s] running install_scripts
+[1.972s] Installing camera_preprocess_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+[1.972s] Installing rgb_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+[1.972s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log'
+[2.044s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data

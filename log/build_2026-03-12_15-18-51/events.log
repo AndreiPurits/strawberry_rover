@@ -1,0 +1,86 @@
+[0.000000] (-) TimerEvent: {}
+[0.000608] (-) JobUnselected: {'identifier': 'rover_bringup'}
+[0.001242] (-) JobUnselected: {'identifier': 'rover_description'}
+[0.001396] (-) JobUnselected: {'identifier': 'rover_fake_camera'}
+[0.001542] (-) JobUnselected: {'identifier': 'rover_fake_lidar'}
+[0.003394] (-) JobUnselected: {'identifier': 'rover_fsm'}
+[0.003565] (-) JobUnselected: {'identifier': 'rover_navigation'}
+[0.003715] (-) JobUnselected: {'identifier': 'rover_perception'}
+[0.003860] (-) JobUnselected: {'identifier': 'rover_simulation'}
+[0.004001] (-) JobUnselected: {'identifier': 'rover_state'}
+[0.004142] (-) JobUnselected: {'identifier': 'rover_utils'}
+[0.004284] (-) JobUnselected: {'identifier': 'rover_visualization'}
+[0.004444] (rover_fake_stereo) JobQueued: {'identifier': 'rover_fake_stereo', 'dependencies': OrderedDict()}
+[0.004598] (rover_fake_stereo) JobStarted: {'identifier': 'rover_fake_stereo'}
+[0.080979] (-) TimerEvent: {}
+[0.181765] (-) TimerEvent: {}
+[0.282333] (-) TimerEvent: {}
+[0.382894] (-) TimerEvent: {}
+[0.483474] (-) TimerEvent: {}
+[0.584091] (-) TimerEvent: {}
+[0.684679] (-) TimerEvent: {}
+[0.785227] (-) TimerEvent: {}
+[0.885779] (-) TimerEvent: {}
+[0.986306] (-) TimerEvent: {}
+[1.086832] (-) TimerEvent: {}
+[1.187391] (-) TimerEvent: {}
+[1.287901] (-) TimerEvent: {}
+[1.388455] (-) TimerEvent: {}
+[1.489330] (-) TimerEvent: {}
+[1.590066] (-) TimerEvent: {}
+[1.690598] (-) TimerEvent: {}
+[1.791118] (-) TimerEvent: {}
+[1.891677] (-) TimerEvent: {}
+[1.992196] (-) TimerEvent: {}
+[2.092729] (-) TimerEvent: {}
+[2.193261] (-) TimerEvent: {}
+[2.293829] (-) TimerEvent: {}
+[2.394363] (-) TimerEvent: {}
+[2.494910] (-) TimerEvent: {}
+[2.595480] (-) TimerEvent: {}
+[2.696050] (-) TimerEvent: {}
+[2.796651] (-) TimerEvent: {}
+[2.897217] (-) TimerEvent: {}
+[2.971501] (rover_fake_stereo) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/rover_fake_stereo', 'build', '--build-base', '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build', 'install', '--record', '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/andrei', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'LANGUAGE': 'en', 'USER': 'andrei', 'SSH_CLIENT': '192.168.1.19 62331 22', 'LC_TIME': 'ru_RU.UTF-8', 'VSCODE_NLS_CONFIG': '{"userLocale":"en","osLocale":"en","resolvedLanguage":"en","defaultMessagesFile":"/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/out/nls.messages.json","locale":"en","availableLanguages":{}}', 'CI': '1', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'tty', 'DEBUG': 'release', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/aarch64-linux-gnu:/opt/ros/foxy/lib', 'BROWSER': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/andrei', 'OLDPWD': '/home/andrei/project/strawberry_rover_ws', 'NVM_BIN': '/home/andrei/.nvm/versions/node/v20.20.1/bin', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-87d7b719-0f3c-4fca-94e9-9b136f0fc576.sock', 'NVM_INC': '/home/andrei/.nvm/versions/node/v20.20.1/include/node', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'ru_RU.UTF-8', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'NVM_DIR': '/home/andrei/.nvm', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install', 'ROS_DISTRO': 'foxy', 'OVSX_REGISTRY_URL': 'https://open-vsx.org', 'LOGNAME': 'andrei', 'FORCE_COLOR': '0', 'VSCODE_HANDLES_SIGPIPE': 'true', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'dumb', 'XDG_SESSION_ID': '90', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/home/andrei/.nvm/versions/node/v20.20.1/bin:/opt/ros/foxy/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'VSCODE_AGENT_FOLDER': '/home/andrei/.cursor-server', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'ru_RU.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'CURSOR_AGENT': '1', 'LANG': 'en_US.UTF-8', 'LC_TELEPHONE': 'ru_RU.UTF-8', 'LS_COLORS': '', 'AMENT_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/home/andrei/project/strawberry_rover_ws/install/rover_simulation:/home/andrei/project/strawberry_rover_ws/install/rover_perception:/home/andrei/project/strawberry_rover_ws/install/rover_navigation:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_description:/opt/ros/foxy', 'SHELL': '/bin/bash', 'LC_NAME': 'ru_RU.UTF-8', 'VSCODE_SERVER_SHUTDOWN_TIMEOUT': '300', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'ru_RU.UTF-8', 'LC_IDENTIFICATION': 'ru_RU.UTF-8', 'PWD': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo', 'SSH_CONNECTION': '192.168.1.19 62331 192.168.1.77 22', 'NVM_CD_FLAGS': '', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages', 'LC_NUMERIC': 'ru_RU.UTF-8', 'LC_PAPER': 'ru_RU.UTF-8', 'COLCON': '1', '_ZO_DOCTOR': '0'}, 'shell': False}
+[2.997489] (-) TimerEvent: {}
+[3.099471] (-) TimerEvent: {}
+[3.200017] (-) TimerEvent: {}
+[3.300667] (-) TimerEvent: {}
+[3.401235] (-) TimerEvent: {}
+[3.501804] (-) TimerEvent: {}
+[3.602356] (-) TimerEvent: {}
+[3.702877] (-) TimerEvent: {}
+[3.803401] (-) TimerEvent: {}
+[3.903918] (-) TimerEvent: {}
+[4.004446] (-) TimerEvent: {}
+[4.104989] (-) TimerEvent: {}
+[4.169769] (rover_fake_stereo) StdoutLine: {'line': b'running egg_info\n'}
+[4.174203] (rover_fake_stereo) StdoutLine: {'line': b'writing ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/PKG-INFO\n'}
+[4.176537] (rover_fake_stereo) StdoutLine: {'line': b'writing dependency_links to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/dependency_links.txt\n'}
+[4.183871] (rover_fake_stereo) StdoutLine: {'line': b'writing entry points to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/entry_points.txt\n'}
+[4.185630] (rover_fake_stereo) StdoutLine: {'line': b'writing requirements to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/requires.txt\n'}
+[4.189071] (rover_fake_stereo) StdoutLine: {'line': b'writing top-level names to ../../build/rover_fake_stereo/rover_fake_stereo.egg-info/top_level.txt\n'}
+[4.205201] (-) TimerEvent: {}
+[4.290511] (rover_fake_stereo) StdoutLine: {'line': b"reading manifest file '../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt'\n"}
+[4.294098] (rover_fake_stereo) StdoutLine: {'line': b"writing manifest file '../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt'\n"}
+[4.295905] (rover_fake_stereo) StdoutLine: {'line': b'running build\n'}
+[4.302250] (rover_fake_stereo) StdoutLine: {'line': b'running build_py\n'}
+[4.305040] (rover_fake_stereo) StdoutLine: {'line': b'copying rover_fake_stereo/fake_stereo_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib/rover_fake_stereo\n'}
+[4.305556] (-) TimerEvent: {}
+[4.309138] (rover_fake_stereo) StdoutLine: {'line': b'running install\n'}
+[4.313383] (rover_fake_stereo) StdoutLine: {'line': b'running install_lib\n'}
+[4.317506] (rover_fake_stereo) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build/lib/rover_fake_stereo/fake_stereo_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo\n'}
+[4.321588] (rover_fake_stereo) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo/fake_stereo_node.py to fake_stereo_node.cpython-38.pyc\n'}
+[4.337122] (rover_fake_stereo) StdoutLine: {'line': b'running install_data\n'}
+[4.339046] (rover_fake_stereo) StdoutLine: {'line': b'running install_egg_info\n'}
+[4.345874] (rover_fake_stereo) StdoutLine: {'line': b"removing '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo-0.0.0-py3.8.egg-info' (and everything under it)\n"}
+[4.347954] (rover_fake_stereo) StdoutLine: {'line': b'Copying ../../build/rover_fake_stereo/rover_fake_stereo.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages/rover_fake_stereo-0.0.0-py3.8.egg-info\n'}
+[4.350989] (rover_fake_stereo) StdoutLine: {'line': b'running install_scripts\n'}
+[4.400593] (rover_fake_stereo) StdoutLine: {'line': b'Installing fake_stereo_node script to /home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/rover_fake_stereo\n'}
+[4.409270] (rover_fake_stereo) StdoutLine: {'line': b"writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log'\n"}
+[4.409910] (-) TimerEvent: {}
+[4.510206] (-) TimerEvent: {}
+[4.522784] (rover_fake_stereo) CommandEnded: {'returncode': 0}
+[4.593968] (rover_fake_stereo) JobEnded: {'identifier': 'rover_fake_stereo', 'rc': 0}
+[4.627430] (-) TimerEvent: {}
+[4.632450] (-) EventReactorShutdown: {}

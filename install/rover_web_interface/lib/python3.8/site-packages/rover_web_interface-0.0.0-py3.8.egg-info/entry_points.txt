@@ -1,0 +1,3 @@
+[console_scripts]
+rover_web_server = rover_web_interface.backend.api_server:main
+

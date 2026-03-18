@@ -1,0 +1,227 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /TF1
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Goal Pose1
+  - Class: rviz_common/Views
+    Name: Views
+  - Class: rviz_common/Time
+    Name: Time
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 1
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 30
+      Reference Frame: sim_world
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Marker Scale: 0.6
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Marker Topic: /sim/scene_markers
+      Name: Scene Markers
+      Namespaces:
+        beds: true
+        posts: true
+        rover: true
+        obstacles: true
+      Queue Size: 20
+      Value: true
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: Scan
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /scan
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Debug Centerline
+      Queue Size: 10
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /debug/centerline
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Debug Heading
+      Queue Size: 10
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /debug/heading
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Debug Row Confidence
+      Queue Size: 10
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /debug/row_confidence
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Debug Nav State
+      Queue Size: 10
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /debug/nav_state
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Front Camera
+      Normalize Range: true
+      Queue Size: 2
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /sim/camera/front/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Bottom RGB
+      Normalize Range: true
+      Queue Size: 2
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /sim/camera/bottom_rgb/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Stereo Left
+      Normalize Range: true
+      Queue Size: 2
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /sim/stereo/left/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Stereo Right
+      Normalize Range: true
+      Queue Size: 2
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /sim/stereo/right/image_raw
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Stereo Combined
+      Normalize Range: true
+      Queue Size: 2
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        Value: /sim/stereo/debug/combined
+      Value: true
+  Enabled: true
+  Fixed Frame: sim_world
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: sim_world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 16
+      Focal Point:
+        X: 0
+        Y: 3.6
+        Z: 0.4
+      Name: Current View
+      Pitch: 0.62
+      Target Frame: sim_world
+      Yaw: 0.0
+Window Geometry:
+  Height: 980
+  Width: 1640
+  X: 80
+  Y: 40

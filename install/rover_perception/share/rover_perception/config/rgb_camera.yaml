@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    device_index: 0
+    frame_id: "camera_link"
+    fps: 30.0
+    width: 640
+    height: 480
+    use_v4l2_backend: true
+    image_topic: "/camera/image_raw"
+    camera_info_topic: "/camera/camera_info"
+    debug_image_topic: "/camera/debug/image_annotated"
+    publish_camera_info: true
+    publish_debug_image: true
+    camera_name: "rover_rgb_camera"
+    auto_reconnect: true
+    flip_horizontal: false

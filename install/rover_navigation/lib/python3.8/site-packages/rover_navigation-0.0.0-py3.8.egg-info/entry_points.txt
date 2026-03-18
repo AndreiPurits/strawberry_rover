@@ -1,0 +1,3 @@
+[console_scripts]
+rover_navigation_node = rover_navigation.rover_navigation_node:main
+

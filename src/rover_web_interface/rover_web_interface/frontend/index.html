@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rover Web Dashboard</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 12px; background: #111; color: #e7e7e7; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .card { background: #1b1b1b; border: 1px solid #333; padding: 10px; border-radius: 6px; }
+    #fieldCanvas, #miniMapCanvas { background: #202020; border: 1px solid #444; }
+    .grow { flex: 1; }
+    .controls label { margin-right: 10px; font-size: 13px; }
+    .cam-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 8px; }
+    canvas.cam { width: 100%; height: auto; background: #000; border: 1px solid #333; }
+    .mini-previews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .mini { border: 1px dashed #555; min-height: 60px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #aaa; }
+    #detailPanel { display: none; }
+    .kv { font-size: 13px; line-height: 1.4; }
+    .control-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    .badge { display: inline-block; padding: 3px 7px; border-radius: 12px; font-size: 12px; border: 1px solid #555; }
+    .mode-manual { background: rgba(80, 130, 255, 0.25); color: #dbe7ff; }
+    .mode-auto { background: rgba(120, 120, 120, 0.25); color: #f0f0f0; }
+    .status-running { color: #9dffb2; }
+    .status-stopped { color: #ffacac; }
+  </style>
+</head>
+<body>
+  <h2>Strawberry Rover Web Dashboard (MVP)</h2>
+
+  <div class="row">
+    <div class="card grow">
+      <div class="controls">
+        <label><input type="checkbox" id="layerSensors" checked> Sensor layer</label>
+        <label><input type="checkbox" id="layerAnalytics" checked> Analytics layer</label>
+        <label><input type="checkbox" id="layerTrail" checked> Rover trail</label>
+      </div>
+      <canvas id="fieldCanvas" width="1000" height="420"></canvas>
+      <div class="kv" id="fieldStats"></div>
+    </div>
+    <div class="card" style="width: 330px;">
+      <h3>Control</h3>
+      <div class="control-row">
+        <button id="btnStart">Start</button>
+        <button id="btnStop">Stop</button>
+        <button id="btnModeToggle">Switch to Manual</button>
+      </div>
+      <div class="kv" id="controlStatus">Mode: auto | Status: stopped</div>
+      <div class="kv">Keyboard: W/S/A/D + Space</div>
+      <h3>Telemetry</h3>
+      <div class="kv" id="telemetryPanel">Waiting for data...</div>
+      <button id="openDetail">Open Rover Detail</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Main Cameras</h3>
+    <div class="cam-grid">
+      <div><div>Front</div><canvas id="camFront" class="cam" width="640" height="480"></canvas></div>
+      <div><div>Bottom</div><canvas id="camBottom" class="cam" width="640" height="480"></canvas></div>
+      <div><div>Stereo (combined)</div><canvas id="camStereo" class="cam" width="640" height="480"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" id="detailPanel">
+    <h3>Rover Detail</h3>
+    <div class="row">
+      <div class="grow">
+        <canvas id="miniMapCanvas" width="700" height="240"></canvas>
+        <div class="kv" id="scanPanel">LiDAR: waiting...</div>
+      </div>
+      <div style="width: 320px;">
+        <h4>Arm Cameras (mock)</h4>
+        <div class="mini-previews" id="armCams"></div>
+        <h4>Rear LiDAR (mock)</h4>
+        <div class="kv">status: mock stream</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

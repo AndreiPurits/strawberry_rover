@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    publish_rate: 10.0
+    image_width: 640
+    image_height: 480
+    left_topic: "/sim/stereo/left/image_raw"
+    right_topic: "/sim/stereo/right/image_raw"
+    debug_combined_topic: "/sim/stereo/debug/combined"
+    rover_pose_topic: "/sim/rover_pose"
+    frame_id: "stereo_link"
+    baseline_px: 10
+    baseline_m: 0.10
+    row_count: 5
+    row_spacing: 1.8
+    bed_width: 0.8
+    field_length: 22.0
+    post_x_step: 4.0
+    image_qos_reliability: "reliable"

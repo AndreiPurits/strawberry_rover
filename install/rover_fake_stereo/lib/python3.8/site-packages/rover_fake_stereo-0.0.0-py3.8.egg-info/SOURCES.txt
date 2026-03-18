@@ -1,0 +1,16 @@
+README.md
+package.xml
+setup.cfg
+setup.py
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/PKG-INFO
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/SOURCES.txt
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/dependency_links.txt
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/entry_points.txt
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/requires.txt
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/top_level.txt
+../../build/rover_fake_stereo/rover_fake_stereo.egg-info/zip-safe
+config/fake_stereo.yaml
+launch/fake_stereo.launch.py
+resource/rover_fake_stereo
+rover_fake_stereo/__init__.py
+rover_fake_stereo/fake_stereo_node.py

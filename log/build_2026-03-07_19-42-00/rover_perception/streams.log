@@ -1,0 +1,41 @@
+[1.380s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data
+[1.824s] running egg_info
+[1.828s] creating ../../build/rover_perception/rover_perception.egg-info
+[1.829s] writing ../../build/rover_perception/rover_perception.egg-info/PKG-INFO
+[1.829s] writing dependency_links to ../../build/rover_perception/rover_perception.egg-info/dependency_links.txt
+[1.832s] writing entry points to ../../build/rover_perception/rover_perception.egg-info/entry_points.txt
+[1.833s] writing requirements to ../../build/rover_perception/rover_perception.egg-info/requires.txt
+[1.833s] writing top-level names to ../../build/rover_perception/rover_perception.egg-info/top_level.txt
+[1.834s] writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[1.907s] reading manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[1.908s] writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+[1.908s] running build
+[1.908s] running build_py
+[1.909s] creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build
+[1.909s] creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib
+[1.911s] creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception
+[1.912s] copying rover_perception/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception
+[1.913s] copying rover_perception/rgb_camera_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception
+[1.914s] running install
+[1.917s] running install_lib
+[1.920s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception
+[1.920s] copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception
+[1.922s] copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/rgb_camera_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception
+[1.922s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/__init__.py to __init__.cpython-38.pyc
+[1.926s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/rgb_camera_node.py to rgb_camera_node.cpython-38.pyc
+[1.929s] running install_data
+[1.929s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index
+[1.929s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index
+[1.929s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index/packages
+[1.930s] copying resource/rover_perception -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index/packages
+[1.930s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception
+[1.930s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch
+[1.930s] copying launch/rgb_camera.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch
+[1.931s] creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config
+[1.931s] copying config/rgb_camera.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config
+[1.931s] running install_egg_info
+[1.941s] Copying ../../build/rover_perception/rover_perception.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info
+[1.942s] running install_scripts
+[1.980s] Installing rgb_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+[1.981s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log'
+[2.065s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data

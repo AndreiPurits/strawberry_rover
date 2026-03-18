@@ -1,0 +1,5 @@
+[console_scripts]
+camera_preprocess_node = rover_perception.camera_preprocess_node:main
+rgb_camera_node = rover_perception.rgb_camera_node:main
+sensor_fusion_node = rover_perception.sensor_fusion_node:main
+

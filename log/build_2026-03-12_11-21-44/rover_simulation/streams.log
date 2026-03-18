@@ -1,0 +1,25 @@
+[1.531s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_simulation': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_simulation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log --single-version-externally-managed install_data
+[2.004s] running egg_info
+[2.005s] writing ../../build/rover_simulation/rover_simulation.egg-info/PKG-INFO
+[2.005s] writing dependency_links to ../../build/rover_simulation/rover_simulation.egg-info/dependency_links.txt
+[2.006s] writing entry points to ../../build/rover_simulation/rover_simulation.egg-info/entry_points.txt
+[2.006s] writing requirements to ../../build/rover_simulation/rover_simulation.egg-info/requires.txt
+[2.009s] writing top-level names to ../../build/rover_simulation/rover_simulation.egg-info/top_level.txt
+[2.078s] reading manifest file '../../build/rover_simulation/rover_simulation.egg-info/SOURCES.txt'
+[2.079s] writing manifest file '../../build/rover_simulation/rover_simulation.egg-info/SOURCES.txt'
+[2.079s] running build
+[2.080s] running build_py
+[2.080s] copying rover_simulation/rover_pose_simulator.py -> /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation
+[2.083s] running install
+[2.087s] running install_lib
+[2.091s] copying /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build/lib/rover_simulation/rover_pose_simulator.py -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation
+[2.093s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation/rover_pose_simulator.py to rover_pose_simulator.cpython-38.pyc
+[2.104s] running install_data
+[2.105s] copying config/rover_pose_simulator.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_simulation/share/rover_simulation/config
+[2.106s] running install_egg_info
+[2.109s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation-0.0.0-py3.8.egg-info' (and everything under it)
+[2.109s] Copying ../../build/rover_simulation/rover_simulation.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages/rover_simulation-0.0.0-py3.8.egg-info
+[2.111s] running install_scripts
+[2.156s] Installing rover_pose_simulator script to /home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/rover_simulation
+[2.156s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log'
+[2.257s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_simulation' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_simulation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_simulation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_simulation/install.log --single-version-externally-managed install_data

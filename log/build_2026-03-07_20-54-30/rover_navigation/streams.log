@@ -1,0 +1,21 @@
+[5.646s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_navigation': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_navigation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_navigation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_navigation/install.log --single-version-externally-managed install_data
+[6.715s] running egg_info
+[6.718s] writing ../../build/rover_navigation/rover_navigation.egg-info/PKG-INFO
+[6.719s] writing dependency_links to ../../build/rover_navigation/rover_navigation.egg-info/dependency_links.txt
+[6.727s] writing entry points to ../../build/rover_navigation/rover_navigation.egg-info/entry_points.txt
+[6.729s] writing requirements to ../../build/rover_navigation/rover_navigation.egg-info/requires.txt
+[6.730s] writing top-level names to ../../build/rover_navigation/rover_navigation.egg-info/top_level.txt
+[6.803s] reading manifest file '../../build/rover_navigation/rover_navigation.egg-info/SOURCES.txt'
+[6.805s] writing manifest file '../../build/rover_navigation/rover_navigation.egg-info/SOURCES.txt'
+[6.806s] running build
+[6.807s] running build_py
+[6.812s] running install
+[6.815s] running install_lib
+[6.821s] running install_data
+[6.824s] running install_egg_info
+[6.830s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation-0.0.0-py3.8.egg-info' (and everything under it)
+[6.831s] Copying ../../build/rover_navigation/rover_navigation.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation-0.0.0-py3.8.egg-info
+[6.837s] running install_scripts
+[6.897s] Installing rover_navigation_node script to /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/rover_navigation
+[6.901s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_navigation/install.log'
+[7.177s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_navigation' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_navigation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_navigation build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_navigation/install.log --single-version-externally-managed install_data

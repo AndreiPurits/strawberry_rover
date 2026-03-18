@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    input_topic: "/camera/image_raw"
+    gray_topic: "/camera/preprocessed/gray"
+    edges_topic: "/camera/preprocessed/edges"
+    blur_kernel_size: 5
+    canny_threshold_low: 60
+    canny_threshold_high: 140

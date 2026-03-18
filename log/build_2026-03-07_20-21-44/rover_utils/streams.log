@@ -1,0 +1,20 @@
+[1.925s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_utils': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_utils/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_utils build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_utils/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_utils/install.log --single-version-externally-managed install_data
+[2.364s] running egg_info
+[2.365s] writing ../../build/rover_utils/rover_utils.egg-info/PKG-INFO
+[2.365s] writing dependency_links to ../../build/rover_utils/rover_utils.egg-info/dependency_links.txt
+[2.365s] writing entry points to ../../build/rover_utils/rover_utils.egg-info/entry_points.txt
+[2.365s] writing requirements to ../../build/rover_utils/rover_utils.egg-info/requires.txt
+[2.365s] writing top-level names to ../../build/rover_utils/rover_utils.egg-info/top_level.txt
+[2.430s] reading manifest file '../../build/rover_utils/rover_utils.egg-info/SOURCES.txt'
+[2.431s] writing manifest file '../../build/rover_utils/rover_utils.egg-info/SOURCES.txt'
+[2.431s] running build
+[2.432s] running build_py
+[2.434s] running install
+[2.438s] running install_lib
+[2.442s] running install_data
+[2.442s] running install_egg_info
+[2.451s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages/rover_utils-0.0.0-py3.8.egg-info' (and everything under it)
+[2.453s] Copying ../../build/rover_utils/rover_utils.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages/rover_utils-0.0.0-py3.8.egg-info
+[2.455s] running install_scripts
+[2.498s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_utils/install.log'
+[2.572s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_utils' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_utils/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_utils build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_utils/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_utils/install.log --single-version-externally-managed install_data

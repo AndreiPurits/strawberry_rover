@@ -1,0 +1,118 @@
+[0.000000] (-) TimerEvent: {}
+[0.000461] (-) JobUnselected: {'identifier': 'rover_description'}
+[0.001128] (-) JobUnselected: {'identifier': 'rover_fake_camera'}
+[0.001481] (-) JobUnselected: {'identifier': 'rover_fake_lidar'}
+[0.001751] (-) JobUnselected: {'identifier': 'rover_fake_stereo'}
+[0.001855] (-) JobUnselected: {'identifier': 'rover_fsm'}
+[0.002077] (-) JobUnselected: {'identifier': 'rover_perception'}
+[0.002150] (-) JobUnselected: {'identifier': 'rover_simulation'}
+[0.002200] (-) JobUnselected: {'identifier': 'rover_state'}
+[0.002244] (-) JobUnselected: {'identifier': 'rover_utils'}
+[0.002299] (-) JobUnselected: {'identifier': 'rover_visualization'}
+[0.002684] (rover_navigation) JobQueued: {'identifier': 'rover_navigation', 'dependencies': OrderedDict()}
+[0.002759] (rover_bringup) JobQueued: {'identifier': 'rover_bringup', 'dependencies': OrderedDict([('rover_description', '/home/andrei/project/strawberry_rover_ws/install/rover_description'), ('rover_fake_lidar', '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar'), ('rover_navigation', '/home/andrei/project/strawberry_rover_ws/install/rover_navigation'), ('rover_perception', '/home/andrei/project/strawberry_rover_ws/install/rover_perception'), ('rover_simulation', '/home/andrei/project/strawberry_rover_ws/install/rover_simulation')])}
+[0.003171] (rover_navigation) JobStarted: {'identifier': 'rover_navigation'}
+[0.099376] (-) TimerEvent: {}
+[0.200240] (-) TimerEvent: {}
+[0.300645] (-) TimerEvent: {}
+[0.400997] (-) TimerEvent: {}
+[0.501433] (-) TimerEvent: {}
+[0.601847] (-) TimerEvent: {}
+[0.702217] (-) TimerEvent: {}
+[0.802576] (-) TimerEvent: {}
+[0.902925] (-) TimerEvent: {}
+[1.003276] (-) TimerEvent: {}
+[1.103626] (-) TimerEvent: {}
+[1.204014] (-) TimerEvent: {}
+[1.260744] (rover_navigation) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/rover_navigation', 'build', '--build-base', '/home/andrei/project/strawberry_rover_ws/build/rover_navigation/build', 'install', '--record', '/home/andrei/project/strawberry_rover_ws/build/rover_navigation/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/andrei/project/strawberry_rover_ws/src/rover_navigation', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/andrei', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'LANGUAGE': 'en', 'USER': 'andrei', 'SSH_CLIENT': '192.168.1.19 57591 22', 'LC_TIME': 'ru_RU.UTF-8', 'VSCODE_NLS_CONFIG': '{"userLocale":"en","osLocale":"en","resolvedLanguage":"en","defaultMessagesFile":"/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/out/nls.messages.json","locale":"en","availableLanguages":{}}', 'CI': '1', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'tty', 'DEBUG': 'release', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/aarch64-linux-gnu:/opt/ros/foxy/lib', 'BROWSER': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/andrei', 'NVM_BIN': '/home/andrei/.nvm/versions/node/v20.20.1/bin', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-46576b63-4b9c-4700-9384-1a0730395192.sock', 'NVM_INC': '/home/andrei/.nvm/versions/node/v20.20.1/include/node', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'ru_RU.UTF-8', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'NVM_DIR': '/home/andrei/.nvm', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install', 'ROS_DISTRO': 'foxy', 'OVSX_REGISTRY_URL': 'https://open-vsx.org', 'LOGNAME': 'andrei', 'FORCE_COLOR': '0', 'VSCODE_HANDLES_SIGPIPE': 'true', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'dumb', 'XDG_SESSION_ID': '43', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/andrei/.nvm/versions/node/v20.20.1/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/opt/ros/foxy/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'VSCODE_AGENT_FOLDER': '/home/andrei/.cursor-server', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'ru_RU.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'CURSOR_AGENT': '1', 'LANG': 'en_US.UTF-8', 'LC_TELEPHONE': 'ru_RU.UTF-8', 'LS_COLORS': '', 'ROS_DOMAIN_ID': '46', 'AMENT_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install/rover_simulation:/home/andrei/project/strawberry_rover_ws/install/rover_perception:/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_description:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/opt/ros/foxy', 'SHELL': '/bin/bash', 'LC_NAME': 'ru_RU.UTF-8', 'VSCODE_SERVER_SHUTDOWN_TIMEOUT': '300', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'ru_RU.UTF-8', 'LC_IDENTIFICATION': 'ru_RU.UTF-8', 'PWD': '/home/andrei/project/strawberry_rover_ws/build/rover_navigation', 'SSH_CONNECTION': '192.168.1.19 57591 192.168.1.77 22', 'NVM_CD_FLAGS': '', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/andrei/project/strawberry_rover_ws/build/rover_navigation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages', 'LC_NUMERIC': 'ru_RU.UTF-8', 'LC_PAPER': 'ru_RU.UTF-8', 'COLCON': '1', '_ZO_DOCTOR': '0'}, 'shell': False}
+[1.304197] (-) TimerEvent: {}
+[1.404673] (-) TimerEvent: {}
+[1.505055] (-) TimerEvent: {}
+[1.605508] (-) TimerEvent: {}
+[1.702520] (rover_navigation) StdoutLine: {'line': b'running egg_info\n'}
+[1.704224] (rover_navigation) StdoutLine: {'line': b'creating ../../build/rover_navigation/rover_navigation.egg-info\n'}
+[1.705397] (rover_navigation) StdoutLine: {'line': b'writing ../../build/rover_navigation/rover_navigation.egg-info/PKG-INFO\n'}
+[1.705634] (-) TimerEvent: {}
+[1.705687] (rover_navigation) StdoutLine: {'line': b'writing dependency_links to ../../build/rover_navigation/rover_navigation.egg-info/dependency_links.txt\n'}
+[1.705850] (rover_navigation) StdoutLine: {'line': b'writing entry points to ../../build/rover_navigation/rover_navigation.egg-info/entry_points.txt\n'}
+[1.706004] (rover_navigation) StdoutLine: {'line': b'writing requirements to ../../build/rover_navigation/rover_navigation.egg-info/requires.txt\n'}
+[1.706209] (rover_navigation) StdoutLine: {'line': b'writing top-level names to ../../build/rover_navigation/rover_navigation.egg-info/top_level.txt\n'}
+[1.709568] (rover_navigation) StdoutLine: {'line': b"writing manifest file '../../build/rover_navigation/rover_navigation.egg-info/SOURCES.txt'\n"}
+[1.772460] (rover_navigation) StdoutLine: {'line': b"reading manifest file '../../build/rover_navigation/rover_navigation.egg-info/SOURCES.txt'\n"}
+[1.774158] (rover_navigation) StdoutLine: {'line': b"writing manifest file '../../build/rover_navigation/rover_navigation.egg-info/SOURCES.txt'\n"}
+[1.774550] (rover_navigation) StdoutLine: {'line': b'running build\n'}
+[1.774742] (rover_navigation) StdoutLine: {'line': b'running build_py\n'}
+[1.775127] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build\n'}
+[1.775310] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib\n'}
+[1.775458] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib/rover_navigation\n'}
+[1.775734] (rover_navigation) StdoutLine: {'line': b'copying rover_navigation/rover_navigation_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib/rover_navigation\n'}
+[1.776673] (rover_navigation) StdoutLine: {'line': b'copying rover_navigation/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib/rover_navigation\n'}
+[1.777422] (rover_navigation) StdoutLine: {'line': b'running install\n'}
+[1.778631] (rover_navigation) StdoutLine: {'line': b'running install_lib\n'}
+[1.780544] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation\n'}
+[1.780894] (rover_navigation) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib/rover_navigation/rover_navigation_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation\n'}
+[1.781187] (rover_navigation) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_navigation/build/lib/rover_navigation/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation\n'}
+[1.782427] (rover_navigation) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation/rover_navigation_node.py to rover_navigation_node.cpython-38.pyc\n'}
+[1.786012] (rover_navigation) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation/__init__.py to __init__.cpython-38.pyc\n'}
+[1.786475] (rover_navigation) StdoutLine: {'line': b'running install_data\n'}
+[1.786802] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/ament_index\n'}
+[1.787043] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/ament_index/resource_index\n'}
+[1.787337] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/ament_index/resource_index/packages\n'}
+[1.787628] (rover_navigation) StdoutLine: {'line': b'copying resource/rover_navigation -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/ament_index/resource_index/packages\n'}
+[1.787848] (rover_navigation) StdoutLine: {'line': b'copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/rover_navigation\n'}
+[1.787993] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/rover_navigation/launch\n'}
+[1.788149] (rover_navigation) StdoutLine: {'line': b'copying launch/rover_navigation.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/rover_navigation/launch\n'}
+[1.788329] (rover_navigation) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/rover_navigation/config\n'}
+[1.788466] (rover_navigation) StdoutLine: {'line': b'copying config/rover_navigation.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_navigation/share/rover_navigation/config\n'}
+[1.788595] (rover_navigation) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.791457] (rover_navigation) StdoutLine: {'line': b'Copying ../../build/rover_navigation/rover_navigation.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages/rover_navigation-0.0.0-py3.8.egg-info\n'}
+[1.793232] (rover_navigation) StdoutLine: {'line': b'running install_scripts\n'}
+[1.805768] (-) TimerEvent: {}
+[1.826631] (rover_navigation) StdoutLine: {'line': b'Installing rover_navigation_node script to /home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/rover_navigation\n'}
+[1.827276] (rover_navigation) StdoutLine: {'line': b"writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_navigation/install.log'\n"}
+[1.886954] (rover_navigation) CommandEnded: {'returncode': 0}
+[1.905948] (-) TimerEvent: {}
+[1.908457] (rover_navigation) JobEnded: {'identifier': 'rover_navigation', 'rc': 0}
+[1.910716] (rover_bringup) JobStarted: {'identifier': 'rover_bringup'}
+[2.006231] (-) TimerEvent: {}
+[2.106693] (-) TimerEvent: {}
+[2.207059] (-) TimerEvent: {}
+[2.307439] (-) TimerEvent: {}
+[2.414791] (-) TimerEvent: {}
+[2.515677] (-) TimerEvent: {}
+[2.616113] (-) TimerEvent: {}
+[2.716479] (-) TimerEvent: {}
+[2.816826] (-) TimerEvent: {}
+[2.917168] (-) TimerEvent: {}
+[3.017516] (-) TimerEvent: {}
+[3.117901] (-) TimerEvent: {}
+[3.198449] (rover_bringup) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/rover_bringup', 'build', '--build-base', '/home/andrei/project/strawberry_rover_ws/build/rover_bringup/build', 'install', '--record', '/home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/andrei/project/strawberry_rover_ws/src/rover_bringup', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/andrei', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'LANGUAGE': 'en', 'USER': 'andrei', 'SSH_CLIENT': '192.168.1.19 57591 22', 'LC_TIME': 'ru_RU.UTF-8', 'VSCODE_NLS_CONFIG': '{"userLocale":"en","osLocale":"en","resolvedLanguage":"en","defaultMessagesFile":"/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/out/nls.messages.json","locale":"en","availableLanguages":{}}', 'CI': '1', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'tty', 'DEBUG': 'release', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/aarch64-linux-gnu:/opt/ros/foxy/lib', 'BROWSER': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/andrei', 'NVM_BIN': '/home/andrei/.nvm/versions/node/v20.20.1/bin', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-46576b63-4b9c-4700-9384-1a0730395192.sock', 'NVM_INC': '/home/andrei/.nvm/versions/node/v20.20.1/include/node', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'ru_RU.UTF-8', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'NVM_DIR': '/home/andrei/.nvm', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install', 'ROS_DISTRO': 'foxy', 'OVSX_REGISTRY_URL': 'https://open-vsx.org', 'LOGNAME': 'andrei', 'FORCE_COLOR': '0', 'VSCODE_HANDLES_SIGPIPE': 'true', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'dumb', 'XDG_SESSION_ID': '43', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/andrei/.nvm/versions/node/v20.20.1/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/opt/ros/foxy/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'VSCODE_AGENT_FOLDER': '/home/andrei/.cursor-server', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'ru_RU.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'CURSOR_AGENT': '1', 'LANG': 'en_US.UTF-8', 'LC_TELEPHONE': 'ru_RU.UTF-8', 'LS_COLORS': '', 'ROS_DOMAIN_ID': '46', 'AMENT_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install/rover_simulation:/home/andrei/project/strawberry_rover_ws/install/rover_perception:/home/andrei/project/strawberry_rover_ws/install/rover_navigation:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_description:/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/opt/ros/foxy', 'SHELL': '/bin/bash', 'LC_NAME': 'ru_RU.UTF-8', 'VSCODE_SERVER_SHUTDOWN_TIMEOUT': '300', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'ru_RU.UTF-8', 'LC_IDENTIFICATION': 'ru_RU.UTF-8', 'PWD': '/home/andrei/project/strawberry_rover_ws/build/rover_bringup', 'SSH_CONNECTION': '192.168.1.19 57591 192.168.1.77 22', 'NVM_CD_FLAGS': '', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/andrei/project/strawberry_rover_ws/build/rover_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages', 'LC_NUMERIC': 'ru_RU.UTF-8', 'LC_PAPER': 'ru_RU.UTF-8', 'COLCON': '1', '_ZO_DOCTOR': '0'}, 'shell': False}
+[3.218044] (-) TimerEvent: {}
+[3.318395] (-) TimerEvent: {}
+[3.418757] (-) TimerEvent: {}
+[3.519129] (-) TimerEvent: {}
+[3.609925] (rover_bringup) StdoutLine: {'line': b'running egg_info\n'}
+[3.611355] (rover_bringup) StdoutLine: {'line': b'writing ../../build/rover_bringup/rover_bringup.egg-info/PKG-INFO\n'}
+[3.612101] (rover_bringup) StdoutLine: {'line': b'writing dependency_links to ../../build/rover_bringup/rover_bringup.egg-info/dependency_links.txt\n'}
+[3.614818] (rover_bringup) StdoutLine: {'line': b'writing entry points to ../../build/rover_bringup/rover_bringup.egg-info/entry_points.txt\n'}
+[3.615177] (rover_bringup) StdoutLine: {'line': b'writing requirements to ../../build/rover_bringup/rover_bringup.egg-info/requires.txt\n'}
+[3.615347] (rover_bringup) StdoutLine: {'line': b'writing top-level names to ../../build/rover_bringup/rover_bringup.egg-info/top_level.txt\n'}
+[3.619205] (-) TimerEvent: {}
+[3.674911] (rover_bringup) StdoutLine: {'line': b"reading manifest file '../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt'\n"}
+[3.676668] (rover_bringup) StdoutLine: {'line': b"writing manifest file '../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt'\n"}
+[3.677502] (rover_bringup) StdoutLine: {'line': b'running build\n'}
+[3.678244] (rover_bringup) StdoutLine: {'line': b'running build_py\n'}
+[3.678573] (rover_bringup) StdoutLine: {'line': b'running install\n'}
+[3.680812] (rover_bringup) StdoutLine: {'line': b'running install_lib\n'}
+[3.683669] (rover_bringup) StdoutLine: {'line': b'running install_data\n'}
+[3.684431] (rover_bringup) StdoutLine: {'line': b'copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup\n'}
+[3.684736] (rover_bringup) StdoutLine: {'line': b'copying launch/bringup.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/launch\n'}
+[3.685265] (rover_bringup) StdoutLine: {'line': b'running install_egg_info\n'}
+[3.687696] (rover_bringup) StdoutLine: {'line': b"removing '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup-0.0.0-py3.8.egg-info' (and everything under it)\n"}
+[3.688389] (rover_bringup) StdoutLine: {'line': b'Copying ../../build/rover_bringup/rover_bringup.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup-0.0.0-py3.8.egg-info\n'}
+[3.690060] (rover_bringup) StdoutLine: {'line': b'running install_scripts\n'}
+[3.719413] (-) TimerEvent: {}
+[3.724366] (rover_bringup) StdoutLine: {'line': b"writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log'\n"}
+[3.782525] (rover_bringup) CommandEnded: {'returncode': 0}
+[3.809271] (rover_bringup) JobEnded: {'identifier': 'rover_bringup', 'rc': 0}
+[3.811298] (-) EventReactorShutdown: {}

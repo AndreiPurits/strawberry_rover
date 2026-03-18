@@ -1,0 +1,17 @@
+README.md
+package.xml
+setup.cfg
+setup.py
+../../build/rover_bringup/rover_bringup.egg-info/PKG-INFO
+../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt
+../../build/rover_bringup/rover_bringup.egg-info/dependency_links.txt
+../../build/rover_bringup/rover_bringup.egg-info/entry_points.txt
+../../build/rover_bringup/rover_bringup.egg-info/requires.txt
+../../build/rover_bringup/rover_bringup.egg-info/top_level.txt
+../../build/rover_bringup/rover_bringup.egg-info/zip-safe
+config/field_sim_debug.rviz
+config/rover_navigation_fast_test.yaml
+config/rover_pose_simulator_fast_test.yaml
+launch/bringup.launch.py
+resource/rover_bringup
+rover_bringup/__init__.py

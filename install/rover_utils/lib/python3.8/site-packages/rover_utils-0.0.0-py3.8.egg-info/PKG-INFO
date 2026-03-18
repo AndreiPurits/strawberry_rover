@@ -1,0 +1,10 @@
+Metadata-Version: 1.2
+Name: rover-utils
+Version: 0.0.0
+Summary: Shared Python utilities for the strawberry rover packages.
+Home-page: UNKNOWN
+Maintainer: TODO
+Maintainer-email: todo@example.com
+License: Apache-2.0
+Description: UNKNOWN
+Platform: UNKNOWN

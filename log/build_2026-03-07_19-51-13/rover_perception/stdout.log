@@ -1,0 +1,27 @@
+running egg_info
+writing ../../build/rover_perception/rover_perception.egg-info/PKG-INFO
+writing dependency_links to ../../build/rover_perception/rover_perception.egg-info/dependency_links.txt
+writing entry points to ../../build/rover_perception/rover_perception.egg-info/entry_points.txt
+writing requirements to ../../build/rover_perception/rover_perception.egg-info/requires.txt
+writing top-level names to ../../build/rover_perception/rover_perception.egg-info/top_level.txt
+reading manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'
+running build
+running build_py
+copying rover_perception/sensor_fusion_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception
+running install
+running install_lib
+copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/sensor_fusion_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception
+byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/sensor_fusion_node.py to sensor_fusion_node.cpython-38.pyc
+running install_data
+copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception
+copying launch/sensor_fusion.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch
+copying config/sensor_fusion.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config
+running install_egg_info
+removing '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info' (and everything under it)
+Copying ../../build/rover_perception/rover_perception.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info
+running install_scripts
+Installing camera_preprocess_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+Installing rgb_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+Installing sensor_fusion_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception
+writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log'

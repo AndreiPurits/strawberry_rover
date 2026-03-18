@@ -1,0 +1,3 @@
+[console_scripts]
+rover_pose_simulator = rover_simulation.rover_pose_simulator:main
+

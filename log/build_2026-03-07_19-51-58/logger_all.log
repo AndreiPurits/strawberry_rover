@@ -1,0 +1,591 @@
+[0.394s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build']
+[0.395s] DEBUG:colcon:Parsed command line arguments: Namespace(allow_overriding=[], ament_cmake_args=None, base_paths=['.'], build_base='build', catkin_cmake_args=None, catkin_skip_building_tests=False, cmake_args=None, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, cmake_target=None, cmake_target_skip_unavailable=False, continue_on_error=False, event_handlers=None, executor='parallel', ignore_user_meta=False, install_base='install', log_base=None, log_level=None, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0xffff98bce580>>, merge_install=False, metas=['./colcon.meta'], packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_end=None, packages_ignore=None, packages_ignore_regex=None, packages_select=None, packages_select_build_failed=False, packages_select_by_dep=None, packages_select_regex=None, packages_select_test_failures=False, packages_skip=None, packages_skip_build_finished=False, packages_skip_by_dep=None, packages_skip_regex=None, packages_skip_test_passed=False, packages_skip_up_to=None, packages_start=None, packages_up_to=None, packages_up_to_regex=None, parallel_workers=8, paths=None, symlink_install=False, test_result_base=None, verb_extension=<colcon_core.verb.build.BuildVerb object at 0xffff98bce580>, verb_name='build', verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0xffff98add850>)
+[0.696s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.696s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.696s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.696s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.696s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.697s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.697s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/andrei/project/strawberry_rover_ws'
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.723s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.723s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.723s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.724s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.724s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.724s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['ignore', 'ignore_ament_install']
+[0.724s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'ignore'
+[0.724s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'ignore_ament_install'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['colcon_pkg']
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'colcon_pkg'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['colcon_meta']
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'colcon_meta'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['ros']
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'ros'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['cmake', 'python']
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'cmake'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'python'
+[0.725s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extensions ['python_setup_py']
+[0.726s] Level 1:colcon.colcon_core.package_identification:_identify(PROMPTS) by extension 'python_setup_py'
+[0.726s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.726s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.726s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.726s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.727s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.728s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extension 'ignore'
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extension 'ignore_ament_install'
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extensions ['colcon_pkg']
+[0.729s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extension 'colcon_pkg'
+[0.730s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extensions ['colcon_meta']
+[0.730s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extension 'colcon_meta'
+[0.730s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extensions ['ros']
+[0.730s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_bringup) by extension 'ros'
+[0.736s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_bringup' with type 'ros.ament_python' and name 'rover_bringup'
+[0.736s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extensions ['ignore', 'ignore_ament_install']
+[0.736s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extension 'ignore'
+[0.736s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extension 'ignore_ament_install'
+[0.736s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extensions ['colcon_pkg']
+[0.737s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extension 'colcon_pkg'
+[0.737s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extensions ['colcon_meta']
+[0.737s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extension 'colcon_meta'
+[0.737s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extensions ['ros']
+[0.737s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_description) by extension 'ros'
+[0.738s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_description' with type 'ros.ament_python' and name 'rover_description'
+[0.738s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extensions ['ignore', 'ignore_ament_install']
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extension 'ignore'
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extension 'ignore_ament_install'
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extensions ['colcon_pkg']
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extension 'colcon_pkg'
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extensions ['colcon_meta']
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extension 'colcon_meta'
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extensions ['ros']
+[0.739s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_camera) by extension 'ros'
+[0.740s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_fake_camera' with type 'ros.ament_python' and name 'rover_fake_camera'
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extensions ['ignore', 'ignore_ament_install']
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extension 'ignore'
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extension 'ignore_ament_install'
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extensions ['colcon_pkg']
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extension 'colcon_pkg'
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extensions ['colcon_meta']
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extension 'colcon_meta'
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extensions ['ros']
+[0.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_lidar) by extension 'ros'
+[0.742s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_fake_lidar' with type 'ros.ament_python' and name 'rover_fake_lidar'
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extensions ['ignore', 'ignore_ament_install']
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extension 'ignore'
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extension 'ignore_ament_install'
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extensions ['colcon_pkg']
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extension 'colcon_pkg'
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extensions ['colcon_meta']
+[0.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extension 'colcon_meta'
+[0.744s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extensions ['ros']
+[0.744s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fake_stereo) by extension 'ros'
+[0.745s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_fake_stereo' with type 'ros.ament_python' and name 'rover_fake_stereo'
+[0.745s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extensions ['ignore', 'ignore_ament_install']
+[0.745s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extension 'ignore'
+[0.745s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extension 'ignore_ament_install'
+[0.745s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extensions ['colcon_pkg']
+[0.745s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extension 'colcon_pkg'
+[0.746s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extensions ['colcon_meta']
+[0.746s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extension 'colcon_meta'
+[0.746s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extensions ['ros']
+[0.746s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_fsm) by extension 'ros'
+[0.747s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_fsm' with type 'ros.ament_python' and name 'rover_fsm'
+[0.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extensions ['ignore', 'ignore_ament_install']
+[0.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extension 'ignore'
+[0.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extension 'ignore_ament_install'
+[0.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extensions ['colcon_pkg']
+[0.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extension 'colcon_pkg'
+[0.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extensions ['colcon_meta']
+[0.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extension 'colcon_meta'
+[0.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extensions ['ros']
+[0.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_perception) by extension 'ros'
+[0.749s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_perception' with type 'ros.ament_python' and name 'rover_perception'
+[0.749s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extensions ['ignore', 'ignore_ament_install']
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extension 'ignore'
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extension 'ignore_ament_install'
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extensions ['colcon_pkg']
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extension 'colcon_pkg'
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extensions ['colcon_meta']
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extension 'colcon_meta'
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extensions ['ros']
+[0.750s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_state) by extension 'ros'
+[0.752s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_state' with type 'ros.ament_python' and name 'rover_state'
+[0.752s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extensions ['ignore', 'ignore_ament_install']
+[0.752s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extension 'ignore'
+[0.752s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extension 'ignore_ament_install'
+[0.752s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extensions ['colcon_pkg']
+[0.752s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extension 'colcon_pkg'
+[0.753s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extensions ['colcon_meta']
+[0.753s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extension 'colcon_meta'
+[0.753s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extensions ['ros']
+[0.753s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_utils) by extension 'ros'
+[0.754s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_utils' with type 'ros.ament_python' and name 'rover_utils'
+[0.754s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extensions ['ignore', 'ignore_ament_install']
+[0.754s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extension 'ignore'
+[0.754s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extension 'ignore_ament_install'
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extensions ['colcon_pkg']
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extension 'colcon_pkg'
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extensions ['colcon_meta']
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extension 'colcon_meta'
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extensions ['ros']
+[0.755s] Level 1:colcon.colcon_core.package_identification:_identify(src/rover_visualization) by extension 'ros'
+[0.756s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rover_visualization' with type 'ros.ament_python' and name 'rover_visualization'
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.756s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.793s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.793s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.798s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 10 installed packages in /home/andrei/project/strawberry_rover_ws/install
+[0.801s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 256 installed packages in /opt/ros/foxy
+[0.839s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.952s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_args' from command line to 'None'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_target' from command line to 'None'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_clean_cache' from command line to 'False'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_clean_first' from command line to 'False'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'cmake_force_configure' from command line to 'False'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'ament_cmake_args' from command line to 'None'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'catkin_cmake_args' from command line to 'None'
+[0.953s] Level 5:colcon.colcon_core.verb:set package 'rover_description' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.953s] DEBUG:colcon.colcon_core.verb:Building package 'rover_description' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_description', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_description', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_description', 'symlink_install': False, 'test_result_base': None}
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_args' from command line to 'None'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_target' from command line to 'None'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_clean_cache' from command line to 'False'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_clean_first' from command line to 'False'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'cmake_force_configure' from command line to 'False'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'ament_cmake_args' from command line to 'None'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'catkin_cmake_args' from command line to 'None'
+[0.954s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_camera' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.954s] DEBUG:colcon.colcon_core.verb:Building package 'rover_fake_camera' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera', 'symlink_install': False, 'test_result_base': None}
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_args' from command line to 'None'
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_target' from command line to 'None'
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_clean_cache' from command line to 'False'
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_clean_first' from command line to 'False'
+[0.955s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'cmake_force_configure' from command line to 'False'
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'ament_cmake_args' from command line to 'None'
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'catkin_cmake_args' from command line to 'None'
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_lidar' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.956s] DEBUG:colcon.colcon_core.verb:Building package 'rover_fake_lidar' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar', 'symlink_install': False, 'test_result_base': None}
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_args' from command line to 'None'
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_target' from command line to 'None'
+[0.956s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_clean_cache' from command line to 'False'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_clean_first' from command line to 'False'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'cmake_force_configure' from command line to 'False'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'ament_cmake_args' from command line to 'None'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'catkin_cmake_args' from command line to 'None'
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fake_stereo' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.957s] DEBUG:colcon.colcon_core.verb:Building package 'rover_fake_stereo' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo', 'symlink_install': False, 'test_result_base': None}
+[0.957s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_args' from command line to 'None'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_target' from command line to 'None'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_clean_cache' from command line to 'False'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_clean_first' from command line to 'False'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'cmake_force_configure' from command line to 'False'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'ament_cmake_args' from command line to 'None'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'catkin_cmake_args' from command line to 'None'
+[0.958s] Level 5:colcon.colcon_core.verb:set package 'rover_fsm' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.958s] DEBUG:colcon.colcon_core.verb:Building package 'rover_fsm' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_fsm', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_fsm', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_fsm', 'symlink_install': False, 'test_result_base': None}
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_args' from command line to 'None'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_target' from command line to 'None'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_clean_cache' from command line to 'False'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_clean_first' from command line to 'False'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'cmake_force_configure' from command line to 'False'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'ament_cmake_args' from command line to 'None'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'catkin_cmake_args' from command line to 'None'
+[0.959s] Level 5:colcon.colcon_core.verb:set package 'rover_perception' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.959s] DEBUG:colcon.colcon_core.verb:Building package 'rover_perception' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_perception', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_perception', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_perception', 'symlink_install': False, 'test_result_base': None}
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_args' from command line to 'None'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_target' from command line to 'None'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_clean_cache' from command line to 'False'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_clean_first' from command line to 'False'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'cmake_force_configure' from command line to 'False'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'ament_cmake_args' from command line to 'None'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'catkin_cmake_args' from command line to 'None'
+[0.960s] Level 5:colcon.colcon_core.verb:set package 'rover_state' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.960s] DEBUG:colcon.colcon_core.verb:Building package 'rover_state' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_state', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_state', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_state', 'symlink_install': False, 'test_result_base': None}
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_args' from command line to 'None'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_target' from command line to 'None'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_clean_cache' from command line to 'False'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_clean_first' from command line to 'False'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'cmake_force_configure' from command line to 'False'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'ament_cmake_args' from command line to 'None'
+[0.961s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'catkin_cmake_args' from command line to 'None'
+[0.962s] Level 5:colcon.colcon_core.verb:set package 'rover_utils' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.962s] DEBUG:colcon.colcon_core.verb:Building package 'rover_utils' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_utils', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_utils', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_utils', 'symlink_install': False, 'test_result_base': None}
+[0.962s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_args' from command line to 'None'
+[0.962s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_target' from command line to 'None'
+[0.962s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_clean_cache' from command line to 'False'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_clean_first' from command line to 'False'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'cmake_force_configure' from command line to 'False'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'ament_cmake_args' from command line to 'None'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'catkin_cmake_args' from command line to 'None'
+[0.963s] Level 5:colcon.colcon_core.verb:set package 'rover_visualization' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.963s] DEBUG:colcon.colcon_core.verb:Building package 'rover_visualization' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_visualization', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_visualization', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_visualization', 'symlink_install': False, 'test_result_base': None}
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_args' from command line to 'None'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_target' from command line to 'None'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_clean_cache' from command line to 'False'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_clean_first' from command line to 'False'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'cmake_force_configure' from command line to 'False'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'ament_cmake_args' from command line to 'None'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'catkin_cmake_args' from command line to 'None'
+[0.964s] Level 5:colcon.colcon_core.verb:set package 'rover_bringup' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.964s] DEBUG:colcon.colcon_core.verb:Building package 'rover_bringup' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/andrei/project/strawberry_rover_ws/build/rover_bringup', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/andrei/project/strawberry_rover_ws/install/rover_bringup', 'merge_install': False, 'path': '/home/andrei/project/strawberry_rover_ws/src/rover_bringup', 'symlink_install': False, 'test_result_base': None}
+[0.964s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.967s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.968s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_description' with build type 'ament_python'
+[0.968s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_description', 'ament_prefix_path')
+[0.974s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.975s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/ament_prefix_path.ps1'
+[0.977s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/ament_prefix_path.dsv'
+[0.984s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/ament_prefix_path.sh'
+[0.987s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.987s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.002s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar' with build type 'ament_python'
+[1.004s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_lidar', 'ament_prefix_path')
+[1.005s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/ament_prefix_path.ps1'
+[1.008s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/ament_prefix_path.dsv'
+[1.011s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/ament_prefix_path.sh'
+[1.013s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.014s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.032s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera' with build type 'ament_python'
+[1.034s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_camera', 'ament_prefix_path')
+[1.035s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/ament_prefix_path.ps1'
+[1.040s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/ament_prefix_path.dsv'
+[1.047s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/ament_prefix_path.sh'
+[1.048s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.048s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.069s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo' with build type 'ament_python'
+[1.071s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_stereo', 'ament_prefix_path')
+[1.072s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/ament_prefix_path.ps1'
+[1.074s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/ament_prefix_path.dsv'
+[1.081s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/ament_prefix_path.sh'
+[1.085s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.085s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.115s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm' with build type 'ament_python'
+[1.117s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fsm', 'ament_prefix_path')
+[1.118s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/ament_prefix_path.ps1'
+[1.120s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/ament_prefix_path.dsv'
+[1.123s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/ament_prefix_path.sh'
+[1.124s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.124s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.138s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_perception' with build type 'ament_python'
+[1.139s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_perception', 'ament_prefix_path')
+[1.141s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/ament_prefix_path.ps1'
+[1.144s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/ament_prefix_path.dsv'
+[1.147s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/ament_prefix_path.sh'
+[1.149s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.149s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.164s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_state' with build type 'ament_python'
+[1.165s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_state', 'ament_prefix_path')
+[1.167s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/ament_prefix_path.ps1'
+[1.169s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/ament_prefix_path.dsv'
+[1.176s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/ament_prefix_path.sh'
+[1.177s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.178s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.191s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_utils' with build type 'ament_python'
+[1.192s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_utils', 'ament_prefix_path')
+[1.193s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/ament_prefix_path.ps1'
+[1.195s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/ament_prefix_path.dsv'
+[1.196s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/ament_prefix_path.sh'
+[1.198s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.198s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.736s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_description'
+[1.737s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.737s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.250s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar'
+[2.252s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.252s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.842s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera'
+[2.844s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.844s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[3.370s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo'
+[3.371s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[3.371s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[3.959s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm'
+[3.961s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[3.961s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.475s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_perception'
+[4.477s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[4.477s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[5.000s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_state'
+[5.001s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[5.001s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[5.524s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_utils'
+[5.525s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[5.525s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[6.920s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_camera build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log --single-version-externally-managed install_data
+[6.986s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_description': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_description build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_description/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_description/install.log --single-version-externally-managed install_data
+[7.246s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_state': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_state/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_state build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_state/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_state/install.log --single-version-externally-managed install_data
+[7.281s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_utils': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_utils/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_utils build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_utils/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_utils/install.log --single-version-externally-managed install_data
+[7.303s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_lidar build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/install.log --single-version-externally-managed install_data
+[7.379s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data
+[7.521s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fsm/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fsm build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log --single-version-externally-managed install_data
+[7.831s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_stereo build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log --single-version-externally-managed install_data
+[7.942s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_description' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_description build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_description/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_description/install.log --single-version-externally-managed install_data
+[7.947s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description' for CMake module files
+[7.948s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description' for CMake config files
+[7.951s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description/lib'
+[7.952s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description/bin'
+[7.952s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/pkgconfig/rover_description.pc'
+[7.953s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages'
+[7.954s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_description', 'pythonpath')
+[7.955s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/pythonpath.ps1'
+[7.959s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/pythonpath.dsv'
+[7.960s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/hook/pythonpath.sh'
+[7.963s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_description/bin'
+[7.964s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_description)
+[7.965s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/package.ps1'
+[7.967s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/package.dsv'
+[7.971s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/package.sh'
+[7.973s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/package.bash'
+[7.975s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_description/share/rover_description/package.zsh'
+[7.977s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_description/share/colcon-core/packages/rover_description)
+[7.989s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization' with build type 'ament_python'
+[8.005s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_visualization', 'ament_prefix_path')
+[8.007s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/ament_prefix_path.ps1'
+[8.013s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/ament_prefix_path.dsv'
+[8.015s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/ament_prefix_path.sh'
+[8.020s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[8.021s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[8.091s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera' for CMake module files
+[8.102s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera' for CMake config files
+[8.095s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_camera build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log --single-version-externally-managed install_data
+[8.104s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib'
+[8.104s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/bin'
+[8.104s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/pkgconfig/rover_fake_camera.pc'
+[8.105s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages'
+[8.105s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_camera', 'pythonpath')
+[8.106s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/pythonpath.ps1'
+[8.108s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/pythonpath.dsv'
+[8.114s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/hook/pythonpath.sh'
+[8.116s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/bin'
+[8.117s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_fake_camera)
+[8.118s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/package.ps1'
+[8.120s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/package.dsv'
+[8.121s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/package.sh'
+[8.123s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/package.bash'
+[8.124s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/package.zsh'
+[8.125s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/colcon-core/packages/rover_fake_camera)
+[8.820s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization'
+[8.821s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[8.821s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[8.866s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar' for CMake module files
+[8.867s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar' for CMake config files
+[8.868s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib'
+[8.868s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/bin'
+[8.868s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/pkgconfig/rover_fake_lidar.pc'
+[8.869s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages'
+[8.869s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_lidar', 'pythonpath')
+[8.871s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/pythonpath.ps1'
+[8.879s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_lidar' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_lidar build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_lidar/install.log --single-version-externally-managed install_data
+[8.879s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/pythonpath.dsv'
+[8.880s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/hook/pythonpath.sh'
+[8.882s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/bin'
+[8.882s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_fake_lidar)
+[8.884s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/package.ps1'
+[8.885s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/package.dsv'
+[8.887s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/package.sh'
+[8.889s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/package.bash'
+[8.890s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/rover_fake_lidar/package.zsh'
+[8.891s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/share/colcon-core/packages/rover_fake_lidar)
+[8.892s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm' for CMake module files
+[8.894s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fsm/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fsm build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log --single-version-externally-managed install_data
+[8.895s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm' for CMake config files
+[8.896s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib'
+[8.897s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/bin'
+[8.897s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/pkgconfig/rover_fsm.pc'
+[8.897s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages'
+[8.897s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fsm', 'pythonpath')
+[8.898s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/pythonpath.ps1'
+[8.899s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/pythonpath.dsv'
+[8.900s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/hook/pythonpath.sh'
+[8.901s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/bin'
+[8.901s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_fsm)
+[8.902s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/package.ps1'
+[8.904s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/package.dsv'
+[8.905s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/package.sh'
+[8.906s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/package.bash'
+[8.906s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/package.zsh'
+[8.907s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/colcon-core/packages/rover_fsm)
+[8.909s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils' for CMake module files
+[8.910s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_utils' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_utils/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_utils build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_utils/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_utils/install.log --single-version-externally-managed install_data
+[8.911s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils' for CMake config files
+[8.913s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib'
+[8.913s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils/bin'
+[8.913s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/pkgconfig/rover_utils.pc'
+[8.913s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages'
+[8.914s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_utils', 'pythonpath')
+[8.914s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/pythonpath.ps1'
+[8.915s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/pythonpath.dsv'
+[8.917s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/hook/pythonpath.sh'
+[8.918s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_utils/bin'
+[8.919s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_utils)
+[8.919s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/package.ps1'
+[8.921s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/package.dsv'
+[8.922s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/package.sh'
+[8.923s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/package.bash'
+[8.924s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/rover_utils/package.zsh'
+[8.924s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_utils/share/colcon-core/packages/rover_utils)
+[8.926s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception' for CMake module files
+[8.928s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_perception' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_perception build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_perception/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log --single-version-externally-managed install_data
+[8.929s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception' for CMake config files
+[8.931s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib'
+[8.931s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception/bin'
+[8.931s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/pkgconfig/rover_perception.pc'
+[8.931s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages'
+[8.932s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_perception', 'pythonpath')
+[8.932s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/pythonpath.ps1'
+[8.934s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/pythonpath.dsv'
+[8.934s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/hook/pythonpath.sh'
+[8.936s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_perception/bin'
+[8.937s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_perception)
+[8.938s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/package.ps1'
+[8.940s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/package.dsv'
+[8.941s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/package.sh'
+[8.942s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/package.bash'
+[8.943s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/package.zsh'
+[8.944s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_perception/share/colcon-core/packages/rover_perception)
+[8.946s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state' for CMake module files
+[8.948s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_state' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_state/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_state build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_state/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_state/install.log --single-version-externally-managed install_data
+[8.949s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state' for CMake config files
+[8.951s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state/lib'
+[8.951s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state/bin'
+[8.951s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/pkgconfig/rover_state.pc'
+[8.951s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages'
+[8.952s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_state', 'pythonpath')
+[8.954s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/pythonpath.ps1'
+[8.955s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/pythonpath.dsv'
+[8.956s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/hook/pythonpath.sh'
+[8.958s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_state/bin'
+[8.958s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_state)
+[8.959s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/package.ps1'
+[8.960s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/package.dsv'
+[8.962s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/package.sh'
+[8.963s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/package.bash'
+[8.965s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/package.zsh'
+[8.966s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_state/share/colcon-core/packages/rover_state)
+[8.973s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup' with build type 'ament_python'
+[8.976s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_bringup', 'ament_prefix_path')
+[8.977s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/ament_prefix_path.ps1'
+[8.980s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/ament_prefix_path.dsv'
+[8.981s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/ament_prefix_path.sh'
+[8.983s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[8.983s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[9.030s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo' for CMake module files
+[9.032s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_stereo' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_stereo build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_stereo/install.log --single-version-externally-managed install_data
+[9.032s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo' for CMake config files
+[9.034s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib'
+[9.034s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/bin'
+[9.034s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/pkgconfig/rover_fake_stereo.pc'
+[9.035s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages'
+[9.035s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_fake_stereo', 'pythonpath')
+[9.036s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/pythonpath.ps1'
+[9.037s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/pythonpath.dsv'
+[9.043s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/hook/pythonpath.sh'
+[9.046s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/bin'
+[9.046s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_fake_stereo)
+[9.047s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/package.ps1'
+[9.048s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/package.dsv'
+[9.050s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/package.sh'
+[9.051s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/package.bash'
+[9.052s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/rover_fake_stereo/package.zsh'
+[9.053s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/share/colcon-core/packages/rover_fake_stereo)
+[9.561s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup'
+[9.563s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[9.563s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[9.919s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_visualization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_visualization build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_visualization/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_visualization/install.log --single-version-externally-managed install_data
+[10.506s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup': AMENT_PREFIX_PATH=/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_description:/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/opt/ros/foxy PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_bringup build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log --single-version-externally-managed install_data
+[10.572s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization' for CMake module files
+[10.573s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization' for CMake config files
+[10.575s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib'
+[10.575s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/bin'
+[10.575s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/pkgconfig/rover_visualization.pc'
+[10.575s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages'
+[10.576s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_visualization', 'pythonpath')
+[10.577s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/pythonpath.ps1'
+[10.577s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_visualization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_visualization build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_visualization/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_visualization/install.log --single-version-externally-managed install_data
+[10.584s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/pythonpath.dsv'
+[10.592s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/hook/pythonpath.sh'
+[10.594s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/bin'
+[10.594s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_visualization)
+[10.595s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/package.ps1'
+[10.596s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/package.dsv'
+[10.598s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/package.sh'
+[10.599s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/package.bash'
+[10.600s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/rover_visualization/package.zsh'
+[10.601s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_visualization/share/colcon-core/packages/rover_visualization)
+[11.146s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup' for CMake module files
+[11.148s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup' returned '0': AMENT_PREFIX_PATH=/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_description:/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/opt/ros/foxy PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_bringup build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log --single-version-externally-managed install_data
+[11.148s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup' for CMake config files
+[11.149s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib'
+[11.150s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/bin'
+[11.150s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/pkgconfig/rover_bringup.pc'
+[11.150s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages'
+[11.151s] Level 1:colcon.colcon_core.shell:create_environment_hook('rover_bringup', 'pythonpath')
+[11.151s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/pythonpath.ps1'
+[11.152s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/pythonpath.dsv'
+[11.155s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/hook/pythonpath.sh'
+[11.157s] Level 1:colcon.colcon_core.environment:checking '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/bin'
+[11.157s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(rover_bringup)
+[11.158s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/package.ps1'
+[11.160s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/package.dsv'
+[11.162s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/package.sh'
+[11.163s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/package.bash'
+[11.164s] INFO:colcon.colcon_core.shell:Creating package script '/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/package.zsh'
+[11.165s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/colcon-core/packages/rover_bringup)
+[11.166s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[11.169s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[11.169s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[11.170s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[11.184s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[11.184s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[11.185s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[11.226s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[11.228s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/andrei/project/strawberry_rover_ws/install/local_setup.ps1'
+[11.230s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/andrei/project/strawberry_rover_ws/install/_local_setup_util_ps1.py'
+[11.236s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/andrei/project/strawberry_rover_ws/install/setup.ps1'
+[11.244s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/andrei/project/strawberry_rover_ws/install/local_setup.sh'
+[11.247s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/andrei/project/strawberry_rover_ws/install/_local_setup_util_sh.py'
+[11.249s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/andrei/project/strawberry_rover_ws/install/setup.sh'
+[11.254s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/andrei/project/strawberry_rover_ws/install/local_setup.bash'
+[11.256s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/andrei/project/strawberry_rover_ws/install/setup.bash'
+[11.260s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/andrei/project/strawberry_rover_ws/install/local_setup.zsh'
+[11.261s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/andrei/project/strawberry_rover_ws/install/setup.zsh'

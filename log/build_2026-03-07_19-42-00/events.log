@@ -1,0 +1,75 @@
+[0.000000] (-) TimerEvent: {}
+[0.000440] (-) JobUnselected: {'identifier': 'rover_bringup'}
+[0.003243] (-) JobUnselected: {'identifier': 'rover_description'}
+[0.003420] (-) JobUnselected: {'identifier': 'rover_fake_camera'}
+[0.003502] (-) JobUnselected: {'identifier': 'rover_fake_lidar'}
+[0.003572] (-) JobUnselected: {'identifier': 'rover_fake_stereo'}
+[0.003621] (-) JobUnselected: {'identifier': 'rover_fsm'}
+[0.003670] (-) JobUnselected: {'identifier': 'rover_state'}
+[0.004079] (-) JobUnselected: {'identifier': 'rover_utils'}
+[0.004165] (-) JobUnselected: {'identifier': 'rover_visualization'}
+[0.004245] (rover_perception) JobQueued: {'identifier': 'rover_perception', 'dependencies': OrderedDict()}
+[0.004327] (rover_perception) JobStarted: {'identifier': 'rover_perception'}
+[0.099221] (-) TimerEvent: {}
+[0.199665] (-) TimerEvent: {}
+[0.300029] (-) TimerEvent: {}
+[0.400390] (-) TimerEvent: {}
+[0.501408] (-) TimerEvent: {}
+[0.601905] (-) TimerEvent: {}
+[0.702358] (-) TimerEvent: {}
+[0.802740] (-) TimerEvent: {}
+[0.903248] (-) TimerEvent: {}
+[1.003679] (-) TimerEvent: {}
+[1.104050] (-) TimerEvent: {}
+[1.204414] (-) TimerEvent: {}
+[1.304803] (-) TimerEvent: {}
+[1.380268] (rover_perception) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/rover_perception', 'build', '--build-base', '/home/andrei/project/strawberry_rover_ws/build/rover_perception/build', 'install', '--record', '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/andrei/project/strawberry_rover_ws/src/rover_perception', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/andrei', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'LANGUAGE': 'en', 'USER': 'andrei', 'SSH_CLIENT': '192.168.1.19 57591 22', 'LC_TIME': 'ru_RU.UTF-8', 'VSCODE_NLS_CONFIG': '{"userLocale":"en","osLocale":"en","resolvedLanguage":"en","defaultMessagesFile":"/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/out/nls.messages.json","locale":"en","availableLanguages":{}}', 'CI': '1', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'tty', 'DEBUG': 'release', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/aarch64-linux-gnu:/opt/ros/foxy/lib', 'BROWSER': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/andrei', 'NVM_BIN': '/home/andrei/.nvm/versions/node/v20.20.1/bin', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-46576b63-4b9c-4700-9384-1a0730395192.sock', 'NVM_INC': '/home/andrei/.nvm/versions/node/v20.20.1/include/node', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'ru_RU.UTF-8', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'NVM_DIR': '/home/andrei/.nvm', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install', 'ROS_DISTRO': 'foxy', 'OVSX_REGISTRY_URL': 'https://open-vsx.org', 'LOGNAME': 'andrei', 'FORCE_COLOR': '0', 'VSCODE_HANDLES_SIGPIPE': 'true', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'dumb', 'XDG_SESSION_ID': '43', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/andrei/.nvm/versions/node/v20.20.1/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/opt/ros/foxy/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'VSCODE_AGENT_FOLDER': '/home/andrei/.cursor-server', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'ru_RU.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'CURSOR_AGENT': '1', 'LANG': 'en_US.UTF-8', 'LC_TELEPHONE': 'ru_RU.UTF-8', 'LS_COLORS': '', 'AMENT_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_description:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/opt/ros/foxy', 'SHELL': '/bin/bash', 'LC_NAME': 'ru_RU.UTF-8', 'VSCODE_SERVER_SHUTDOWN_TIMEOUT': '300', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'ru_RU.UTF-8', 'LC_IDENTIFICATION': 'ru_RU.UTF-8', 'PWD': '/home/andrei/project/strawberry_rover_ws/build/rover_perception', 'SSH_CONNECTION': '192.168.1.19 57591 192.168.1.77 22', 'NVM_CD_FLAGS': '', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/andrei/project/strawberry_rover_ws/build/rover_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages', 'LC_NUMERIC': 'ru_RU.UTF-8', 'LC_PAPER': 'ru_RU.UTF-8', 'COLCON': '1', '_ZO_DOCTOR': '0'}, 'shell': False}
+[1.404990] (-) TimerEvent: {}
+[1.505391] (-) TimerEvent: {}
+[1.605826] (-) TimerEvent: {}
+[1.706218] (-) TimerEvent: {}
+[1.806599] (-) TimerEvent: {}
+[1.828177] (rover_perception) StdoutLine: {'line': b'running egg_info\n'}
+[1.831840] (rover_perception) StdoutLine: {'line': b'creating ../../build/rover_perception/rover_perception.egg-info\n'}
+[1.832841] (rover_perception) StdoutLine: {'line': b'writing ../../build/rover_perception/rover_perception.egg-info/PKG-INFO\n'}
+[1.833129] (rover_perception) StdoutLine: {'line': b'writing dependency_links to ../../build/rover_perception/rover_perception.egg-info/dependency_links.txt\n'}
+[1.836323] (rover_perception) StdoutLine: {'line': b'writing entry points to ../../build/rover_perception/rover_perception.egg-info/entry_points.txt\n'}
+[1.836798] (rover_perception) StdoutLine: {'line': b'writing requirements to ../../build/rover_perception/rover_perception.egg-info/requires.txt\n'}
+[1.836966] (rover_perception) StdoutLine: {'line': b'writing top-level names to ../../build/rover_perception/rover_perception.egg-info/top_level.txt\n'}
+[1.837946] (rover_perception) StdoutLine: {'line': b"writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'\n"}
+[1.908583] (-) TimerEvent: {}
+[1.910521] (rover_perception) StdoutLine: {'line': b"reading manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'\n"}
+[1.911974] (rover_perception) StdoutLine: {'line': b"writing manifest file '../../build/rover_perception/rover_perception.egg-info/SOURCES.txt'\n"}
+[1.912518] (rover_perception) StdoutLine: {'line': b'running build\n'}
+[1.912716] (rover_perception) StdoutLine: {'line': b'running build_py\n'}
+[1.913013] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build\n'}
+[1.913183] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib\n'}
+[1.915433] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception\n'}
+[1.915886] (rover_perception) StdoutLine: {'line': b'copying rover_perception/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception\n'}
+[1.917324] (rover_perception) StdoutLine: {'line': b'copying rover_perception/rgb_camera_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception\n'}
+[1.917794] (rover_perception) StdoutLine: {'line': b'running install\n'}
+[1.920965] (rover_perception) StdoutLine: {'line': b'running install_lib\n'}
+[1.924007] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception\n'}
+[1.924400] (rover_perception) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception\n'}
+[1.924688] (rover_perception) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_perception/build/lib/rover_perception/rgb_camera_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception\n'}
+[1.926474] (rover_perception) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/__init__.py to __init__.cpython-38.pyc\n'}
+[1.929739] (rover_perception) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception/rgb_camera_node.py to rgb_camera_node.cpython-38.pyc\n'}
+[1.932932] (rover_perception) StdoutLine: {'line': b'running install_data\n'}
+[1.933314] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index\n'}
+[1.933515] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index\n'}
+[1.933677] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index/packages\n'}
+[1.933826] (rover_perception) StdoutLine: {'line': b'copying resource/rover_perception -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/ament_index/resource_index/packages\n'}
+[1.934257] (rover_perception) StdoutLine: {'line': b'copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception\n'}
+[1.934468] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch\n'}
+[1.934625] (rover_perception) StdoutLine: {'line': b'copying launch/rgb_camera.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/launch\n'}
+[1.934789] (rover_perception) StdoutLine: {'line': b'creating /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config\n'}
+[1.934930] (rover_perception) StdoutLine: {'line': b'copying config/rgb_camera.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_perception/share/rover_perception/config\n'}
+[1.935065] (rover_perception) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.940002] (rover_perception) StdoutLine: {'line': b'Copying ../../build/rover_perception/rover_perception.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages/rover_perception-0.0.0-py3.8.egg-info\n'}
+[1.945434] (rover_perception) StdoutLine: {'line': b'running install_scripts\n'}
+[1.984405] (rover_perception) StdoutLine: {'line': b'Installing rgb_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/rover_perception\n'}
+[1.984975] (rover_perception) StdoutLine: {'line': b"writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_perception/install.log'\n"}
+[2.008849] (-) TimerEvent: {}
+[2.069188] (rover_perception) CommandEnded: {'returncode': 0}
+[2.095256] (rover_perception) JobEnded: {'identifier': 'rover_perception', 'rc': 0}
+[2.097133] (-) EventReactorShutdown: {}

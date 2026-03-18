@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rover_bringup</name>
+  <version>0.0.0</version>
+  <description>Bringup package for launching the strawberry rover system.</description>
+
+  <maintainer email="todo@example.com">TODO</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>rover_description</exec_depend>
+  <exec_depend>rover_fake_lidar</exec_depend>
+  <exec_depend>rover_simulation</exec_depend>
+  <exec_depend>rover_fake_camera</exec_depend>
+  <exec_depend>rover_fake_stereo</exec_depend>
+  <exec_depend>rover_navigation</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+

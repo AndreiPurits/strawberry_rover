@@ -1,0 +1,3 @@
+[console_scripts]
+fake_lidar_node = rover_fake_lidar.fake_lidar_node:main
+

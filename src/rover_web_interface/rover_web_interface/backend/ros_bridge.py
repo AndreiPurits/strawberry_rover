@@ -1,0 +1,393 @@
+import base64
+import math
+import threading
+import time
+from collections import deque
+from typing import Any, Deque, Dict, List, Optional, Tuple
+
+import rclpy
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Twist
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from sensor_msgs.msg import LaserScan
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
+
+
+def _ros_time_to_sec(stamp) -> float:
+    return float(stamp.sec) + (float(stamp.nanosec) * 1e-9)
+
+
+class RosWebBridge(Node):
+    """ROS2 -> web bridge state cache for FastAPI layer."""
+
+    def __init__(self) -> None:
+        super().__init__("rover_web_bridge")
+
+        self.declare_parameter("row_spacing", 1.8)
+        self.declare_parameter("trail_max_points", 300)
+        self.declare_parameter("scan_downsample", 8)
+        self.declare_parameter("control_publish_period_s", 0.05)
+
+        self._row_spacing = float(self.get_parameter("row_spacing").value)
+        self._trail_max_points = int(self.get_parameter("trail_max_points").value)
+        self._scan_downsample = max(1, int(self.get_parameter("scan_downsample").value))
+        self._control_publish_period_s = float(
+            self.get_parameter("control_publish_period_s").value
+        )
+
+        self._lock = threading.Lock()
+        self._trail: Deque[Tuple[float, float]] = deque(maxlen=self._trail_max_points)
+        self._beds: List[Dict[str, float]] = []
+        self._cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+
+        self._pose = {"x": 0.0, "y": 0.0, "z": 0.0}
+        self._heading_rad = 0.0
+        self._speed_mps = 0.0
+        self._angular_velocity = 0.0
+        self._current_row = 0
+        self._last_pose_time: Optional[float] = None
+        self._last_pose_xy: Optional[Tuple[float, float]] = None
+        self._last_heading: Optional[float] = None
+
+        self._nav_state = "unknown"
+        self._scan_summary: Dict[str, Any] = {
+            "angle_min": 0.0,
+            "angle_max": 0.0,
+            "range_min": 0.0,
+            "range_max": 0.0,
+            "points": [],
+        }
+        self._images: Dict[str, Dict[str, Any]] = {
+            "front": {},
+            "bottom": {},
+            "stereo": {},
+        }
+        self._control_started = False
+        self._control_mode = "auto"
+        self._last_cmd = {
+            "linear_x": 0.0,
+            "angular_z": 0.0,
+            "source": "none",
+            "stamp": 0.0,
+        }
+        self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
+        self._force_zero_once = False
+
+        self.create_subscription(PoseStamped, "/sim/rover_pose", self._on_pose, 10)
+        self.create_subscription(MarkerArray, "/sim/scene_markers", self._on_scene, 10)
+        self.create_subscription(Marker, "/debug/nav_state", self._on_nav_state, 10)
+        self.create_subscription(LaserScan, "/scan", self._on_scan, 10)
+        self.create_subscription(
+            Image,
+            "/sim/camera/front/image_raw",
+            lambda msg: self._on_image("front", msg),
+            10,
+        )
+        self.create_subscription(
+            Image,
+            "/sim/camera/bottom_rgb/image_raw",
+            lambda msg: self._on_image("bottom", msg),
+            10,
+        )
+        self.create_subscription(
+            Image,
+            "/sim/stereo/debug/combined",
+            lambda msg: self._on_image("stereo", msg),
+            10,
+        )
+        self.create_timer(self._control_publish_period_s, self._control_publish_tick)
+
+        self.get_logger().info("rover_web_bridge started.")
+
+    def _on_pose(self, msg: PoseStamped) -> None:
+        now = _ros_time_to_sec(msg.header.stamp)
+        x = float(msg.pose.position.x)
+        y = float(msg.pose.position.y)
+        z = float(msg.pose.position.z)
+        qz = float(msg.pose.orientation.z)
+        qw = float(msg.pose.orientation.w)
+        heading = math.atan2(2.0 * qw * qz, 1.0 - 2.0 * qz * qz)
+
+        speed = 0.0
+        w = 0.0
+        if self._last_pose_time is not None and self._last_pose_xy is not None:
+            dt = now - self._last_pose_time
+            if dt > 1e-4:
+                dx = x - self._last_pose_xy[0]
+                dy = y - self._last_pose_xy[1]
+                speed = math.hypot(dx, dy) / dt
+                if self._last_heading is not None:
+                    d_heading = self._normalize_angle(heading - self._last_heading)
+                    w = d_heading / dt
+
+        with self._lock:
+            self._pose = {"x": x, "y": y, "z": z}
+            self._heading_rad = heading
+            self._speed_mps = speed
+            self._angular_velocity = w
+            self._current_row = int(round(y / max(1e-6, self._row_spacing))) + 1
+            self._trail.append((x, y))
+            self._last_pose_time = now
+            self._last_pose_xy = (x, y)
+            self._last_heading = heading
+
+    def _on_scene(self, msg: MarkerArray) -> None:
+        beds: List[Dict[str, float]] = []
+        for marker in msg.markers:
+            if marker.ns != "beds":
+                continue
+            beds.append(
+                {
+                    "x": float(marker.pose.position.x),
+                    "y": float(marker.pose.position.y),
+                    "length": float(marker.scale.x),
+                    "width": float(marker.scale.y),
+                }
+            )
+        with self._lock:
+            if beds:
+                self._beds = beds
+
+    def _on_nav_state(self, msg: Marker) -> None:
+        with self._lock:
+            self._nav_state = msg.text if msg.text else "unknown"
+
+    def _on_scan(self, msg: LaserScan) -> None:
+        points: List[Dict[str, float]] = []
+        angle = float(msg.angle_min)
+        for idx, rng in enumerate(msg.ranges):
+            if idx % self._scan_downsample == 0 and math.isfinite(rng):
+                points.append({"a": angle, "r": float(rng)})
+            angle += float(msg.angle_increment)
+        with self._lock:
+            self._scan_summary = {
+                "angle_min": float(msg.angle_min),
+                "angle_max": float(msg.angle_max),
+                "range_min": float(msg.range_min),
+                "range_max": float(msg.range_max),
+                "points": points,
+            }
+
+    def _on_image(self, camera_name: str, msg: Image) -> None:
+        # Keep bridge simple and format-agnostic for MVP:
+        # forward raw frame bytes as base64 and render in browser JS.
+        encoded = base64.b64encode(bytes(msg.data)).decode("ascii")
+        with self._lock:
+            self._images[camera_name] = {
+                "stamp": _ros_time_to_sec(msg.header.stamp),
+                "width": int(msg.width),
+                "height": int(msg.height),
+                "encoding": str(msg.encoding),
+                "step": int(msg.step),
+                "data_b64": encoded,
+            }
+
+    def get_state_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            pose = dict(self._pose)
+            heading = float(self._heading_rad)
+            speed = float(self._speed_mps)
+            w = float(self._angular_velocity)
+            trail = [{"x": p[0], "y": p[1]} for p in self._trail]
+            beds = list(self._beds)
+            nav_state = self._nav_state
+            current_row = int(self._current_row)
+            control = self._build_control_snapshot()
+
+        now = time.time()
+        sensors = self._mock_sensor_grid(now)
+        analytics = self._mock_analytics(now)
+        telemetry = self._build_telemetry(now, speed, current_row)
+
+        return {
+            "timestamp": now,
+            "field": {
+                "beds": beds,
+                "sensor_grid": sensors,
+            },
+            "rover": {
+                "pose": pose,
+                "heading_rad": heading,
+                "heading_deg": math.degrees(heading),
+                "route_trail": trail,
+                "nav_state": nav_state,
+            },
+            "telemetry": {
+                **telemetry,
+                "speed_mps": speed,
+                "angular_velocity_rps": w,
+                "current_row": current_row,
+            },
+            "analytics": analytics,
+            "control": control,
+        }
+
+    def get_scan_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            return dict(self._scan_summary)
+
+    def get_camera_snapshot(self, camera_name: str) -> Dict[str, Any]:
+        if camera_name not in self._images:
+            return {}
+        with self._lock:
+            return dict(self._images[camera_name])
+
+    def _build_control_snapshot(self) -> Dict[str, Any]:
+        return {
+            "mode": self._control_mode,
+            "started": bool(self._control_started),
+            "manual_allowed": bool(self._control_started and self._control_mode == "manual"),
+            "last_command": dict(self._last_cmd),
+        }
+
+    def get_control_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            return self._build_control_snapshot()
+
+    def _control_publish_tick(self) -> None:
+        with self._lock:
+            started = bool(self._control_started)
+            mode = str(self._control_mode)
+            zero_once = bool(self._force_zero_once)
+            linear_x = float(self._pending_cmd["linear_x"])
+            angular_z = float(self._pending_cmd["angular_z"])
+            if zero_once:
+                self._force_zero_once = False
+
+        if zero_once:
+            twist = Twist()
+            self._cmd_pub.publish(twist)
+            return
+
+        if started and mode == "manual":
+            twist = Twist()
+            twist.linear.x = linear_x
+            twist.angular.z = angular_z
+            self._cmd_pub.publish(twist)
+
+    def start_control(self) -> Dict[str, Any]:
+        with self._lock:
+            self._control_started = True
+            self._last_cmd["stamp"] = time.time()
+            return self._build_control_snapshot()
+
+    def stop_control(self) -> Dict[str, Any]:
+        with self._lock:
+            self._control_started = False
+        self.publish_zero_cmd(source="stop")
+        with self._lock:
+            return self._build_control_snapshot()
+
+    def set_control_mode(self, mode: str) -> Dict[str, Any]:
+        cleaned = str(mode).strip().lower()
+        if cleaned not in ("manual", "auto"):
+            raise ValueError("mode must be 'manual' or 'auto'")
+        with self._lock:
+            self._control_mode = cleaned
+        if cleaned != "manual":
+            # Safety rule: leaving manual mode immediately zeroes manual motion.
+            self.publish_zero_cmd(source="mode_auto")
+        with self._lock:
+            return self._build_control_snapshot()
+
+    def apply_manual_command(
+        self,
+        linear_x: float,
+        angular_z: float,
+        source: str = "web",
+    ) -> Dict[str, Any]:
+        with self._lock:
+            manual_allowed = self._control_started and self._control_mode == "manual"
+        if not manual_allowed:
+            return self.get_control_snapshot()
+
+        with self._lock:
+            self._pending_cmd = {
+                "linear_x": float(linear_x),
+                "angular_z": float(angular_z),
+            }
+            self._last_cmd = {
+                "linear_x": float(linear_x),
+                "angular_z": float(angular_z),
+                "source": str(source),
+                "stamp": time.time(),
+            }
+            return self._build_control_snapshot()
+
+    def publish_zero_cmd(self, source: str = "zero") -> Dict[str, Any]:
+        with self._lock:
+            self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
+            self._force_zero_once = True
+            self._last_cmd = {
+                "linear_x": 0.0,
+                "angular_z": 0.0,
+                "source": str(source),
+                "stamp": time.time(),
+            }
+            return self._build_control_snapshot()
+
+    @staticmethod
+    def _normalize_angle(angle: float) -> float:
+        while angle > math.pi:
+            angle -= 2.0 * math.pi
+        while angle < -math.pi:
+            angle += 2.0 * math.pi
+        return angle
+
+    @staticmethod
+    def _mock_sensor_grid(now_s: float) -> List[Dict[str, float]]:
+        grid: List[Dict[str, float]] = []
+        idx = 0
+        for row in range(5):
+            for col in range(4):
+                phase = (row * 0.7) + (col * 0.4)
+                grid.append(
+                    {
+                        "id": idx,
+                        "x": -8.0 + (col * 5.0),
+                        "y": row * 1.8,
+                        "soil_moisture": 48.0 + 8.0 * math.sin(now_s * 0.05 + phase),
+                        "air_humidity": 62.0 + 6.0 * math.cos(now_s * 0.03 + phase),
+                        "soil_temp": 21.0 + 2.0 * math.sin(now_s * 0.02 + phase),
+                        "air_temp": 25.0 + 2.5 * math.cos(now_s * 0.015 + phase),
+                        "daily_illumination": 72.0 + 10.0 * math.sin(now_s * 0.01 + phase),
+                    }
+                )
+                idx += 1
+        return grid
+
+    @staticmethod
+    def _mock_analytics(now_s: float) -> Dict[str, float]:
+        return {
+            "berries_collected_today": 320.0 + 40.0 * math.sin(now_s * 0.004),
+            "working_time_hours": 5.2 + 0.3 * math.sin(now_s * 0.002),
+            "energy_consumption_kwh": 3.8 + 0.2 * math.cos(now_s * 0.003),
+            "avg_harvest_speed_berries_per_hour": 58.0 + 5.0 * math.sin(now_s * 0.005),
+            "productivity_index": 0.82 + 0.06 * math.sin(now_s * 0.006),
+        }
+
+    @staticmethod
+    def _build_telemetry(now_s: float, speed: float, current_row: int) -> Dict[str, Any]:
+        return {
+            "battery_level_pct": 81.0 + 4.0 * math.cos(now_s * 0.003),
+            "avg_energy_consumption_wh": 690.0 + 25.0 * math.sin(now_s * 0.004),
+            "battery_temperature_c": 34.0 + 1.8 * math.sin(now_s * 0.008),
+            "berries_collected": 95.0 + 12.0 * math.sin(now_s * 0.005),
+            "collection_speed_per_hour": 52.0 + 6.0 * math.cos(now_s * 0.004),
+            "berry_density_estimate": 0.65 + 0.08 * math.sin(now_s * 0.007),
+            "rear_lidar_status": "mock",
+            "current_row": current_row,
+            "speed_mps": speed,
+            "arm_cameras": [
+                {"id": i + 1, "label": f"arm_cam_{i + 1}", "status": "mock"}
+                for i in range(6)
+            ],
+        }
+
+
+def create_bridge_node() -> RosWebBridge:
+    if not rclpy.ok():
+        rclpy.init(args=None)
+    return RosWebBridge()

@@ -1,0 +1,33 @@
+running egg_info
+creating ../../build/rover_state/rover_state.egg-info
+writing ../../build/rover_state/rover_state.egg-info/PKG-INFO
+writing dependency_links to ../../build/rover_state/rover_state.egg-info/dependency_links.txt
+writing entry points to ../../build/rover_state/rover_state.egg-info/entry_points.txt
+writing requirements to ../../build/rover_state/rover_state.egg-info/requires.txt
+writing top-level names to ../../build/rover_state/rover_state.egg-info/top_level.txt
+writing manifest file '../../build/rover_state/rover_state.egg-info/SOURCES.txt'
+reading manifest file '../../build/rover_state/rover_state.egg-info/SOURCES.txt'
+writing manifest file '../../build/rover_state/rover_state.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/andrei/project/strawberry_rover_ws/build/rover_state/build
+creating /home/andrei/project/strawberry_rover_ws/build/rover_state/build/lib
+creating /home/andrei/project/strawberry_rover_ws/build/rover_state/build/lib/rover_state
+copying rover_state/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_state/build/lib/rover_state
+running install
+running install_lib
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages/rover_state
+copying /home/andrei/project/strawberry_rover_ws/build/rover_state/build/lib/rover_state/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages/rover_state
+byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages/rover_state/__init__.py to __init__.cpython-38.pyc
+running install_data
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/share/ament_index
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/share/ament_index/resource_index
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/share/ament_index/resource_index/packages
+copying resource/rover_state -> /home/andrei/project/strawberry_rover_ws/install/rover_state/share/ament_index/resource_index/packages
+copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/launch
+creating /home/andrei/project/strawberry_rover_ws/install/rover_state/share/rover_state/config
+running install_egg_info
+Copying ../../build/rover_state/rover_state.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages/rover_state-0.0.0-py3.8.egg-info
+running install_scripts
+writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_state/install.log'

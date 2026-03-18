@@ -1,0 +1,36 @@
+[5.980s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_bringup build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log --single-version-externally-managed install_data
+[7.043s] running egg_info
+[7.043s] creating ../../build/rover_bringup/rover_bringup.egg-info
+[7.044s] writing ../../build/rover_bringup/rover_bringup.egg-info/PKG-INFO
+[7.046s] writing dependency_links to ../../build/rover_bringup/rover_bringup.egg-info/dependency_links.txt
+[7.046s] writing entry points to ../../build/rover_bringup/rover_bringup.egg-info/entry_points.txt
+[7.047s] writing requirements to ../../build/rover_bringup/rover_bringup.egg-info/requires.txt
+[7.047s] writing top-level names to ../../build/rover_bringup/rover_bringup.egg-info/top_level.txt
+[7.052s] writing manifest file '../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt'
+[7.125s] reading manifest file '../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt'
+[7.127s] writing manifest file '../../build/rover_bringup/rover_bringup.egg-info/SOURCES.txt'
+[7.128s] running build
+[7.128s] running build_py
+[7.131s] creating /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build
+[7.134s] creating /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build/lib
+[7.134s] creating /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build/lib/rover_bringup
+[7.134s] copying rover_bringup/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build/lib/rover_bringup
+[7.135s] running install
+[7.138s] running install_lib
+[7.141s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup
+[7.142s] copying /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build/lib/rover_bringup/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup
+[7.143s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup/__init__.py to __init__.cpython-38.pyc
+[7.147s] running install_data
+[7.147s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/ament_index
+[7.148s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/ament_index/resource_index
+[7.150s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/ament_index/resource_index/packages
+[7.150s] copying resource/rover_bringup -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/ament_index/resource_index/packages
+[7.150s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup
+[7.150s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/launch
+[7.150s] copying launch/bringup.launch.py -> /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/launch
+[7.150s] creating /home/andrei/project/strawberry_rover_ws/install/rover_bringup/share/rover_bringup/config
+[7.150s] running install_egg_info
+[7.160s] Copying ../../build/rover_bringup/rover_bringup.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages/rover_bringup-0.0.0-py3.8.egg-info
+[7.161s] running install_scripts
+[7.246s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log'
+[7.776s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_bringup' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_bringup build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_bringup/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_bringup/install.log --single-version-externally-managed install_data

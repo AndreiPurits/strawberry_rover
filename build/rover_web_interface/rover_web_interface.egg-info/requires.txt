@@ -1,0 +1,4 @@
+fastapi
+setuptools
+uvicorn
+websockets

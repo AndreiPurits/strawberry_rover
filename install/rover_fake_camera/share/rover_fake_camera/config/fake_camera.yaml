@@ -1,0 +1,17 @@
+/**:
+  ros__parameters:
+    publish_rate: 10.0
+    image_width: 640
+    image_height: 480
+    front_topic: "/sim/camera/front/image_raw"
+    bottom_rgb_topic: "/sim/camera/bottom_rgb/image_raw"
+    rover_pose_topic: "/sim/rover_pose"
+    front_frame_id: "camera_front_link"
+    bottom_rgb_frame_id: "bottom_rgb_camera_link"
+    row_count: 5
+    row_spacing: 1.8
+    bed_width: 0.8
+    field_length: 22.0
+    start_side_extension: 1.5
+    front_camera_pitch_deg: -15.0
+    image_qos_reliability: "reliable"

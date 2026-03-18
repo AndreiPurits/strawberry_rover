@@ -1,0 +1,63 @@
+[0.000000] (-) TimerEvent: {}
+[0.000255] (-) JobUnselected: {'identifier': 'rover_bringup'}
+[0.000520] (-) JobUnselected: {'identifier': 'rover_description'}
+[0.000854] (-) JobUnselected: {'identifier': 'rover_fake_lidar'}
+[0.001478] (-) JobUnselected: {'identifier': 'rover_fake_stereo'}
+[0.001845] (-) JobUnselected: {'identifier': 'rover_fsm'}
+[0.002128] (-) JobUnselected: {'identifier': 'rover_navigation'}
+[0.002256] (-) JobUnselected: {'identifier': 'rover_perception'}
+[0.002526] (-) JobUnselected: {'identifier': 'rover_simulation'}
+[0.002569] (-) JobUnselected: {'identifier': 'rover_state'}
+[0.002670] (-) JobUnselected: {'identifier': 'rover_utils'}
+[0.002746] (-) JobUnselected: {'identifier': 'rover_visualization'}
+[0.003277] (rover_fake_camera) JobQueued: {'identifier': 'rover_fake_camera', 'dependencies': OrderedDict()}
+[0.003368] (rover_fake_camera) JobStarted: {'identifier': 'rover_fake_camera'}
+[0.099181] (-) TimerEvent: {}
+[0.199803] (-) TimerEvent: {}
+[0.300336] (-) TimerEvent: {}
+[0.400898] (-) TimerEvent: {}
+[0.501486] (-) TimerEvent: {}
+[0.602309] (-) TimerEvent: {}
+[0.702978] (-) TimerEvent: {}
+[0.803504] (-) TimerEvent: {}
+[0.904033] (-) TimerEvent: {}
+[1.004568] (-) TimerEvent: {}
+[1.105107] (-) TimerEvent: {}
+[1.205656] (-) TimerEvent: {}
+[1.306202] (-) TimerEvent: {}
+[1.406920] (-) TimerEvent: {}
+[1.507480] (-) TimerEvent: {}
+[1.540606] (rover_fake_camera) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/rover_fake_camera', 'build', '--build-base', '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build', 'install', '--record', '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'VSCODE_CWD': '/home/andrei', 'VSCODE_ESM_ENTRYPOINT': 'vs/workbench/api/node/extensionHostProcess', 'LANGUAGE': 'en', 'USER': 'andrei', 'SSH_CLIENT': '192.168.1.19 57184 22', 'LC_TIME': 'ru_RU.UTF-8', 'VSCODE_NLS_CONFIG': '{"userLocale":"en","osLocale":"en","resolvedLanguage":"en","defaultMessagesFile":"/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/out/nls.messages.json","locale":"en","availableLanguages":{}}', 'CI': '1', 'VSCODE_HANDLES_UNCAUGHT_ERRORS': 'true', 'XDG_SESSION_TYPE': 'tty', 'DEBUG': 'release', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/aarch64-linux-gnu:/opt/ros/foxy/lib', 'BROWSER': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/andrei', 'NVM_BIN': '/home/andrei/.nvm/versions/node/v20.20.1/bin', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-b33840fc-25ce-403a-beff-4fc3f87a7b41.sock', 'NVM_INC': '/home/andrei/.nvm/versions/node/v20.20.1/include/node', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'ru_RU.UTF-8', 'NO_COLOR': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'NVM_DIR': '/home/andrei/.nvm', 'VSCODE_L10N_BUNDLE_LOCATION': '', 'COLCON_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install', 'ROS_DISTRO': 'foxy', 'OVSX_REGISTRY_URL': 'https://open-vsx.org', 'LOGNAME': 'andrei', 'FORCE_COLOR': '0', 'VSCODE_HANDLES_SIGPIPE': 'true', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'dumb', 'XDG_SESSION_ID': '149', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/home/andrei/.nvm/versions/node/v20.20.1/bin:/opt/ros/foxy/bin:/home/andrei/.cursor-server/bin/linux-arm64/8c95649f251a168cc4bb34c89531fae7db4bd990/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'VSCODE_AGENT_FOLDER': '/home/andrei/.cursor-server', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'ru_RU.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'CURSOR_AGENT': '1', 'LANG': 'en_US.UTF-8', 'LC_TELEPHONE': 'ru_RU.UTF-8', 'LS_COLORS': '', 'AMENT_PREFIX_PATH': '/home/andrei/project/strawberry_rover_ws/install/rover_visualization:/home/andrei/project/strawberry_rover_ws/install/rover_utils:/home/andrei/project/strawberry_rover_ws/install/rover_state:/home/andrei/project/strawberry_rover_ws/install/rover_bringup:/home/andrei/project/strawberry_rover_ws/install/rover_simulation:/home/andrei/project/strawberry_rover_ws/install/rover_perception:/home/andrei/project/strawberry_rover_ws/install/rover_navigation:/home/andrei/project/strawberry_rover_ws/install/rover_fsm:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera:/home/andrei/project/strawberry_rover_ws/install/rover_description:/opt/ros/foxy', 'SHELL': '/bin/bash', 'LC_NAME': 'ru_RU.UTF-8', 'VSCODE_SERVER_SHUTDOWN_TIMEOUT': '300', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'ru_RU.UTF-8', 'LC_IDENTIFICATION': 'ru_RU.UTF-8', 'PWD': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera', 'SSH_CONNECTION': '192.168.1.19 57184 192.168.1.77 22', 'NVM_CD_FLAGS': '', 'XDG_DATA_DIRS': '/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_utils/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_state/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_bringup/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_simulation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_perception/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_navigation/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_stereo/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_lidar/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:/home/andrei/project/strawberry_rover_ws/install/rover_description/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages', 'LC_NUMERIC': 'ru_RU.UTF-8', 'LC_PAPER': 'ru_RU.UTF-8', 'COLCON': '1', '_ZO_DOCTOR': '0'}, 'shell': False}
+[1.607782] (-) TimerEvent: {}
+[1.708432] (-) TimerEvent: {}
+[1.808962] (-) TimerEvent: {}
+[1.909522] (-) TimerEvent: {}
+[2.010104] (-) TimerEvent: {}
+[2.045224] (rover_fake_camera) StdoutLine: {'line': b'running egg_info\n'}
+[2.046391] (rover_fake_camera) StdoutLine: {'line': b'writing ../../build/rover_fake_camera/rover_fake_camera.egg-info/PKG-INFO\n'}
+[2.047188] (rover_fake_camera) StdoutLine: {'line': b'writing dependency_links to ../../build/rover_fake_camera/rover_fake_camera.egg-info/dependency_links.txt\n'}
+[2.047623] (rover_fake_camera) StdoutLine: {'line': b'writing entry points to ../../build/rover_fake_camera/rover_fake_camera.egg-info/entry_points.txt\n'}
+[2.047899] (rover_fake_camera) StdoutLine: {'line': b'writing requirements to ../../build/rover_fake_camera/rover_fake_camera.egg-info/requires.txt\n'}
+[2.050147] (rover_fake_camera) StdoutLine: {'line': b'writing top-level names to ../../build/rover_fake_camera/rover_fake_camera.egg-info/top_level.txt\n'}
+[2.110319] (-) TimerEvent: {}
+[2.120348] (rover_fake_camera) StdoutLine: {'line': b"reading manifest file '../../build/rover_fake_camera/rover_fake_camera.egg-info/SOURCES.txt'\n"}
+[2.122119] (rover_fake_camera) StdoutLine: {'line': b"writing manifest file '../../build/rover_fake_camera/rover_fake_camera.egg-info/SOURCES.txt'\n"}
+[2.122693] (rover_fake_camera) StdoutLine: {'line': b'running build\n'}
+[2.123154] (rover_fake_camera) StdoutLine: {'line': b'running build_py\n'}
+[2.123713] (rover_fake_camera) StdoutLine: {'line': b'copying rover_fake_camera/fake_camera_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build/lib/rover_fake_camera\n'}
+[2.124498] (rover_fake_camera) StdoutLine: {'line': b'running install\n'}
+[2.127409] (rover_fake_camera) StdoutLine: {'line': b'running install_lib\n'}
+[2.129816] (rover_fake_camera) StdoutLine: {'line': b'copying /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build/lib/rover_fake_camera/fake_camera_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera\n'}
+[2.131809] (rover_fake_camera) StdoutLine: {'line': b'byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera/fake_camera_node.py to fake_camera_node.cpython-38.pyc\n'}
+[2.139202] (rover_fake_camera) StdoutLine: {'line': b'running install_data\n'}
+[2.139693] (rover_fake_camera) StdoutLine: {'line': b'running install_egg_info\n'}
+[2.144623] (rover_fake_camera) StdoutLine: {'line': b"removing '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera-0.0.0-py3.8.egg-info' (and everything under it)\n"}
+[2.145587] (rover_fake_camera) StdoutLine: {'line': b'Copying ../../build/rover_fake_camera/rover_fake_camera.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera-0.0.0-py3.8.egg-info\n'}
+[2.147612] (rover_fake_camera) StdoutLine: {'line': b'running install_scripts\n'}
+[2.193999] (rover_fake_camera) StdoutLine: {'line': b'Installing fake_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/rover_fake_camera\n'}
+[2.195100] (rover_fake_camera) StdoutLine: {'line': b"writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log'\n"}
+[2.210522] (-) TimerEvent: {}
+[2.298251] (rover_fake_camera) CommandEnded: {'returncode': 0}
+[2.310674] (-) TimerEvent: {}
+[2.334182] (rover_fake_camera) JobEnded: {'identifier': 'rover_fake_camera', 'rc': 0}
+[2.336727] (-) EventReactorShutdown: {}

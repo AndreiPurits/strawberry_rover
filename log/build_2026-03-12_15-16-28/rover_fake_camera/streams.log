@@ -1,0 +1,25 @@
+[3.435s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_camera build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log --single-version-externally-managed install_data
+[4.096s] running egg_info
+[4.097s] writing ../../build/rover_fake_camera/rover_fake_camera.egg-info/PKG-INFO
+[4.098s] writing dependency_links to ../../build/rover_fake_camera/rover_fake_camera.egg-info/dependency_links.txt
+[4.105s] writing entry points to ../../build/rover_fake_camera/rover_fake_camera.egg-info/entry_points.txt
+[4.105s] writing requirements to ../../build/rover_fake_camera/rover_fake_camera.egg-info/requires.txt
+[4.105s] writing top-level names to ../../build/rover_fake_camera/rover_fake_camera.egg-info/top_level.txt
+[4.184s] reading manifest file '../../build/rover_fake_camera/rover_fake_camera.egg-info/SOURCES.txt'
+[4.186s] writing manifest file '../../build/rover_fake_camera/rover_fake_camera.egg-info/SOURCES.txt'
+[4.187s] running build
+[4.192s] running build_py
+[4.194s] copying rover_fake_camera/fake_camera_node.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build/lib/rover_fake_camera
+[4.196s] running install
+[4.200s] running install_lib
+[4.204s] copying /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build/lib/rover_fake_camera/fake_camera_node.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera
+[4.207s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera/fake_camera_node.py to fake_camera_node.cpython-38.pyc
+[4.219s] running install_data
+[4.222s] copying config/fake_camera.yaml -> /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/share/rover_fake_camera/config
+[4.222s] running install_egg_info
+[4.229s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera-0.0.0-py3.8.egg-info' (and everything under it)
+[4.230s] Copying ../../build/rover_fake_camera/rover_fake_camera.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages/rover_fake_camera-0.0.0-py3.8.egg-info
+[4.232s] running install_scripts
+[4.291s] Installing fake_camera_node script to /home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/rover_fake_camera
+[4.291s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log'
+[4.507s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fake_camera' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fake_camera/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fake_camera build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fake_camera/install.log --single-version-externally-managed install_data

@@ -1,0 +1,35 @@
+[5.450s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fsm/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fsm build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log --single-version-externally-managed install_data
+[6.030s] running egg_info
+[6.031s] creating ../../build/rover_fsm/rover_fsm.egg-info
+[6.036s] writing ../../build/rover_fsm/rover_fsm.egg-info/PKG-INFO
+[6.038s] writing dependency_links to ../../build/rover_fsm/rover_fsm.egg-info/dependency_links.txt
+[6.040s] writing entry points to ../../build/rover_fsm/rover_fsm.egg-info/entry_points.txt
+[6.041s] writing requirements to ../../build/rover_fsm/rover_fsm.egg-info/requires.txt
+[6.042s] writing top-level names to ../../build/rover_fsm/rover_fsm.egg-info/top_level.txt
+[6.048s] writing manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+[6.140s] reading manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+[6.149s] writing manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+[6.152s] running build
+[6.154s] running build_py
+[6.158s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build
+[6.160s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib
+[6.161s] creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm
+[6.163s] copying rover_fsm/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm
+[6.165s] running install
+[6.169s] running install_lib
+[6.178s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm
+[6.179s] copying /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm
+[6.180s] byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm/__init__.py to __init__.cpython-38.pyc
+[6.183s] running install_data
+[6.183s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index
+[6.184s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index
+[6.184s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index/packages
+[6.184s] copying resource/rover_fsm -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index/packages
+[6.184s] copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm
+[6.184s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/launch
+[6.185s] creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/config
+[6.185s] running install_egg_info
+[6.190s] Copying ../../build/rover_fsm/rover_fsm.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm-0.0.0-py3.8.egg-info
+[6.194s] running install_scripts
+[6.245s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log'
+[6.420s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_fsm' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_fsm/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_fsm build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log --single-version-externally-managed install_data

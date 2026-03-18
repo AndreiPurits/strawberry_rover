@@ -1,0 +1,3 @@
+[console_scripts]
+fake_stereo_node = rover_fake_stereo.fake_stereo_node:main
+

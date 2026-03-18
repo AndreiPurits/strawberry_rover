@@ -1,0 +1,33 @@
+running egg_info
+creating ../../build/rover_fsm/rover_fsm.egg-info
+writing ../../build/rover_fsm/rover_fsm.egg-info/PKG-INFO
+writing dependency_links to ../../build/rover_fsm/rover_fsm.egg-info/dependency_links.txt
+writing entry points to ../../build/rover_fsm/rover_fsm.egg-info/entry_points.txt
+writing requirements to ../../build/rover_fsm/rover_fsm.egg-info/requires.txt
+writing top-level names to ../../build/rover_fsm/rover_fsm.egg-info/top_level.txt
+writing manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+reading manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+writing manifest file '../../build/rover_fsm/rover_fsm.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build
+creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib
+creating /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm
+copying rover_fsm/__init__.py -> /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm
+running install
+running install_lib
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm
+copying /home/andrei/project/strawberry_rover_ws/build/rover_fsm/build/lib/rover_fsm/__init__.py -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm
+byte-compiling /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm/__init__.py to __init__.cpython-38.pyc
+running install_data
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index/packages
+copying resource/rover_fsm -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/ament_index/resource_index/packages
+copying package.xml -> /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/launch
+creating /home/andrei/project/strawberry_rover_ws/install/rover_fsm/share/rover_fsm/config
+running install_egg_info
+Copying ../../build/rover_fsm/rover_fsm.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_fsm/lib/python3.8/site-packages/rover_fsm-0.0.0-py3.8.egg-info
+running install_scripts
+writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_fsm/install.log'

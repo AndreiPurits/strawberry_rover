@@ -1,0 +1,20 @@
+[2.380s] Invoking command in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_visualization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_visualization build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_visualization/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_visualization/install.log --single-version-externally-managed install_data
+[2.979s] running egg_info
+[2.980s] writing ../../build/rover_visualization/rover_visualization.egg-info/PKG-INFO
+[2.982s] writing dependency_links to ../../build/rover_visualization/rover_visualization.egg-info/dependency_links.txt
+[2.982s] writing entry points to ../../build/rover_visualization/rover_visualization.egg-info/entry_points.txt
+[2.984s] writing requirements to ../../build/rover_visualization/rover_visualization.egg-info/requires.txt
+[2.986s] writing top-level names to ../../build/rover_visualization/rover_visualization.egg-info/top_level.txt
+[3.060s] reading manifest file '../../build/rover_visualization/rover_visualization.egg-info/SOURCES.txt'
+[3.062s] writing manifest file '../../build/rover_visualization/rover_visualization.egg-info/SOURCES.txt'
+[3.063s] running build
+[3.064s] running build_py
+[3.067s] running install
+[3.071s] running install_lib
+[3.074s] running install_data
+[3.075s] running install_egg_info
+[3.079s] removing '/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages/rover_visualization-0.0.0-py3.8.egg-info' (and everything under it)
+[3.109s] Copying ../../build/rover_visualization/rover_visualization.egg-info to /home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages/rover_visualization-0.0.0-py3.8.egg-info
+[3.110s] running install_scripts
+[3.155s] writing list of installed files to '/home/andrei/project/strawberry_rover_ws/build/rover_visualization/install.log'
+[3.252s] Invoked command in '/home/andrei/project/strawberry_rover_ws/src/rover_visualization' returned '0': PYTHONPATH=/home/andrei/project/strawberry_rover_ws/build/rover_visualization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/andrei/project/strawberry_rover_ws/install/rover_visualization/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_visualization build --build-base /home/andrei/project/strawberry_rover_ws/build/rover_visualization/build install --record /home/andrei/project/strawberry_rover_ws/build/rover_visualization/install.log --single-version-externally-managed install_data

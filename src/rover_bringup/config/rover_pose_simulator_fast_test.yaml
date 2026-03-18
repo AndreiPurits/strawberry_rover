@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    publish_rate: 25.0
+    pose_topic: "/sim/rover_pose"
+    cmd_vel_topic: "/cmd_vel"
+    frame_id: "base_link"
+    world_frame_id: "sim_world"
+    x0: 0.0
+    y0: 0.0
+    yaw0: 0.0
+    motion_mode: "cmd_vel"
+    row_count: 5
+    row_spacing: 1.8
+    row_length: 8.0
+    scripted_speed: 0.35
+    scripted_turn_speed: 0.8
+    waypoint_tolerance: 0.2
+    loop_rows: true
