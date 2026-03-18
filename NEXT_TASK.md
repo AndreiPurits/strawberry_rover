@@ -44,6 +44,9 @@ Visualization & Monitoring Agent
     - media-area перестроена в 2x2 (`front`, `bottom`, `stereo`, `lidar view`);
     - route/row controls перенесены под карту справа, telemetry+controls разделены на 2 колонки;
     - удалены metadata input-поля (`route name/notes/row count/spacing`), оставлены action-кнопки.
+  - выполнен MVP nav-loop hotfix (без запуска полного Stage 6.4):
+    - Auto FSM больше не завершает цикл в terminal `FINISHED`;
+    - проход по рядам переведен в бесконечный детерминированный snake-loop для demo (непрерывное движение в Auto).
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;
