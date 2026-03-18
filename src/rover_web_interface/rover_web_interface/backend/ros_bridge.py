@@ -595,6 +595,9 @@ class RosWebBridge(Node):
             return self._build_control_snapshot()
 
     def publish_zero_cmd(self, source: str = "zero") -> Dict[str, Any]:
+        # Publish an immediate zero command, then keep one extra zero on the next
+        # control tick to override any in-flight non-zero command safely.
+        self._cmd_pub.publish(Twist())
         with self._lock:
             self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
             self._force_zero_once = True

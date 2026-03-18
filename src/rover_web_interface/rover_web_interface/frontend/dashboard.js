@@ -2,6 +2,12 @@
 
 const stateStore = {
   state: null,
+  control: {
+    mode: "auto",
+    started: false,
+    manualAllowed: false,
+    lastCommand: {},
+  },
   roverScreen: { x: 0, y: 0 },
   ws: null,
   keysDown: new Set(),
@@ -186,12 +192,12 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
 }
 
 function controlSnapshot(state) {
-  const c = state?.control || {};
+  const c = state?.control || stateStore.control || {};
   return {
     mode: c.mode || "auto",
     started: Boolean(c.started),
-    manualAllowed: Boolean(c.manual_allowed),
-    lastCommand: c.last_command || {},
+    manualAllowed: Boolean(c.manual_allowed ?? c.manualAllowed),
+    lastCommand: c.last_command || c.lastCommand || {},
   };
 }
 
@@ -415,8 +421,10 @@ async function postControl(url, payload) {
 }
 
 function applyControlResponse(resp) {
-  if (!resp || !resp.control || !stateStore.state) return;
+  if (!resp || !resp.control) return;
+  if (!stateStore.state) stateStore.state = {};
   stateStore.state.control = resp.control;
+  stateStore.control = controlSnapshot(stateStore.state);
   renderControl(stateStore.state);
 }
 
@@ -457,7 +465,6 @@ function currentKeyboardCommand() {
 }
 
 function sendManualKeyboardCommand() {
-  if (!canManualControl()) return;
   const cmd = currentKeyboardCommand();
   stateStore.lastManualCmd = cmd;
   if (!sendWsControl({ action: "command", command: cmd, source: "keyboard" })) {
@@ -468,7 +475,6 @@ function sendManualKeyboardCommand() {
 
 function stopManualKeyboard(source = "keyboard_keyup") {
   stateStore.lastManualCmd = { linear_x: 0.0, angular_z: 0.0 };
-  if (!canManualControl()) return;
   if (!sendWsControl({ action: "zero", source })) {
     postControl("/api/control/command", {
       command: { linear_x: 0.0, angular_z: 0.0 },
@@ -519,7 +525,6 @@ function currentGamepadCommand() {
 }
 
 function sendManualJoystickCommand(cmd) {
-  if (!canManualControl()) return;
   stateStore.lastManualCmd = cmd;
   if (!sendWsControl({ action: "command", command: cmd, source: "joystick" })) {
     postControl("/api/control/command", { command: cmd, source: "joystick" }).catch(() => {});
@@ -527,7 +532,6 @@ function sendManualJoystickCommand(cmd) {
 }
 
 function stopManualJoystick(source = "joystick_disconnect") {
-  if (!canManualControl()) return;
   if (!sendWsControl({ action: "zero", source })) {
     postControl("/api/control/command", {
       command: { linear_x: 0.0, angular_z: 0.0 },
@@ -558,6 +562,7 @@ function gamepadLoop() {
 
 function onState(state) {
   stateStore.state = state;
+  stateStore.control = controlSnapshot(state);
   drawFieldMap("fieldCanvas", state, false);
   renderTelemetry(state);
   renderControl(state);
