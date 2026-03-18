@@ -70,23 +70,27 @@
   - фиксированный viewport layout (`100vh`, grid ~58/42);
   - map/cameras/controls/telemetry размещены в одном экране без вертикальной прокрутки;
   - увеличены кнопки и добавлены активные/disabled состояния для operator/demo usability.
+- Реализован Stage 6.3 (route editing / map management, MVP) в `rover_web_interface`:
+  - добавлен backend route-management API: `select`, `rename`, `delete`, `metadata update`, `rows add/remove`, `trim_last`;
+  - добавлено понятие active route (`active_route_id`) и active route snapshot в `/api/state`;
+  - в UI добавлена панель `Saved Routes` со списком маршрутов и базовыми действиями управления;
+  - добавлен editor route metadata (`name`, `notes`, `row_count`, `spacing_m`) и базовый row metadata management;
+  - выбранный маршрут подсвечивается на карте отдельным стилем.
 
 ## Текущая активная фаза
-Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 route recording).
+Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).
 
 ## Текущая активная задача
-- перейти к Stage 6.3 (route editing / map management):
-  - просмотр списка сохраненных routes;
-  - редактирование geometry/точек маршрута;
-  - базовая spline/corner correction;
-  - подготовка масштабирования row-структуры под поле.
+- перейти к Stage 6.4 (route execution):
+  - загрузка выбранного active route в execution mode;
+  - визуализация прогресса прохождения маршрута;
+  - первичный follow-route lifecycle (start/pause/stop) в web UI/backend contract.
 
 ## Следующая задача после текущей
-- Stage 6.3 — Route editing / map management:
-  - визуальный просмотр сохраненных маршрутов в web UI;
-  - операции edit/add/delete row segments;
-  - корректировка route-геометрии с сохранением в backend contract;
-  - подготовка данных для Stage 6.4 route execution.
+- Stage 6.4 — Route execution:
+  - выбор/загрузка сохраненного active route;
+  - отображение состояния исполнения маршрута и прогресса;
+  - подготовка безопасного web execution контракта без изменений core ROS2 architecture.
 
 ## Ограничения текущего этапа
 - Реально подключена только RGB-камера (в текущем sim bringup используется виртуальная камера).

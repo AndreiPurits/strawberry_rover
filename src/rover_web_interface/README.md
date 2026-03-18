@@ -18,6 +18,13 @@ Minimal Stage 6 web visualization layer for Strawberry Rover.
   - `/api/routes/start`
   - `/api/routes/stop`
   - `/api/routes/save`
+  - `/api/routes/select`
+  - `/api/routes/rename`
+  - `/api/routes/delete`
+  - `/api/routes/metadata`
+  - `/api/routes/rows/add`
+  - `/api/routes/rows/remove`
+  - `/api/routes/trim_last`
   - `/api/scan`
   - `/api/cameras/front`
   - `/api/cameras/bottom`
@@ -51,6 +58,10 @@ Control payload contract (frontend -> backend):
   - field map with beds
   - rover pose, heading, route trail
   - route recording overlay (draft + saved routes)
+  - route manager (list/select/rename/delete)
+  - metadata editing (`notes`, `row_count`, `spacing_m`)
+  - row metadata add/remove (MVP, metadata-only)
+  - active route highlight + lightweight trim-last-points action
   - telemetry panel
   - camera panels (front/bottom/stereo)
   - single-screen no-scroll operator layout (map + cameras + controls + telemetry)

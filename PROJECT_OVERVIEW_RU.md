@@ -37,6 +37,8 @@ Strawberry Rover — это программно-аппаратная систе
 - В браузере доступен минимальный мониторинг: полевая карта, позиция/ориентация/trail ровера, telemetry, front/bottom/stereo потоки и detail-окно ровера.
 - Реализован Stage 6.2 route recording: запись маршрута из `/sim/rover_pose` (точки `x/y/yaw/timestamp/row_index`), команды `start/stop/save`, сохраненные маршруты остаются видимыми на карте.
 - UI переразложен под single-screen operator view: map/cameras/controls/telemetry помещаются в один экран без вертикального скролла, кнопки увеличены и сгруппированы по режимам.
+- Реализован Stage 6.3 route editing / map management (MVP): список сохраненных маршрутов, выбор active route, rename/delete, metadata editor и базовое управление row metadata.
+- Выбранный active route визуально выделяется на карте; добавлен lightweight edit action `trim last points`.
 
 ## Оборудование, которое уже есть
 - Jetson AGX Orin
@@ -164,12 +166,12 @@ Strawberry Rover — это программно-аппаратная систе
    - режим построения маршрута во время проезда по грядкам;
    - запись траектории из live pose stream в backend route draft;
    - сохранение draft как saved route с metadata (длина грядки, межрядье, snake-структура).
-3. **Route editing / map management** (следующий подэтап)
+3. **Route editing / map management** (выполнено в MVP)
    - просмотр и правка сохраненных маршрутов;
-   - spline-коррекция;
-   - добавление/удаление рядов;
-   - масштабирование структуры маршрута под поле.
-4. **Route execution**
+   - metadata-редактирование и базовые row-операции;
+   - lightweight правка геометрии (trim-last-points);
+   - подготовка контракта для execution-слоя.
+4. **Route execution** (следующий подэтап)
    - загрузка сохраненного маршрута;
    - визуализация маршрута на карте;
    - запуск режима следования по маршруту.
@@ -178,7 +180,7 @@ Strawberry Rover — это программно-аппаратная систе
 - расширение описывает архитектуру и этапы внедрения;
 - реализация будет выполняться итеративно по подэтапам;
 - web control на Stage 6.1 уже реализован минимально и demo-ready;
-- следующий подэтап: Stage 6.2 route recording.
+- следующий подэтап: Stage 6.4 route execution.
 
 ### Этап 7 — Управление манипулятором
 - **Цель:** подготовить контур управления сбором ягод.

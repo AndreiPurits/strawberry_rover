@@ -91,7 +91,7 @@
     }
     .control-groups {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
     }
     .group-title {
@@ -123,6 +123,50 @@
       background: #2f3d4a;
     }
     .kv { font-size: 12px; line-height: 1.35; }
+    .tiny { font-size: 11px; line-height: 1.25; opacity: 0.9; }
+    .route-manager {
+      margin-top: 8px;
+      border-top: 1px solid #2d2d2d;
+      padding-top: 7px;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 8px;
+      min-height: 0;
+    }
+    .route-list {
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 6px;
+      min-height: 92px;
+      max-height: 130px;
+      overflow: auto;
+    }
+    .route-item {
+      padding: 4px 6px;
+      border: 1px solid #3b3b3b;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+    .route-item.active {
+      border-color: #77c9ff;
+      background: rgba(119, 201, 255, 0.16);
+    }
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .editor-grid input {
+      width: 100%;
+      min-height: 28px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      background: #141414;
+      color: #eee;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
     .badge {
       display: inline-block;
       padding: 3px 7px;
@@ -201,6 +245,35 @@
           Keyboard: W/S/A/D + Space
         </div>
         <div class="kv" id="routeStats" style="margin-top: 6px;">Routes: 0 saved</div>
+        <div class="route-manager">
+          <div>
+            <div class="group-title">Saved Routes</div>
+            <div id="routeList" class="route-list tiny">No saved routes</div>
+            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr 1fr; display: grid;">
+              <button id="btnRouteSelect">Select</button>
+              <button id="btnRouteDelete">Delete</button>
+              <button id="btnRouteTrim">Trim Last</button>
+            </div>
+          </div>
+          <div>
+            <div class="group-title">Route Metadata</div>
+            <div class="editor-grid">
+              <input id="routeNameInput" placeholder="Route name">
+              <input id="routeNotesInput" placeholder="Notes">
+              <input id="routeRowsInput" placeholder="Row count" type="number" min="0" step="1">
+              <input id="routeSpacingInput" placeholder="Spacing (m)" type="number" step="0.1">
+            </div>
+            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr 1fr; display: grid;">
+              <button id="btnRouteRename">Rename</button>
+              <button id="btnRouteMetaSave">Save Meta</button>
+              <button id="btnRowAdd">Add Row</button>
+            </div>
+            <div class="button-grid" style="margin-top: 6px; grid-template-columns: 1fr 1fr; display: grid;">
+              <button id="btnRowRemove">Remove Row</button>
+              <span class="tiny" id="selectedRouteInfo">Selected: none</span>
+            </div>
+          </div>
+        </div>
         <div class="kv" id="telemetryPanel" style="margin-top: 6px;">Waiting for data...</div>
       </div>
     </section>

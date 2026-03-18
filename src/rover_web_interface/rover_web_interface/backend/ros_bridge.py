@@ -92,9 +92,11 @@ class RosWebBridge(Node):
             "points": [],
         }
         self._saved_routes: List[Dict[str, Any]] = []
+        self._active_route_id: Optional[str] = None
         self._route_counter = 0
         self._route_last_sample_time = 0.0
         self._route_last_sample_xy: Optional[Tuple[float, float]] = None
+        self._current_route = self._new_route_draft(time.time())
 
         self.create_subscription(PoseStamped, "/sim/rover_pose", self._on_pose, 10)
         self.create_subscription(MarkerArray, "/sim/scene_markers", self._on_scene, 10)
@@ -291,10 +293,17 @@ class RosWebBridge(Node):
                     "point_count": len(route["points"]),
                 }
             )
+        active = None
+        for route in saved:
+            if route["id"] == self._active_route_id:
+                active = route
+                break
         return {
             "recording": bool(self._route_recording),
             "current_route": current,
             "saved_routes": saved,
+            "active_route_id": self._active_route_id,
+            "active_route": active,
         }
 
     def get_route_snapshot(self) -> Dict[str, Any]:
@@ -306,6 +315,10 @@ class RosWebBridge(Node):
             "bed_length_m": 22.0,
             "row_spacing_m": self._row_spacing,
             "snake_structure": True,
+            "notes": "",
+            "row_count": 5,
+            "spacing_m": self._row_spacing,
+            "rows": [],
         }
 
     def _new_route_draft(self, now_s: float) -> Dict[str, Any]:
@@ -376,9 +389,135 @@ class RosWebBridge(Node):
                 "points": list(self._current_route["points"]),
             }
             self._saved_routes.append(route)
+            self._active_route_id = route["id"]
             self._current_route = self._new_route_draft(time.time())
             self._route_last_sample_time = 0.0
             self._route_last_sample_xy = None
+            return self._build_route_snapshot()
+
+    @staticmethod
+    def _copy_route(route: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": route["id"],
+            "name": route["name"],
+            "created_at": route["created_at"],
+            "saved_at": route["saved_at"],
+            "metadata": dict(route["metadata"]),
+            "points": list(route["points"]),
+        }
+
+    @staticmethod
+    def _normalize_metadata(existing: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+        meta = dict(existing)
+        if "notes" in patch:
+            meta["notes"] = str(patch.get("notes", ""))
+        if "row_count" in patch:
+            try:
+                meta["row_count"] = max(0, int(patch.get("row_count", 0)))
+            except (TypeError, ValueError):
+                pass
+        if "spacing_m" in patch:
+            try:
+                meta["spacing_m"] = float(patch.get("spacing_m", meta.get("spacing_m", 0.0)))
+            except (TypeError, ValueError):
+                pass
+        if "rows" in patch and isinstance(patch["rows"], list):
+            meta["rows"] = list(patch["rows"])
+        return meta
+
+    def _find_saved_route_index(self, route_id: str) -> int:
+        for idx, route in enumerate(self._saved_routes):
+            if route["id"] == route_id:
+                return idx
+        return -1
+
+    def select_route(self, route_id: str) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            self._active_route_id = self._saved_routes[idx]["id"]
+            return self._build_route_snapshot()
+
+    def rename_route(self, route_id: str, new_name: str) -> Dict[str, Any]:
+        clean_name = str(new_name).strip()
+        if not clean_name:
+            raise ValueError("route_name_empty")
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            self._saved_routes[idx]["name"] = clean_name
+            return self._build_route_snapshot()
+
+    def delete_route(self, route_id: str) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            del self._saved_routes[idx]
+            if self._active_route_id == route_id:
+                self._active_route_id = self._saved_routes[-1]["id"] if self._saved_routes else None
+            return self._build_route_snapshot()
+
+    def update_route_metadata(self, route_id: str, metadata_patch: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            route["metadata"] = self._normalize_metadata(route["metadata"], metadata_patch)
+            return self._build_route_snapshot()
+
+    def add_route_row_metadata(self, route_id: str, row_meta: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            metadata = dict(route["metadata"])
+            rows = list(metadata.get("rows", []))
+            rows.append(
+                {
+                    "row_id": str(row_meta.get("row_id", f"row_{len(rows) + 1}")),
+                    "label": str(row_meta.get("label", f"Row {len(rows) + 1}")),
+                    "length_m": float(row_meta.get("length_m", metadata.get("bed_length_m", 22.0))),
+                }
+            )
+            metadata["rows"] = rows
+            metadata["row_count"] = max(int(metadata.get("row_count", 0)), len(rows))
+            route["metadata"] = metadata
+            return self._build_route_snapshot()
+
+    def remove_route_row_metadata(self, route_id: str, row_index: int) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            metadata = dict(route["metadata"])
+            rows = list(metadata.get("rows", []))
+            if row_index < 0 or row_index >= len(rows):
+                raise ValueError("row_index_out_of_range")
+            del rows[row_index]
+            metadata["rows"] = rows
+            metadata["row_count"] = max(0, int(metadata.get("row_count", 0)))
+            route["metadata"] = metadata
+            return self._build_route_snapshot()
+
+    def trim_route_last_points(self, route_id: str, points_to_trim: int = 20) -> Dict[str, Any]:
+        trim_n = max(1, int(points_to_trim))
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            pts = list(route["points"])
+            if trim_n >= len(pts):
+                pts = []
+            else:
+                pts = pts[:-trim_n]
+            route["points"] = pts
             return self._build_route_snapshot()
 
     def get_control_snapshot(self) -> Dict[str, Any]:

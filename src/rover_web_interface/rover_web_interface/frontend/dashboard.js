@@ -15,6 +15,8 @@ const stateStore = {
   lastControlSource: "n/a",
   gamepadLoopHandle: null,
   routeRecording: false,
+  selectedRouteId: null,
+  routeEditorRouteId: null,
 };
 
 const GAMEPAD_DEADZONE = 0.18;
@@ -124,6 +126,7 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
 
   // Saved routes stay visible.
   const routes = state.routes || {};
+  const activeRouteId = routes.active_route_id || null;
   (routes.saved_routes || []).forEach((route) => {
     const points = route.points || [];
     if (points.length < 2) return;
@@ -133,8 +136,9 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     });
-    ctx.strokeStyle = "rgba(172, 136, 255, 0.95)";
-    ctx.lineWidth = 2.5;
+    const isActive = route.id === activeRouteId;
+    ctx.strokeStyle = isActive ? "rgba(80, 220, 255, 0.98)" : "rgba(172, 136, 255, 0.9)";
+    ctx.lineWidth = isActive ? 4 : 2.2;
     ctx.stroke();
   });
 
@@ -234,6 +238,10 @@ function renderRouteUi(state) {
   const recording = Boolean(routes.recording);
   const currentCount = Number(routes.current_route?.point_count || 0);
   const savedCount = Number((routes.saved_routes || []).length);
+  const activeRouteId = routes.active_route_id || null;
+  if (activeRouteId) {
+    stateStore.selectedRouteId = activeRouteId;
+  }
   const statusEl = document.getElementById("routeRecordStatus");
   if (statusEl) {
     statusEl.textContent = recording ? `Recording: ON (${currentCount} pts)` : `Recording: idle (${currentCount} pts)`;
@@ -257,6 +265,72 @@ function renderRouteUi(state) {
   if (btnSave) {
     btnSave.disabled = recording || currentCount < 2;
   }
+
+  const routeList = document.getElementById("routeList");
+  if (routeList) {
+    const saved = routes.saved_routes || [];
+    if (!saved.length) {
+      routeList.textContent = "No saved routes";
+    } else {
+      routeList.innerHTML = "";
+      saved.forEach((route) => {
+        const d = document.createElement("div");
+        const isActive = route.id === (routes.active_route_id || stateStore.selectedRouteId);
+        d.className = `route-item ${isActive ? "active" : ""}`;
+        const created = route.created_at ? new Date(route.created_at * 1000).toLocaleTimeString() : "n/a";
+        d.innerHTML = `
+          <div><strong>${route.name || route.id}</strong> <span class="tiny">(${route.id})</span></div>
+          <div class="tiny">pts: ${route.point_count || 0} | created: ${created}</div>
+        `;
+        d.addEventListener("click", async () => {
+          stateStore.selectedRouteId = route.id;
+          await postJson("/api/routes/select", { route_id: route.id });
+        });
+        routeList.appendChild(d);
+      });
+    }
+  }
+
+  const activeRoute = routes.active_route || null;
+  const routeNameInput = document.getElementById("routeNameInput");
+  const routeNotesInput = document.getElementById("routeNotesInput");
+  const routeRowsInput = document.getElementById("routeRowsInput");
+  const routeSpacingInput = document.getElementById("routeSpacingInput");
+  const selectedRouteInfo = document.getElementById("selectedRouteInfo");
+  if (activeRoute) {
+    const meta = activeRoute.metadata || {};
+    if (stateStore.routeEditorRouteId !== activeRoute.id) {
+      if (routeNameInput) routeNameInput.value = activeRoute.name || "";
+      if (routeNotesInput) routeNotesInput.value = meta.notes || "";
+      if (routeRowsInput) routeRowsInput.value = Number(meta.row_count ?? 0);
+      if (routeSpacingInput) routeSpacingInput.value = Number(meta.spacing_m ?? 0).toFixed(2);
+      stateStore.routeEditorRouteId = activeRoute.id;
+    }
+    if (selectedRouteInfo) {
+      selectedRouteInfo.textContent = `Selected: ${activeRoute.name || activeRoute.id}`;
+    }
+  } else {
+    stateStore.routeEditorRouteId = null;
+    if (selectedRouteInfo) {
+      selectedRouteInfo.textContent = "Selected: none";
+    }
+  }
+
+  const editable = Boolean(activeRoute);
+  const btnRouteSelect = document.getElementById("btnRouteSelect");
+  const btnRouteDelete = document.getElementById("btnRouteDelete");
+  const btnRouteTrim = document.getElementById("btnRouteTrim");
+  const btnRouteRename = document.getElementById("btnRouteRename");
+  const btnRouteMetaSave = document.getElementById("btnRouteMetaSave");
+  const btnRowAdd = document.getElementById("btnRowAdd");
+  const btnRowRemove = document.getElementById("btnRowRemove");
+  if (btnRouteSelect) btnRouteSelect.disabled = !stateStore.selectedRouteId;
+  if (btnRouteDelete) btnRouteDelete.disabled = !editable;
+  if (btnRouteTrim) btnRouteTrim.disabled = !editable;
+  if (btnRouteRename) btnRouteRename.disabled = !editable;
+  if (btnRouteMetaSave) btnRouteMetaSave.disabled = !editable;
+  if (btnRowAdd) btnRowAdd.disabled = !editable;
+  if (btnRowRemove) btnRowRemove.disabled = !editable;
 }
 
 function renderGamepadStatus() {
@@ -335,6 +409,15 @@ async function postControl(url, payload) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload ? JSON.stringify(payload) : "{}",
+  });
+  return res.json();
+}
+
+async function postJson(url, payload) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
   });
   return res.json();
 }
@@ -536,6 +619,67 @@ function initUi() {
   });
   document.getElementById("btnRouteSave").addEventListener("click", async () => {
     await postControl("/api/routes/save");
+  });
+  document.getElementById("btnRouteSelect").addEventListener("click", async () => {
+    if (!stateStore.selectedRouteId) return;
+    await postJson("/api/routes/select", { route_id: stateStore.selectedRouteId });
+  });
+  document.getElementById("btnRouteDelete").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    if (!routeId) return;
+    await postJson("/api/routes/delete", { route_id: routeId });
+  });
+  document.getElementById("btnRouteRename").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    const name = document.getElementById("routeNameInput").value.trim();
+    if (!routeId || !name) return;
+    await postJson("/api/routes/rename", { route_id: routeId, name });
+  });
+  document.getElementById("btnRouteMetaSave").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    if (!routeId) return;
+    const notes = document.getElementById("routeNotesInput").value.trim();
+    const rowCount = Number(document.getElementById("routeRowsInput").value || 0);
+    const spacing = Number(document.getElementById("routeSpacingInput").value || 0);
+    await postJson("/api/routes/metadata", {
+      route_id: routeId,
+      metadata: {
+        notes,
+        row_count: rowCount,
+        spacing_m: spacing,
+      },
+    });
+  });
+  document.getElementById("btnRowAdd").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    if (!routeId) return;
+    const active = stateStore.state?.routes?.active_route || {};
+    const rows = active.metadata?.rows || [];
+    const idx = rows.length + 1;
+    await postJson("/api/routes/rows/add", {
+      route_id: routeId,
+      row: {
+        row_id: `row_${idx}`,
+        label: `Row ${idx}`,
+        length_m: Number(active.metadata?.bed_length_m || 22.0),
+      },
+    });
+  });
+  document.getElementById("btnRowRemove").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    if (!routeId) return;
+    const active = stateStore.state?.routes?.active_route || {};
+    const rows = active.metadata?.rows || [];
+    if (!rows.length) return;
+    await postJson("/api/routes/rows/remove", {
+      route_id: routeId,
+      row_index: rows.length - 1,
+    });
+  });
+  document.getElementById("btnRouteTrim").addEventListener("click", async () => {
+    const routeId = stateStore.state?.routes?.active_route_id;
+    if (!routeId) return;
+    await postJson("/api/routes/trim_last", { route_id: routeId, points_to_trim: 20 });
   });
 
   window.addEventListener("keydown", (evt) => {
