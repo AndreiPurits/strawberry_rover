@@ -6,7 +6,30 @@ const stateStore = {
   ws: null,
   keysDown: new Set(),
   lastManualCmd: { linear_x: 0.0, angular_z: 0.0 },
+  gamepad: {
+    connected: false,
+    index: null,
+    axes: { leftX: 0.0, leftY: 0.0, rightX: 0.0 },
+    active: false,
+  },
+  lastControlSource: "n/a",
+  gamepadLoopHandle: null,
 };
+
+const GAMEPAD_DEADZONE = 0.18;
+const LINEAR_SPEED_MAX = 0.55;
+const ANGULAR_SPEED_MAX = 1.1;
+
+function clamp(value, lo, hi) {
+  return Math.min(hi, Math.max(lo, value));
+}
+
+function applyDeadzone(value, deadzone) {
+  if (Math.abs(value) < deadzone) return 0.0;
+  const sign = value >= 0 ? 1 : -1;
+  const scaled = (Math.abs(value) - deadzone) / (1.0 - deadzone);
+  return sign * scaled;
+}
 
 function worldToCanvas(x, y, bounds, canvas) {
   const xNorm = (x - bounds.minX) / Math.max(1e-6, bounds.maxX - bounds.minX);
@@ -144,6 +167,7 @@ function renderControl(state) {
   const modeLabel = c.mode === "manual" ? "manual" : "auto";
   const runLabel = c.started ? "running" : "stopped";
   const last = c.lastCommand || {};
+  stateStore.lastControlSource = last.source || "n/a";
   const statusEl = document.getElementById("controlStatus");
   if (statusEl) {
     statusEl.innerHTML = `
@@ -158,6 +182,21 @@ function renderControl(state) {
   if (modeBtn) {
     modeBtn.textContent = c.mode === "manual" ? "Switch to Auto" : "Switch to Manual";
   }
+  const sourceEl = document.getElementById("controlSource");
+  if (sourceEl) {
+    sourceEl.textContent = `Control source: ${stateStore.lastControlSource}`;
+  }
+}
+
+function renderGamepadStatus() {
+  const statusEl = document.getElementById("gamepadStatus");
+  if (!statusEl) return;
+  const gp = stateStore.gamepad;
+  if (!gp.connected) {
+    statusEl.textContent = "Gamepad: disconnected";
+    return;
+  }
+  statusEl.textContent = `Gamepad: connected | lx=${gp.axes.leftX.toFixed(2)} ly=${gp.axes.leftY.toFixed(2)} rx=${gp.axes.rightX.toFixed(2)} | active=${gp.active}`;
 }
 
 function renderTelemetry(state) {
@@ -277,6 +316,85 @@ function stopManualKeyboard(source = "keyboard_keyup") {
   }
 }
 
+function currentGamepadCommand() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let idx = stateStore.gamepad.index;
+  if (idx === null) {
+    for (let i = 0; i < pads.length; i += 1) {
+      if (pads[i]) {
+        idx = i;
+        stateStore.gamepad.index = i;
+        break;
+      }
+    }
+  }
+  const pad = idx !== null ? pads[idx] : null;
+  if (!pad) {
+    stateStore.gamepad.connected = false;
+    stateStore.gamepad.active = false;
+    renderGamepadStatus();
+    return { connected: false, command: { linear_x: 0.0, angular_z: 0.0 } };
+  }
+
+  const rawLeftX = Number(pad.axes[0] || 0.0);
+  const rawLeftY = Number(pad.axes[1] || 0.0);
+  const rawRightX = Number(pad.axes[2] || 0.0);
+  const leftX = applyDeadzone(rawLeftX, GAMEPAD_DEADZONE);
+  const leftY = applyDeadzone(rawLeftY, GAMEPAD_DEADZONE);
+  const rightX = applyDeadzone(rawRightX, GAMEPAD_DEADZONE);
+  const turn = Math.abs(rightX) > 1e-3 ? rightX : leftX;
+  const linear = clamp(-leftY * LINEAR_SPEED_MAX, -LINEAR_SPEED_MAX, LINEAR_SPEED_MAX);
+  const angular = clamp(-turn * ANGULAR_SPEED_MAX, -ANGULAR_SPEED_MAX, ANGULAR_SPEED_MAX);
+
+  stateStore.gamepad.connected = true;
+  stateStore.gamepad.axes = { leftX, leftY, rightX };
+  stateStore.gamepad.active = Math.abs(linear) > 1e-3 || Math.abs(angular) > 1e-3;
+  renderGamepadStatus();
+
+  return {
+    connected: true,
+    command: { linear_x: linear, angular_z: angular },
+  };
+}
+
+function sendManualJoystickCommand(cmd) {
+  if (!canManualControl()) return;
+  stateStore.lastManualCmd = cmd;
+  if (!sendWsControl({ action: "command", command: cmd, source: "joystick" })) {
+    postControl("/api/control/command", { command: cmd, source: "joystick" }).catch(() => {});
+  }
+}
+
+function stopManualJoystick(source = "joystick_disconnect") {
+  if (!canManualControl()) return;
+  if (!sendWsControl({ action: "zero", source })) {
+    postControl("/api/control/command", {
+      command: { linear_x: 0.0, angular_z: 0.0 },
+      source,
+    }).catch(() => {});
+  }
+}
+
+function gamepadLoop() {
+  const snap = controlSnapshot(stateStore.state);
+  if (snap.mode === "manual" && snap.started) {
+    const gp = currentGamepadCommand();
+    if (gp.connected) {
+      if (stateStore.gamepad.active) {
+        sendManualJoystickCommand(gp.command);
+      } else if (stateStore.lastControlSource === "joystick") {
+        stopManualJoystick("joystick_idle");
+      }
+    } else if (stateStore.lastControlSource === "joystick") {
+      stopManualJoystick("joystick_disconnect");
+    }
+  } else {
+    // Keep status panel fresh even if manual input disabled.
+    currentGamepadCommand();
+  }
+  stateStore.gamepadLoopHandle = window.requestAnimationFrame(gamepadLoop);
+}
+
 function renderArmCameraMocks(state) {
   const container = document.getElementById("armCams");
   if (!container) return;
@@ -319,16 +437,38 @@ function connectWs() {
 }
 
 function initUi() {
+  window.addEventListener("gamepadconnected", (evt) => {
+    stateStore.gamepad.connected = true;
+    stateStore.gamepad.index = evt.gamepad.index;
+    stateStore.gamepad.active = false;
+    renderGamepadStatus();
+  });
+  window.addEventListener("gamepaddisconnected", (evt) => {
+    if (stateStore.gamepad.index === evt.gamepad.index) {
+      stateStore.gamepad.connected = false;
+      stateStore.gamepad.index = null;
+      stateStore.gamepad.active = false;
+      renderGamepadStatus();
+      if (stateStore.lastControlSource === "joystick") {
+        stopManualJoystick("joystick_disconnect");
+      }
+    }
+  });
+
   document.getElementById("btnStart").addEventListener("click", async () => {
     await postControl("/api/control/start");
   });
   document.getElementById("btnStop").addEventListener("click", async () => {
     stateStore.keysDown.clear();
+    stateStore.gamepad.active = false;
     await postControl("/api/control/stop");
   });
   document.getElementById("btnModeToggle").addEventListener("click", async () => {
     const mode = controlSnapshot(stateStore.state).mode === "manual" ? "auto" : "manual";
     stateStore.keysDown.clear();
+    if (mode === "auto" && stateStore.lastControlSource === "joystick") {
+      stopManualJoystick("mode_auto");
+    }
     await postControl("/api/control/mode", { mode });
   });
 
@@ -361,6 +501,9 @@ function initUi() {
   window.addEventListener("blur", () => {
     stateStore.keysDown.clear();
     stopManualKeyboard("window_blur");
+    if (stateStore.lastControlSource === "joystick") {
+      stopManualJoystick("window_blur");
+    }
   });
 
   document.getElementById("openDetail").addEventListener("click", () => {
@@ -378,6 +521,7 @@ function initUi() {
       document.getElementById("detailPanel").style.display = "block";
     }
   });
+  renderGamepadStatus();
 }
 
 function startPolling() {
@@ -391,6 +535,7 @@ async function bootstrap() {
   initUi();
   connectWs();
   startPolling();
+  gamepadLoop();
   const initial = await (await fetch("/api/state")).json();
   if (!initial.error) onState(initial);
 }
