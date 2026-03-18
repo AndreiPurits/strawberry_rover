@@ -35,6 +35,8 @@ Strawberry Rover — это программно-аппаратная систе
 - Нижняя камера очищена от ложной визуализации: грядка отображается только при реальном попадании в footprint грядки.
 - Добавлен web-layer без изменения ROS2 архитектуры: backend-мост (REST + WebSocket) и frontend dashboard.
 - В браузере доступен минимальный мониторинг: полевая карта, позиция/ориентация/trail ровера, telemetry, front/bottom/stereo потоки и detail-окно ровера.
+- Реализован Stage 6.2 route recording: запись маршрута из `/sim/rover_pose` (точки `x/y/yaw/timestamp/row_index`), команды `start/stop/save`, сохраненные маршруты остаются видимыми на карте.
+- UI переразложен под single-screen operator view: map/cameras/controls/telemetry помещаются в один экран без вертикального скролла, кнопки увеличены и сгруппированы по режимам.
 
 ## Оборудование, которое уже есть
 - Jetson AGX Orin
@@ -158,11 +160,11 @@ Strawberry Rover — это программно-аппаратная систе
    - keyboard/joystick input;
    - кнопки start/stop;
    - переключение manual/auto.
-2. **Route recording**
+2. **Route recording** (выполнено в MVP)
    - режим построения маршрута во время проезда по грядкам;
-   - запись траектории с RTK/geo привязкой и привязкой к online map;
-   - сохранение геометрии поля (длина грядок, межрядье, snake-структура).
-3. **Route editing / map management**
+   - запись траектории из live pose stream в backend route draft;
+   - сохранение draft как saved route с metadata (длина грядки, межрядье, snake-структура).
+3. **Route editing / map management** (следующий подэтап)
    - просмотр и правка сохраненных маршрутов;
    - spline-коррекция;
    - добавление/удаление рядов;

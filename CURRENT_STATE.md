@@ -60,22 +60,33 @@
   - UI-индикация gamepad connection/live axes;
   - отображение текущего control source (`keyboard`/`joystick`);
   - при disconnect/idle joystick отправляется zero-команда (safety).
+- Реализован Stage 6.2 (route recording) в `rover_web_interface`:
+  - добавлены route controls в UI: `Start recording`, `Stop recording`, `Save route`;
+  - backend route-state добавлен в web bridge: `recording`, `current_route`, `saved_routes`;
+  - source траектории: live `/sim/rover_pose`, точки формата `x/y/yaw/timestamp/row_index`;
+  - сохранение маршрутов реализовано in-memory (MVP), draft и saved routes видимы на карте;
+  - добавлены REST endpoints: `/api/routes`, `/api/routes/start`, `/api/routes/stop`, `/api/routes/save`.
+- Dashboard переразложен под single-screen режим (no-scroll):
+  - фиксированный viewport layout (`100vh`, grid ~58/42);
+  - map/cameras/controls/telemetry размещены в одном экране без вертикальной прокрутки;
+  - увеличены кнопки и добавлены активные/disabled состояния для operator/demo usability.
 
 ## Текущая активная фаза
-Этап 6 — Веб-интерфейс мониторинга (MVP backend+frontend реализован, в доработке интеграции).
+Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 route recording).
 
 ## Текущая активная задача
-- перейти к Stage 6.2 (route recording) после завершения Stage 6.1:
-  - определить schema сохранения маршрута (geo/RTK + snake-row metadata);
-  - добавить backend storage API для route drafts;
-  - добавить UI-режим `record route` без реализации route execution на этом шаге.
+- перейти к Stage 6.3 (route editing / map management):
+  - просмотр списка сохраненных routes;
+  - редактирование geometry/точек маршрута;
+  - базовая spline/corner correction;
+  - подготовка масштабирования row-структуры под поле.
 
 ## Следующая задача после текущей
-- Stage 6.2 — Route recording:
-  - запись траектории при движении ровера по грядкам;
-  - привязка к RTK/geo и online map-координатам;
-  - сохранение route metadata (bed length / row spacing / snake structure);
-  - подготовка редактируемого формата для следующего подэтапа Stage 6.3.
+- Stage 6.3 — Route editing / map management:
+  - визуальный просмотр сохраненных маршрутов в web UI;
+  - операции edit/add/delete row segments;
+  - корректировка route-геометрии с сохранением в backend contract;
+  - подготовка данных для Stage 6.4 route execution.
 
 ## Ограничения текущего этапа
 - Реально подключена только RGB-камера (в текущем sim bringup используется виртуальная камера).

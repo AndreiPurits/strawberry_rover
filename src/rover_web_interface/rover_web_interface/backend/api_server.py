@@ -112,6 +112,34 @@ def api_control_state() -> Dict[str, Any]:
     return _bridge.get_control_snapshot()
 
 
+@app.get("/api/routes")
+def api_routes() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return _bridge.get_route_snapshot()
+
+
+@app.post("/api/routes/start")
+def api_routes_start() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.start_route_recording()}
+
+
+@app.post("/api/routes/stop")
+def api_routes_stop() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.stop_route_recording()}
+
+
+@app.post("/api/routes/save")
+def api_routes_save() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.save_current_route()}
+
+
 def _apply_control(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _bridge is None:
         raise HTTPException(status_code=503, detail="bridge_not_ready")

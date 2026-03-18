@@ -14,6 +14,7 @@ const stateStore = {
   },
   lastControlSource: "n/a",
   gamepadLoopHandle: null,
+  routeRecording: false,
 };
 
 const GAMEPAD_DEADZONE = 0.18;
@@ -105,7 +106,7 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
     });
   }
 
-  // Route trail
+  // Route trail (historical rover path)
   if (showTrail) {
     const trail = state.rover?.route_trail || [];
     if (trail.length > 1) {
@@ -119,6 +120,36 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+  }
+
+  // Saved routes stay visible.
+  const routes = state.routes || {};
+  (routes.saved_routes || []).forEach((route) => {
+    const points = route.points || [];
+    if (points.length < 2) return;
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      const p = worldToCanvas(pt.x, pt.y, bounds, canvas);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.strokeStyle = "rgba(172, 136, 255, 0.95)";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  });
+
+  // Current recording route is highlighted on map in real time.
+  const recordingPoints = routes.current_route?.points || [];
+  if (recordingPoints.length > 1) {
+    ctx.beginPath();
+    recordingPoints.forEach((pt, i) => {
+      const p = worldToCanvas(pt.x, pt.y, bounds, canvas);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.strokeStyle = routes.recording ? "rgba(255, 90, 90, 0.95)" : "rgba(90, 170, 255, 0.8)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
   }
 
   // Rover icon
@@ -181,10 +212,50 @@ function renderControl(state) {
   const modeBtn = document.getElementById("btnModeToggle");
   if (modeBtn) {
     modeBtn.textContent = c.mode === "manual" ? "Switch to Auto" : "Switch to Manual";
+    modeBtn.classList.toggle("active", c.mode === "manual");
+  }
+  const startBtn = document.getElementById("btnStart");
+  const stopBtn = document.getElementById("btnStop");
+  if (startBtn) {
+    startBtn.classList.toggle("active", c.started);
+    startBtn.disabled = c.started;
+  }
+  if (stopBtn) {
+    stopBtn.disabled = !c.started;
   }
   const sourceEl = document.getElementById("controlSource");
   if (sourceEl) {
     sourceEl.textContent = `Control source: ${stateStore.lastControlSource}`;
+  }
+}
+
+function renderRouteUi(state) {
+  const routes = state?.routes || {};
+  const recording = Boolean(routes.recording);
+  const currentCount = Number(routes.current_route?.point_count || 0);
+  const savedCount = Number((routes.saved_routes || []).length);
+  const statusEl = document.getElementById("routeRecordStatus");
+  if (statusEl) {
+    statusEl.textContent = recording ? `Recording: ON (${currentCount} pts)` : `Recording: idle (${currentCount} pts)`;
+    statusEl.className = recording ? "recording-on" : "recording-off";
+  }
+  const routeStats = document.getElementById("routeStats");
+  if (routeStats) {
+    routeStats.textContent = `Routes: ${savedCount} saved | draft points: ${currentCount}`;
+  }
+
+  const btnStart = document.getElementById("btnRouteStart");
+  const btnStop = document.getElementById("btnRouteStop");
+  const btnSave = document.getElementById("btnRouteSave");
+  if (btnStart) {
+    btnStart.disabled = recording;
+    btnStart.classList.toggle("active", recording);
+  }
+  if (btnStop) {
+    btnStop.disabled = !recording;
+  }
+  if (btnSave) {
+    btnSave.disabled = recording || currentCount < 2;
   }
 }
 
@@ -395,26 +466,12 @@ function gamepadLoop() {
   stateStore.gamepadLoopHandle = window.requestAnimationFrame(gamepadLoop);
 }
 
-function renderArmCameraMocks(state) {
-  const container = document.getElementById("armCams");
-  if (!container) return;
-  const cams = state.telemetry?.arm_cameras || [];
-  container.innerHTML = "";
-  cams.forEach((cam) => {
-    const d = document.createElement("div");
-    d.className = "mini";
-    d.textContent = `${cam.label} (${cam.status})`;
-    container.appendChild(d);
-  });
-}
-
 function onState(state) {
   stateStore.state = state;
   drawFieldMap("fieldCanvas", state, false);
-  drawFieldMap("miniMapCanvas", state, true);
   renderTelemetry(state);
-  renderArmCameraMocks(state);
   renderControl(state);
+  renderRouteUi(state);
 }
 
 function connectWs() {
@@ -471,6 +528,15 @@ function initUi() {
     }
     await postControl("/api/control/mode", { mode });
   });
+  document.getElementById("btnRouteStart").addEventListener("click", async () => {
+    await postControl("/api/routes/start");
+  });
+  document.getElementById("btnRouteStop").addEventListener("click", async () => {
+    await postControl("/api/routes/stop");
+  });
+  document.getElementById("btnRouteSave").addEventListener("click", async () => {
+    await postControl("/api/routes/save");
+  });
 
   window.addEventListener("keydown", (evt) => {
     if (["INPUT", "TEXTAREA"].includes((evt.target?.tagName || "").toUpperCase())) return;
@@ -506,21 +572,6 @@ function initUi() {
     }
   });
 
-  document.getElementById("openDetail").addEventListener("click", () => {
-    const panel = document.getElementById("detailPanel");
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
-  });
-  document.getElementById("fieldCanvas").addEventListener("click", (evt) => {
-    const c = evt.currentTarget;
-    const rect = c.getBoundingClientRect();
-    const x = ((evt.clientX - rect.left) * c.width) / rect.width;
-    const y = ((evt.clientY - rect.top) * c.height) / rect.height;
-    const dx = x - stateStore.roverScreen.x;
-    const dy = y - stateStore.roverScreen.y;
-    if ((dx * dx) + (dy * dy) < 18 * 18) {
-      document.getElementById("detailPanel").style.display = "block";
-    }
-  });
   renderGamepadStatus();
 }
 

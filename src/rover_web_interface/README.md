@@ -14,6 +14,10 @@ Minimal Stage 6 web visualization layer for Strawberry Rover.
   - `/api/control/stop`
   - `/api/control/mode`
   - `/api/control/command`
+  - `/api/routes`
+  - `/api/routes/start`
+  - `/api/routes/stop`
+  - `/api/routes/save`
   - `/api/scan`
   - `/api/cameras/front`
   - `/api/cameras/bottom`
@@ -46,11 +50,13 @@ Control payload contract (frontend -> backend):
 - Features:
   - field map with beds
   - rover pose, heading, route trail
+  - route recording overlay (draft + saved routes)
   - telemetry panel
   - camera panels (front/bottom/stereo)
-  - rover detail panel with mini map and LiDAR summary
+  - single-screen no-scroll operator layout (map + cameras + controls + telemetry)
   - mock sensor + analytics layers
   - web control: Start/Stop, Manual/Auto
+  - route control: Start Recording / Stop Recording / Save Route
   - keyboard control: `W/S/A/D`, `Space`
   - joystick control (Gamepad API): left stick Y = forward/backward, left/right stick X = turn
   - gamepad status + live axes + current control source
