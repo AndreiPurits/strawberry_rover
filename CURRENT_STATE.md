@@ -104,6 +104,17 @@
   - camera layout оставлен в прежней удачной схеме (front wide + bottom/stereo ниже), без «растянутого» page-flow;
   - вертикальный размер camera preview увеличен примерно в 2 раза относительно компактной базы (`min-height` около `180 -> 340`);
   - full-frame `contain` сохранен (без crop), допускается ограниченный внутренний scroll левой панели.
+- Выполнен focused UI cleanup/refactor pass (только web layout, без изменения control/sim/navigation/route execution logic):
+  - верхняя строка уплотнена: `Control Console` + `Sensor/Analytics/Trail/Recording` объединены в один ряд;
+  - удален верхний status-clutter (`last cmd`, `control source`, `Gamepad`, `Front LiDAR`, compact Mode/Status block);
+  - camera area перестроена в 2x2 media-grid: `Front` + `Bottom` + `Stereo` + `LiDAR View`;
+  - удалены нижний текстовый блок (`Keyboard`, `Routes`, `draft points`) и analytics strip под картой;
+  - route/row management перенесен под field-map справа; нижний правый блок разделен на `Telemetry` (left) и `Route/Row actions` (right);
+  - удалены input-поля route metadata (`Route name`, `Notes`, `Row count`, `Spacing`) в пользу action-кнопок.
+- Выполнен targeted nav-fix для Auto recovery после manual deviation:
+  - устранены колебания при возврате к грядке: recovery теперь выполняется детерминированно (сначала ориентация к centerline, затем возврат, затем выравнивание по ходу ряда);
+  - добавлена короткая post-recovery стабилизация `FOLLOW_ROW` (временное отключение LiDAR guard и увеличенный deadband), чтобы ровер после возврата шел по прямой без синусоиды;
+  - подтверждено runtime-тестом: после съезда в Manual ровер в Auto возвращается к centerline и продолжает прямой проход с малой lateral-error.
 
 ## Текущая активная фаза
 Этап 6 — Веб-интерфейс мониторинга (MVP + Stage 6.1 + Stage 6.2 + Stage 6.3).

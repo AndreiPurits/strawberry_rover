@@ -183,11 +183,14 @@ function drawFieldMap(canvasId, state, centerOnRover = false) {
 
   if (showAnalytics) {
     const a = state.analytics || {};
-    document.getElementById("fieldStats").textContent =
-      `Analytics: berries/day=${(a.berries_collected_today || 0).toFixed(1)} | ` +
-      `work time=${(a.working_time_hours || 0).toFixed(2)}h | ` +
-      `energy=${(a.energy_consumption_kwh || 0).toFixed(2)}kWh | ` +
-      `avg speed=${(a.avg_harvest_speed_berries_per_hour || 0).toFixed(1)}/h`;
+    const fieldStatsEl = document.getElementById("fieldStats");
+    if (fieldStatsEl) {
+      fieldStatsEl.textContent =
+        `Analytics: berries/day=${(a.berries_collected_today || 0).toFixed(1)} | ` +
+        `work time=${(a.working_time_hours || 0).toFixed(2)}h | ` +
+        `energy=${(a.energy_consumption_kwh || 0).toFixed(2)}kWh | ` +
+        `avg speed=${(a.avg_harvest_speed_berries_per_hour || 0).toFixed(1)}/h`;
+    }
   }
 }
 
@@ -203,22 +206,8 @@ function controlSnapshot(state) {
 
 function renderControl(state) {
   const c = controlSnapshot(state);
-  const modeClass = c.mode === "manual" ? "mode-manual" : "mode-auto";
-  const runClass = c.started ? "status-running" : "status-stopped";
-  const modeLabel = c.mode === "manual" ? "manual" : "auto";
-  const runLabel = c.started ? "running" : "stopped";
   const last = c.lastCommand || {};
   stateStore.lastControlSource = last.source || "n/a";
-  const statusEl = document.getElementById("controlStatus");
-  if (statusEl) {
-    statusEl.innerHTML = `
-      <span class="badge ${modeClass}">Mode: ${modeLabel}</span>
-      <span class="badge ${runClass}">Status: ${runLabel}</span><br>
-      last cmd: vx=${Number(last.linear_x || 0).toFixed(2)},
-      wz=${Number(last.angular_z || 0).toFixed(2)},
-      src=${last.source || "n/a"}
-    `;
-  }
   const modeBtn = document.getElementById("btnModeToggle");
   if (modeBtn) {
     modeBtn.textContent = c.mode === "manual" ? "Switch to Auto" : "Switch to Manual";
@@ -233,10 +222,6 @@ function renderControl(state) {
   if (stopBtn) {
     stopBtn.disabled = !c.started;
     stopBtn.classList.toggle("active", !c.started);
-  }
-  const sourceEl = document.getElementById("controlSource");
-  if (sourceEl) {
-    sourceEl.textContent = `Control source: ${stateStore.lastControlSource}`;
   }
 }
 
@@ -432,8 +417,40 @@ async function fetchCamera(name, canvasId) {
 async function fetchScan() {
   const res = await fetch("/api/scan");
   const data = await res.json();
-  const count = (data.points || []).length;
-  document.getElementById("scanPanel").textContent = `Front LiDAR (/scan): ${count} sampled points`;
+  const scanCanvas = document.getElementById("scanCanvas");
+  if (!scanCanvas) return;
+  const ctx = scanCanvas.getContext("2d");
+  const w = scanCanvas.width;
+  const h = scanCanvas.height;
+  ctx.fillStyle = "#090c10";
+  ctx.fillRect(0, 0, w, h);
+  const points = data.points || [];
+  const maxRange = Math.max(1.0, Number(data.range_max || 6.0));
+  const cx = Math.round(w * 0.5);
+  const cy = Math.round(h * 0.88);
+  const scale = Math.min(w * 0.42, h * 0.78) / maxRange;
+  ctx.strokeStyle = "rgba(80,120,170,0.35)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i += 1) {
+    const r = (i * maxRange / 4.0) * scale;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(120, 240, 255, 0.9)";
+  points.forEach((p) => {
+    const a = Number(p.a || 0);
+    const r = Number(p.r || 0);
+    const x = cx + (Math.cos(a) * r * scale);
+    const y = cy - (Math.sin(a) * r * scale);
+    if (x >= 0 && x < w && y >= 0 && y < h) {
+      ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+    }
+  });
+  ctx.fillStyle = "rgba(255, 200, 80, 0.95)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 async function postControl(url, payload) {
@@ -671,16 +688,19 @@ function initUi() {
   });
   document.getElementById("btnRouteRename").addEventListener("click", async () => {
     const routeId = stateStore.state?.routes?.active_route_id;
-    const name = document.getElementById("routeNameInput").value.trim();
+    if (!routeId) return;
+    const activeName = stateStore.state?.routes?.active_route?.name || "";
+    const name = (window.prompt("Route name", activeName) || "").trim();
     if (!routeId || !name) return;
     await postJson("/api/routes/rename", { route_id: routeId, name });
   });
   document.getElementById("btnRouteMetaSave").addEventListener("click", async () => {
     const routeId = stateStore.state?.routes?.active_route_id;
     if (!routeId) return;
-    const notes = document.getElementById("routeNotesInput").value.trim();
-    const rowCount = Number(document.getElementById("routeRowsInput").value || 0);
-    const spacing = Number(document.getElementById("routeSpacingInput").value || 0);
+    const activeMeta = stateStore.state?.routes?.active_route?.metadata || {};
+    const notes = String(activeMeta.notes || "");
+    const rowCount = Number(activeMeta.row_count || 0);
+    const spacing = Number(activeMeta.spacing_m || 0);
     await postJson("/api/routes/metadata", {
       route_id: routeId,
       metadata: {

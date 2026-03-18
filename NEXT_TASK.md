@@ -38,6 +38,12 @@ Visualization & Monitoring Agent
     - возвращен более компактный dashboard-баланс карты и камер;
     - сохранен full-frame camera render без crop;
     - увеличена вертикальная читаемость камер (примерно 2x от компактной базы) с допустимым минимальным scroll.
+  - выполнен focused UI cleanup/refactor (layout-only):
+    - верхняя панель уплотнена (title + layer checkboxes + recording в одной строке);
+    - удалены компактные status-блоки и несущественный text clutter;
+    - media-area перестроена в 2x2 (`front`, `bottom`, `stereo`, `lidar view`);
+    - route/row controls перенесены под карту справа, telemetry+controls разделены на 2 колонки;
+    - удалены metadata input-поля (`route name/notes/row count/spacing`), оставлены action-кнопки.
 
 Требования:
 - не менять ROS2 simulation/navigation/perception пакеты;
