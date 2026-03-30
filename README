@@ -1,0 +1,16 @@
+Strawberry Rover — ROS 2 workspace
+
+Коротко
+- ROS 2 workspace для автономного ровера для работы на клубничных грядках.
+- Основная разработка: симуляция (LiDAR/сцена/движение), навигация, и web-интерфейс мониторинга.
+
+Сборка
+1) Установить ROS 2 Foxy и colcon
+2) В корне workspace:
+   colcon build
+
+Запуск
+- Используйте launch из пакета rover_bringup (см. src/rover_bringup/launch).
+
+Arduino
+- Скетчи и библиотеки лежат в папке arduino/.

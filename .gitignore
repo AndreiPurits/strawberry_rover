@@ -10,3 +10,6 @@ log/
 __pycache__/
 *.pyc
 
+# Local helper scripts (do not version)
+restart_sim.sh
+
