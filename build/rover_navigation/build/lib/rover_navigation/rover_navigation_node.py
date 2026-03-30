@@ -7,6 +7,8 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float32
+from std_msgs.msg import Bool
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker
 
 
@@ -58,6 +60,15 @@ class RoverNavigationNode(Node):
         self.declare_parameter("follow_row_lidar_steer_weight", 0.15)
         self.declare_parameter("low_conf_lidar_steer_weight", 0.05)
         self.declare_parameter("follow_row_lidar_steer_max", 0.30)
+        self.declare_parameter("bed_center_deadband", 0.10)
+        self.declare_parameter("recovery_trigger_distance", 0.75)
+        self.declare_parameter("recovery_keep_current_distance", 0.45)
+        self.declare_parameter("recovery_speed", 0.14)
+        self.declare_parameter("recovery_target_x_margin", 0.8)
+        self.declare_parameter("post_recovery_straight_time", 1.5)
+        self.declare_parameter("post_recovery_deadband", 0.18)
+        self.declare_parameter("web_control_started_topic", "/web/control/started")
+        self.declare_parameter("web_control_mode_topic", "/web/control/mode")
 
         self._scan_topic = str(self.get_parameter("scan_topic").value)
         self._cmd_vel_topic = str(self.get_parameter("cmd_vel_topic").value)
@@ -152,6 +163,33 @@ class RoverNavigationNode(Node):
         self._follow_row_lidar_steer_max = max(
             0.0, float(self.get_parameter("follow_row_lidar_steer_max").value)
         )
+        self._bed_center_deadband = max(
+            0.0, float(self.get_parameter("bed_center_deadband").value)
+        )
+        self._recovery_trigger_distance = max(
+            0.15, float(self.get_parameter("recovery_trigger_distance").value)
+        )
+        self._recovery_keep_current_distance = max(
+            0.05, float(self.get_parameter("recovery_keep_current_distance").value)
+        )
+        self._recovery_speed = max(
+            0.05, float(self.get_parameter("recovery_speed").value)
+        )
+        self._recovery_target_x_margin = max(
+            0.0, float(self.get_parameter("recovery_target_x_margin").value)
+        )
+        self._post_recovery_straight_time = max(
+            0.0, float(self.get_parameter("post_recovery_straight_time").value)
+        )
+        self._post_recovery_deadband = max(
+            0.0, float(self.get_parameter("post_recovery_deadband").value)
+        )
+        self._web_control_started_topic = str(
+            self.get_parameter("web_control_started_topic").value
+        )
+        self._web_control_mode_topic = str(
+            self.get_parameter("web_control_mode_topic").value
+        )
 
         self._last_scan: Optional[LaserScan] = None
         self._has_pose = False
@@ -166,12 +204,22 @@ class RoverNavigationNode(Node):
         self._state_enter_time = self.get_clock().now()
         self._row_index = 0
         self._row_direction = 1
+        self._row_step = 1
         self._next_row_index = 0
         self._align_phase = "CROSS_ROW"
+        self._recover_row_index = 0
+        self._recover_center_hits = 0
         self._row_initialized = False
+        self._post_recovery_until_s = 0.0
+        # If web control bridge is not running, autonomous navigation stays enabled.
+        self._web_control_started = True
+        self._web_control_mode = "auto"
+        self._auto_cmd_enabled_last = True
 
         self.create_subscription(LaserScan, self._scan_topic, self._on_scan, 10)
         self.create_subscription(PoseStamped, self._sim_pose_topic, self._on_pose, 10)
+        self.create_subscription(Bool, self._web_control_started_topic, self._on_web_started, 10)
+        self.create_subscription(String, self._web_control_mode_topic, self._on_web_mode, 10)
         self._cmd_pub = self.create_publisher(Twist, self._cmd_vel_topic, 10)
         self._debug_pub = self.create_publisher(Float32, self._debug_topic, 10)
         self._centerline_pub = self.create_publisher(
@@ -209,6 +257,20 @@ class RoverNavigationNode(Node):
             self._next_row_index = min(self._row_count - 1, self._row_index + 1)
             self._row_direction = -1 if abs(self._normalize_angle(self._sim_yaw - math.pi)) < 1.4 else 1
             self._row_initialized = True
+            self._start_recovery_if_needed()
+
+    def _on_web_started(self, msg: Bool) -> None:
+        self._web_control_started = bool(msg.data)
+        if not self._web_control_started:
+            self._cmd_pub.publish(Twist())
+
+    def _on_web_mode(self, msg: String) -> None:
+        mode = str(msg.data).strip().lower()
+        if mode in ("manual", "auto"):
+            prev_mode = self._web_control_mode
+            self._web_control_mode = mode
+            if prev_mode == "auto" and mode != "auto":
+                self._cmd_pub.publish(Twist())
 
     def _on_timer(self) -> None:
         if self._last_scan is None or not self._has_pose:
@@ -246,8 +308,16 @@ class RoverNavigationNode(Node):
         )
 
         cmd = self._compute_fsm_command()
-
-        self._cmd_pub.publish(cmd)
+        auto_cmd_enabled = bool(
+            self._web_control_started and self._web_control_mode == "auto"
+        )
+        if auto_cmd_enabled:
+            self._cmd_pub.publish(cmd)
+        elif self._auto_cmd_enabled_last:
+            # Publish one zero command when leaving auto control, then stop
+            # publishing so manual web commands are not overridden.
+            self._cmd_pub.publish(Twist())
+        self._auto_cmd_enabled_last = auto_cmd_enabled
 
         dbg = Float32()
         dbg.data = self._steering_cmd
@@ -265,11 +335,27 @@ class RoverNavigationNode(Node):
 
     def _compute_fsm_command(self) -> Twist:
         cmd = Twist()
+        if not self._web_control_started or self._web_control_mode != "auto":
+            return cmd
+
         end_x = self._target_end_x(self._row_direction)
 
         if self._nav_state == "FOLLOW_ROW":
+            if self._is_off_bed(self._row_index):
+                self._start_recovery_if_needed()
+                cmd.linear.x = 0.0
+                cmd.angular.z = 0.0
+                return cmd
+
             row_center_y = self._row_index * self._row_spacing
             y_error = row_center_y - self._sim_y
+            now_s = self.get_clock().now().nanoseconds / 1e9
+            post_recovery_active = now_s < self._post_recovery_until_s
+            active_deadband = self._bed_center_deadband
+            if post_recovery_active:
+                active_deadband = max(active_deadband, self._post_recovery_deadband)
+            if abs(y_error) <= active_deadband:
+                y_error = 0.0
             row_center_steer = self._clamp(
                 self._bed_center_gain
                 * y_error
@@ -283,8 +369,8 @@ class RoverNavigationNode(Node):
                 -self._follow_row_lidar_steer_max,
                 self._follow_row_lidar_steer_max,
             )
-            lidar_weight = self._follow_row_lidar_steer_weight
-            if self._row_confidence < 0.35:
+            lidar_weight = 0.0 if post_recovery_active else self._follow_row_lidar_steer_weight
+            if not post_recovery_active and self._row_confidence < 0.35:
                 lidar_weight = self._low_conf_lidar_steer_weight
             steer_cmd = self._clamp(
                 row_center_steer + (lidar_weight * lidar_guard_steer),
@@ -304,14 +390,63 @@ class RoverNavigationNode(Node):
             )
             reached_end_scan = self._smoothed_front < self._end_row_front_distance
             if reached_end_pose or reached_end_scan:
-                if self._row_index >= self._row_count - 1:
-                    self._set_state("FINISHED")
+                if self._row_count <= 1:
+                    self._row_direction = -self._row_direction
                 else:
-                    self._next_row_index = self._row_index + 1
+                    if self._row_index >= self._row_count - 1:
+                        self._row_step = -1
+                    elif self._row_index <= 0:
+                        self._row_step = 1
+                    self._next_row_index = self._row_index + self._row_step
+                    self._next_row_index = max(0, min(self._row_count - 1, self._next_row_index))
                     self._align_phase = "CROSS_ROW"
                     self._set_state("END_OF_ROW")
+                cmd.linear.x = 0.0
+                cmd.angular.z = 0.0
+            return cmd
+
+        if self._nav_state == "RECOVER_ROW":
+            row_center_y = self._recover_row_index * self._row_spacing
+            target_y = row_center_y
+            dy = target_y - self._sim_y
+
+            if self._align_phase == "RETURN_CENTER":
+                desired_yaw = (math.pi / 2.0) if dy >= 0.0 else (-math.pi / 2.0)
+                yaw_err = self._normalize_angle(desired_yaw - self._sim_yaw)
+                # First face the row centerline direction, then move laterally
+                # toward center to avoid weaving arcs.
+                if abs(yaw_err) > 0.35:
                     cmd.linear.x = 0.0
-                    cmd.angular.z = 0.0
+                else:
+                    cmd.linear.x = self._recovery_speed
+                cmd.angular.z = self._clamp(
+                    1.4 * yaw_err, -self._transition_turn_speed, self._transition_turn_speed
+                )
+                if abs(dy) <= self._align_xy_tolerance:
+                    self._recover_center_hits += 1
+                else:
+                    self._recover_center_hits = 0
+                if self._recover_center_hits >= 4:
+                    self._recover_center_hits = 0
+                    self._align_phase = "ALIGN_HEADING"
+                return cmd
+
+            target_heading = 0.0 if self._row_direction > 0 else math.pi
+            yaw_err = self._normalize_angle(target_heading - self._sim_yaw)
+            cmd.linear.x = 0.0
+            cmd.angular.z = self._clamp(
+                self._transition_turn_gain * yaw_err,
+                -self._transition_turn_speed,
+                self._transition_turn_speed,
+            )
+            if abs(yaw_err) <= self._align_heading_tolerance:
+                self._row_index = self._recover_row_index
+                self._smoothed_error = 0.0
+                self._steering_cmd = 0.0
+                self._post_recovery_until_s = (
+                    self.get_clock().now().nanoseconds / 1e9
+                ) + self._post_recovery_straight_time
+                self._set_state("FOLLOW_ROW")
             return cmd
 
         if self._nav_state == "END_OF_ROW":
@@ -370,7 +505,7 @@ class RoverNavigationNode(Node):
                 self._set_state("FOLLOW_ROW")
             return cmd
 
-        # FINISHED (default fallback)
+        # Safety fallback (should not be reached in normal cyclic traversal).
         cmd.linear.x = 0.0
         cmd.angular.z = 0.0
         return cmd
@@ -534,6 +669,27 @@ class RoverNavigationNode(Node):
     def _nearest_row_index(self, y_value: float) -> int:
         idx = int(round(y_value / self._row_spacing))
         return max(0, min(self._row_count - 1, idx))
+
+    def _is_off_bed(self, row_index: int) -> bool:
+        center_y = row_index * self._row_spacing
+        return abs(self._sim_y - center_y) > self._recovery_trigger_distance
+
+    def _select_recovery_row(self) -> int:
+        current_center = self._row_index * self._row_spacing
+        if abs(self._sim_y - current_center) <= self._recovery_keep_current_distance:
+            return self._row_index
+        return self._nearest_row_index(self._sim_y)
+
+    def _start_recovery_if_needed(self) -> None:
+        target_row = self._select_recovery_row()
+        center_y = target_row * self._row_spacing
+        if abs(self._sim_y - center_y) <= self._align_xy_tolerance:
+            self._row_index = target_row
+            return
+        self._recover_row_index = target_row
+        self._recover_center_hits = 0
+        self._align_phase = "RETURN_CENTER"
+        self._set_state("RECOVER_ROW")
 
     @staticmethod
     def _ema(previous: float, current: float, alpha: float) -> float:

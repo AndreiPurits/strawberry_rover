@@ -11,6 +11,8 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 
@@ -29,6 +31,8 @@ class RosWebBridge(Node):
         self.declare_parameter("trail_max_points", 300)
         self.declare_parameter("scan_downsample", 8)
         self.declare_parameter("control_publish_period_s", 0.05)
+        self.declare_parameter("route_record_min_dt_s", 0.15)
+        self.declare_parameter("route_record_min_dist_m", 0.05)
 
         self._row_spacing = float(self.get_parameter("row_spacing").value)
         self._trail_max_points = int(self.get_parameter("trail_max_points").value)
@@ -36,11 +40,19 @@ class RosWebBridge(Node):
         self._control_publish_period_s = float(
             self.get_parameter("control_publish_period_s").value
         )
+        self._route_record_min_dt_s = float(
+            self.get_parameter("route_record_min_dt_s").value
+        )
+        self._route_record_min_dist_m = float(
+            self.get_parameter("route_record_min_dist_m").value
+        )
 
         self._lock = threading.Lock()
         self._trail: Deque[Tuple[float, float]] = deque(maxlen=self._trail_max_points)
         self._beds: List[Dict[str, float]] = []
         self._cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._control_started_pub = self.create_publisher(Bool, "/web/control/started", 10)
+        self._control_mode_pub = self.create_publisher(String, "/web/control/mode", 10)
 
         self._pose = {"x": 0.0, "y": 0.0, "z": 0.0}
         self._heading_rad = 0.0
@@ -74,6 +86,21 @@ class RosWebBridge(Node):
         }
         self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
         self._force_zero_once = False
+        self._route_recording = False
+        self._current_route: Dict[str, Any] = {
+            "id": "draft",
+            "name": "draft_route",
+            "created_at": 0.0,
+            "saved_at": None,
+            "metadata": {},
+            "points": [],
+        }
+        self._saved_routes: List[Dict[str, Any]] = []
+        self._active_route_id: Optional[str] = None
+        self._route_counter = 0
+        self._route_last_sample_time = 0.0
+        self._route_last_sample_xy: Optional[Tuple[float, float]] = None
+        self._current_route = self._new_route_draft(time.time())
 
         self.create_subscription(PoseStamped, "/sim/rover_pose", self._on_pose, 10)
         self.create_subscription(MarkerArray, "/sim/scene_markers", self._on_scene, 10)
@@ -98,6 +125,7 @@ class RosWebBridge(Node):
             10,
         )
         self.create_timer(self._control_publish_period_s, self._control_publish_tick)
+        self._publish_control_state()
 
         self.get_logger().info("rover_web_bridge started.")
 
@@ -132,6 +160,9 @@ class RosWebBridge(Node):
             self._last_pose_time = now
             self._last_pose_xy = (x, y)
             self._last_heading = heading
+
+            if self._route_recording and self._should_append_route_point(now, x, y):
+                self._append_route_point(now, x, y, heading)
 
     def _on_scene(self, msg: MarkerArray) -> None:
         beds: List[Dict[str, float]] = []
@@ -195,6 +226,7 @@ class RosWebBridge(Node):
             nav_state = self._nav_state
             current_row = int(self._current_row)
             control = self._build_control_snapshot()
+            routes = self._build_route_snapshot()
 
         now = time.time()
         sensors = self._mock_sensor_grid(now)
@@ -222,6 +254,7 @@ class RosWebBridge(Node):
             },
             "analytics": analytics,
             "control": control,
+            "routes": routes,
         }
 
     def get_scan_snapshot(self) -> Dict[str, Any]:
@@ -242,6 +275,256 @@ class RosWebBridge(Node):
             "last_command": dict(self._last_cmd),
         }
 
+    def _build_route_snapshot(self) -> Dict[str, Any]:
+        current = {
+            "id": self._current_route["id"],
+            "name": self._current_route["name"],
+            "created_at": self._current_route["created_at"],
+            "saved_at": self._current_route["saved_at"],
+            "metadata": dict(self._current_route["metadata"]),
+            "points": list(self._current_route["points"]),
+            "point_count": len(self._current_route["points"]),
+        }
+        saved = []
+        for route in self._saved_routes:
+            saved.append(
+                {
+                    "id": route["id"],
+                    "name": route["name"],
+                    "created_at": route["created_at"],
+                    "saved_at": route["saved_at"],
+                    "metadata": dict(route["metadata"]),
+                    "points": list(route["points"]),
+                    "point_count": len(route["points"]),
+                }
+            )
+        active = None
+        for route in saved:
+            if route["id"] == self._active_route_id:
+                active = route
+                break
+        return {
+            "recording": bool(self._route_recording),
+            "current_route": current,
+            "saved_routes": saved,
+            "active_route_id": self._active_route_id,
+            "active_route": active,
+        }
+
+    def get_route_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            return self._build_route_snapshot()
+
+    def _route_metadata_template(self) -> Dict[str, Any]:
+        return {
+            "bed_length_m": 22.0,
+            "row_spacing_m": self._row_spacing,
+            "snake_structure": True,
+            "notes": "",
+            "row_count": 5,
+            "spacing_m": self._row_spacing,
+            "rows": [],
+        }
+
+    def _new_route_draft(self, now_s: float) -> Dict[str, Any]:
+        self._route_counter += 1
+        route_id = f"route_{self._route_counter:03d}"
+        return {
+            "id": route_id,
+            "name": route_id,
+            "created_at": now_s,
+            "saved_at": None,
+            "metadata": self._route_metadata_template(),
+            "points": [],
+        }
+
+    def _should_append_route_point(self, now_s: float, x: float, y: float) -> bool:
+        if not self._current_route["points"]:
+            return True
+        dt = now_s - self._route_last_sample_time
+        if dt < self._route_record_min_dt_s:
+            return False
+        if self._route_last_sample_xy is None:
+            return True
+        dist = math.hypot(x - self._route_last_sample_xy[0], y - self._route_last_sample_xy[1])
+        return dist >= self._route_record_min_dist_m
+
+    def _append_route_point(self, now_s: float, x: float, y: float, heading: float) -> None:
+        point = {
+            "x": float(x),
+            "y": float(y),
+            "yaw": float(heading),
+            "timestamp": float(now_s),
+            "row_index": int(self._current_row),
+        }
+        self._current_route["points"].append(point)
+        self._route_last_sample_time = now_s
+        self._route_last_sample_xy = (x, y)
+
+    def start_route_recording(self) -> Dict[str, Any]:
+        with self._lock:
+            if not self._route_recording:
+                now_s = time.time()
+                if self._current_route["saved_at"] is not None:
+                    self._current_route = self._new_route_draft(now_s)
+                elif not self._current_route["points"]:
+                    self._current_route["created_at"] = now_s
+                    self._current_route["metadata"] = self._route_metadata_template()
+                self._route_recording = True
+                self._route_last_sample_time = 0.0
+                self._route_last_sample_xy = None
+            return self._build_route_snapshot()
+
+    def stop_route_recording(self) -> Dict[str, Any]:
+        with self._lock:
+            self._route_recording = False
+            return self._build_route_snapshot()
+
+    def save_current_route(self) -> Dict[str, Any]:
+        with self._lock:
+            self._route_recording = False
+            if not self._current_route["points"]:
+                return self._build_route_snapshot()
+            route = {
+                "id": self._current_route["id"],
+                "name": self._current_route["name"],
+                "created_at": self._current_route["created_at"],
+                "saved_at": time.time(),
+                "metadata": dict(self._current_route["metadata"]),
+                "points": list(self._current_route["points"]),
+            }
+            self._saved_routes.append(route)
+            self._active_route_id = route["id"]
+            self._current_route = self._new_route_draft(time.time())
+            self._route_last_sample_time = 0.0
+            self._route_last_sample_xy = None
+            return self._build_route_snapshot()
+
+    @staticmethod
+    def _copy_route(route: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": route["id"],
+            "name": route["name"],
+            "created_at": route["created_at"],
+            "saved_at": route["saved_at"],
+            "metadata": dict(route["metadata"]),
+            "points": list(route["points"]),
+        }
+
+    @staticmethod
+    def _normalize_metadata(existing: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+        meta = dict(existing)
+        if "notes" in patch:
+            meta["notes"] = str(patch.get("notes", ""))
+        if "row_count" in patch:
+            try:
+                meta["row_count"] = max(0, int(patch.get("row_count", 0)))
+            except (TypeError, ValueError):
+                pass
+        if "spacing_m" in patch:
+            try:
+                meta["spacing_m"] = float(patch.get("spacing_m", meta.get("spacing_m", 0.0)))
+            except (TypeError, ValueError):
+                pass
+        if "rows" in patch and isinstance(patch["rows"], list):
+            meta["rows"] = list(patch["rows"])
+        return meta
+
+    def _find_saved_route_index(self, route_id: str) -> int:
+        for idx, route in enumerate(self._saved_routes):
+            if route["id"] == route_id:
+                return idx
+        return -1
+
+    def select_route(self, route_id: str) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            self._active_route_id = self._saved_routes[idx]["id"]
+            return self._build_route_snapshot()
+
+    def rename_route(self, route_id: str, new_name: str) -> Dict[str, Any]:
+        clean_name = str(new_name).strip()
+        if not clean_name:
+            raise ValueError("route_name_empty")
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            self._saved_routes[idx]["name"] = clean_name
+            return self._build_route_snapshot()
+
+    def delete_route(self, route_id: str) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            del self._saved_routes[idx]
+            if self._active_route_id == route_id:
+                self._active_route_id = self._saved_routes[-1]["id"] if self._saved_routes else None
+            return self._build_route_snapshot()
+
+    def update_route_metadata(self, route_id: str, metadata_patch: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            route["metadata"] = self._normalize_metadata(route["metadata"], metadata_patch)
+            return self._build_route_snapshot()
+
+    def add_route_row_metadata(self, route_id: str, row_meta: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            metadata = dict(route["metadata"])
+            rows = list(metadata.get("rows", []))
+            rows.append(
+                {
+                    "row_id": str(row_meta.get("row_id", f"row_{len(rows) + 1}")),
+                    "label": str(row_meta.get("label", f"Row {len(rows) + 1}")),
+                    "length_m": float(row_meta.get("length_m", metadata.get("bed_length_m", 22.0))),
+                }
+            )
+            metadata["rows"] = rows
+            metadata["row_count"] = max(int(metadata.get("row_count", 0)), len(rows))
+            route["metadata"] = metadata
+            return self._build_route_snapshot()
+
+    def remove_route_row_metadata(self, route_id: str, row_index: int) -> Dict[str, Any]:
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            metadata = dict(route["metadata"])
+            rows = list(metadata.get("rows", []))
+            if row_index < 0 or row_index >= len(rows):
+                raise ValueError("row_index_out_of_range")
+            del rows[row_index]
+            metadata["rows"] = rows
+            metadata["row_count"] = max(0, int(metadata.get("row_count", 0)))
+            route["metadata"] = metadata
+            return self._build_route_snapshot()
+
+    def trim_route_last_points(self, route_id: str, points_to_trim: int = 20) -> Dict[str, Any]:
+        trim_n = max(1, int(points_to_trim))
+        with self._lock:
+            idx = self._find_saved_route_index(route_id)
+            if idx < 0:
+                raise ValueError("route_not_found")
+            route = self._saved_routes[idx]
+            pts = list(route["points"])
+            if trim_n >= len(pts):
+                pts = []
+            else:
+                pts = pts[:-trim_n]
+            route["points"] = pts
+            return self._build_route_snapshot()
+
     def get_control_snapshot(self) -> Dict[str, Any]:
         with self._lock:
             return self._build_control_snapshot()
@@ -255,6 +538,8 @@ class RosWebBridge(Node):
             angular_z = float(self._pending_cmd["angular_z"])
             if zero_once:
                 self._force_zero_once = False
+
+        self._publish_control_state()
 
         if zero_once:
             twist = Twist()
@@ -271,11 +556,14 @@ class RosWebBridge(Node):
         with self._lock:
             self._control_started = True
             self._last_cmd["stamp"] = time.time()
+        self._publish_control_state()
+        with self._lock:
             return self._build_control_snapshot()
 
     def stop_control(self) -> Dict[str, Any]:
         with self._lock:
             self._control_started = False
+        self._publish_control_state()
         self.publish_zero_cmd(source="stop")
         with self._lock:
             return self._build_control_snapshot()
@@ -286,6 +574,7 @@ class RosWebBridge(Node):
             raise ValueError("mode must be 'manual' or 'auto'")
         with self._lock:
             self._control_mode = cleaned
+        self._publish_control_state()
         if cleaned != "manual":
             # Safety rule: leaving manual mode immediately zeroes manual motion.
             self.publish_zero_cmd(source="mode_auto")
@@ -317,6 +606,9 @@ class RosWebBridge(Node):
             return self._build_control_snapshot()
 
     def publish_zero_cmd(self, source: str = "zero") -> Dict[str, Any]:
+        # Publish an immediate zero command, then keep one extra zero on the next
+        # control tick to override any in-flight non-zero command safely.
+        self._cmd_pub.publish(Twist())
         with self._lock:
             self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
             self._force_zero_once = True
@@ -327,6 +619,17 @@ class RosWebBridge(Node):
                 "stamp": time.time(),
             }
             return self._build_control_snapshot()
+
+    def _publish_control_state(self) -> None:
+        with self._lock:
+            started = bool(self._control_started)
+            mode = str(self._control_mode)
+        started_msg = Bool()
+        started_msg.data = started
+        mode_msg = String()
+        mode_msg.data = mode
+        self._control_started_pub.publish(started_msg)
+        self._control_mode_pub.publish(mode_msg)
 
     @staticmethod
     def _normalize_angle(angle: float) -> float:

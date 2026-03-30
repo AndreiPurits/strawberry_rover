@@ -8,7 +8,7 @@
     x0: -12.5
     y0: 0.0
     yaw0: 0.0
-    motion_mode: "scripted_rows"
+    motion_mode: "cmd_vel"
     row_count: 5
     row_spacing: 1.8
     row_length: 22.0

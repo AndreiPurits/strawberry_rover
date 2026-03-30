@@ -28,6 +28,12 @@ const stateStore = {
 const GAMEPAD_DEADZONE = 0.18;
 const LINEAR_SPEED_MAX = 0.55;
 const ANGULAR_SPEED_MAX = 1.1;
+const MAX_LIDAR_RANGE = 6.0; // meters (fallback/manual scale)
+const LIDAR_AUTO_SCALE = true;
+const LIDAR_AUTO_PERCENTILE = 0.9;
+const LIDAR_AUTO_MIN_RANGE = 2.0;
+const LIDAR_AUTO_MAX_RANGE = 8.0;
+const LIDAR_FILL_RATIO = 0.88;
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
@@ -38,6 +44,17 @@ function applyDeadzone(value, deadzone) {
   const sign = value >= 0 ? 1 : -1;
   const scaled = (Math.abs(value) - deadzone) / (1.0 - deadzone);
   return sign * scaled;
+}
+
+function percentile(values, p) {
+  if (!Array.isArray(values) || values.length === 0) return NaN;
+  const sorted = [...values].sort((a, b) => a - b);
+  const pos = clamp((sorted.length - 1) * p, 0, sorted.length - 1);
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo];
+  const t = pos - lo;
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * t;
 }
 
 function worldToCanvas(x, y, bounds, canvas) {
@@ -425,31 +442,49 @@ async function fetchScan() {
   ctx.fillStyle = "#090c10";
   ctx.fillRect(0, 0, w, h);
   const points = data.points || [];
-  const maxRange = Math.max(1.0, Number(data.range_max || 6.0));
+  const validRanges = points
+    .map((p) => Number(p.r))
+    .filter((r) => Number.isFinite(r) && r > 0.0);
+  let renderRange = MAX_LIDAR_RANGE;
+  if (LIDAR_AUTO_SCALE && validRanges.length > 0) {
+    const p90 = percentile(validRanges, LIDAR_AUTO_PERCENTILE);
+    if (Number.isFinite(p90)) {
+      renderRange = clamp(p90, LIDAR_AUTO_MIN_RANGE, LIDAR_AUTO_MAX_RANGE);
+    }
+  }
+
   const cx = Math.round(w * 0.5);
-  const cy = Math.round(h * 0.88);
-  const scale = Math.min(w * 0.42, h * 0.78) / maxRange;
-  ctx.strokeStyle = "rgba(80,120,170,0.35)";
+  const cy = Math.round(h * 0.5);
+  const canvasRadius = Math.min(w, h) * 0.5 * LIDAR_FILL_RATIO;
+  const scale = canvasRadius / Math.max(1e-6, renderRange);
+
+  ctx.strokeStyle = "rgba(120,160,210,0.45)";
   ctx.lineWidth = 1;
   for (let i = 1; i <= 4; i += 1) {
-    const r = (i * maxRange / 4.0) * scale;
+    const r = (i * renderRange / 4.0) * scale;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
   }
-  ctx.fillStyle = "rgba(120, 240, 255, 0.9)";
+
+  ctx.fillStyle = "rgba(80, 255, 235, 0.98)";
   points.forEach((p) => {
     const a = Number(p.a || 0);
     const r = Number(p.r || 0);
-    const x = cx + (Math.cos(a) * r * scale);
-    const y = cy - (Math.sin(a) * r * scale);
+    if (!Number.isFinite(r) || r <= 0.0) return;
+    const rr = Math.min(r, renderRange); // clamp distant points to visualization boundary
+    const x = cx + (Math.cos(a) * rr * scale);
+    const y = cy - (Math.sin(a) * rr * scale);
     if (x >= 0 && x < w && y >= 0 && y < h) {
-      ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
     }
   });
-  ctx.fillStyle = "rgba(255, 200, 80, 0.95)";
+
+  ctx.fillStyle = "rgba(255, 210, 95, 0.98)";
   ctx.beginPath();
-  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
   ctx.fill();
 }
 

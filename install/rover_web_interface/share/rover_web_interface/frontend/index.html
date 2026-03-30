@@ -5,77 +5,361 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rover Web Dashboard</title>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 12px; background: #111; color: #e7e7e7; }
-    .row { display: flex; gap: 12px; margin-bottom: 12px; }
-    .card { background: #1b1b1b; border: 1px solid #333; padding: 10px; border-radius: 6px; }
-    #fieldCanvas, #miniMapCanvas { background: #202020; border: 1px solid #444; }
-    .grow { flex: 1; }
-    .controls label { margin-right: 10px; font-size: 13px; }
-    .cam-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 8px; }
-    canvas.cam { width: 100%; height: auto; background: #000; border: 1px solid #333; }
-    .mini-previews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-    .mini { border: 1px dashed #555; min-height: 60px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #aaa; }
-    #detailPanel { display: none; }
-    .kv { font-size: 13px; line-height: 1.4; }
-    .control-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-    .badge { display: inline-block; padding: 3px 7px; border-radius: 12px; font-size: 12px; border: 1px solid #555; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      font-family: sans-serif;
+      background: #111;
+      color: #e7e7e7;
+    }
+    .app-shell {
+      width: 100vw;
+      height: 100vh;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 58% 42%;
+      gap: 12px;
+      overflow: hidden;
+    }
+    .card {
+      background: #1b1b1b;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .left-pane {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .right-pane {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    h2, h3, h4 { margin: 0 0 6px 0; }
+    .layer-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      align-items: center;
+    }
+    #fieldCanvas {
+      width: 100%;
+      height: 100%;
+      background: #202020;
+      border: 1px solid #444;
+      border-radius: 6px;
+      display: block;
+    }
+    .field-wrap {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .field-canvas-wrap {
+      flex: 1;
+      min-height: 0;
+    }
+    .cam-stack {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .cam-card {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+      overflow: hidden;
+    }
+    canvas.cam {
+      width: 100%;
+      height: 100%;
+      min-height: 140px;
+      aspect-ratio: 11 / 8;
+      background: #000;
+      border: 1px solid #333;
+      border-radius: 6px;
+      display: block;
+    }
+    #scanCanvas {
+      background: #090c10;
+    }
+    .control-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .top-control-row {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .control-group-box {
+      border: 1px solid #2c2c2c;
+      border-radius: 8px;
+      padding: 6px;
+      min-width: 0;
+    }
+    .group-title {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .button-grid {
+      display: grid;
+      gap: 4px;
+    }
+    button {
+      min-height: 56px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #2a2a2a;
+      color: #ececec;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    button.active {
+      border-color: #77c9ff;
+      box-shadow: 0 0 0 2px rgba(119, 201, 255, 0.25);
+      background: #2f3d4a;
+    }
+    .btn-start {
+      background: linear-gradient(180deg, #2cae4d, #1f7e36);
+      border-color: #3ec965;
+      color: #f5fff8;
+    }
+    .btn-stop {
+      background: linear-gradient(180deg, #c74141, #8f2b2b);
+      border-color: #dc5959;
+      color: #fff4f4;
+    }
+    .kv { font-size: 12px; line-height: 1.35; }
+    .tiny { font-size: 10px; line-height: 1.2; opacity: 0.9; }
+    .route-manager {
+      margin-top: 6px;
+      display: grid;
+      gap: 6px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .route-list {
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 6px;
+      min-height: 72px;
+      max-height: none;
+      overflow: hidden;
+    }
+    .route-item {
+      padding: 4px 6px;
+      border: 1px solid #3b3b3b;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+    .route-item.active {
+      border-color: #77c9ff;
+      background: rgba(119, 201, 255, 0.16);
+    }
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .editor-grid input {
+      width: 100%;
+      min-height: 28px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      background: #141414;
+      color: #eee;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+      border: 1px solid #555;
+      margin-right: 4px;
+    }
     .mode-manual { background: rgba(80, 130, 255, 0.25); color: #dbe7ff; }
     .mode-auto { background: rgba(120, 120, 120, 0.25); color: #f0f0f0; }
     .status-running { color: #9dffb2; }
     .status-stopped { color: #ffacac; }
+    .recording-on { color: #ff6b6b; font-weight: 700; }
+    .recording-off { color: #8f8f8f; }
+    .bottom-right-split {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 8px;
+      min-height: 0;
+    }
+    .telemetry-card {
+      min-height: 0;
+      overflow: auto;
+    }
+    .route-actions-card {
+      min-height: 0;
+      overflow: auto;
+      border-left: 1px solid #2d2d2d;
+      padding-left: 8px;
+    }
+    .control-primary {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .control-secondary {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .cam-label {
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0.95;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .route-manager button {
+      min-height: 34px;
+      font-size: 12px;
+    }
+    .top-control-row button {
+      min-height: 36px;
+      font-size: 13px;
+    }
+    @media (max-width: 1500px) {
+      .app-shell {
+        grid-template-columns: 56% 44%;
+      }
+      .top-control-row {
+        grid-template-columns: 1fr;
+      }
+      .bottom-right-split {
+        grid-template-columns: 1fr;
+      }
+      .route-actions-card {
+        border-left: none;
+        border-top: 1px solid #2d2d2d;
+        padding-left: 0;
+        padding-top: 8px;
+      }
+      .cam-stack {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+      }
+      canvas.cam {
+        min-height: 140px;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>Strawberry Rover Web Dashboard (MVP)</h2>
+  <div class="app-shell">
+    <section class="left-pane">
+      <div class="card">
+        <div class="control-header-row">
+          <h2>Control Console</h2>
+          <div class="layer-row">
+            <label><input type="checkbox" id="layerSensors" checked> Sensor</label>
+            <label><input type="checkbox" id="layerAnalytics" checked> Analytics</label>
+            <label><input type="checkbox" id="layerTrail" checked> Trail</label>
+            <span id="routeRecordStatus" class="recording-off">Recording: idle</span>
+          </div>
+        </div>
+        <div class="top-control-row">
+          <div class="control-group-box">
+            <div class="group-title">Mode + Motion</div>
+            <div class="button-grid control-primary">
+              <button id="btnModeToggle">Switch to Manual</button>
+              <button id="btnStart" class="btn-start">Start</button>
+              <button id="btnStop" class="btn-stop">Stop</button>
+            </div>
+          </div>
+          <div class="control-group-box">
+            <div class="group-title">Route Recording</div>
+            <div class="button-grid control-secondary">
+              <button id="btnRouteStart">Record</button>
+              <button id="btnRouteStop">Stop Rec</button>
+              <button id="btnRouteSave">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cam-stack">
+        <div class="card cam-card">
+          <div class="cam-label">Front Camera</div>
+          <canvas id="camFront" class="cam" width="640" height="480"></canvas>
+        </div>
+        <div class="card cam-card">
+          <div class="cam-label">Bottom Camera</div>
+          <canvas id="camBottom" class="cam" width="640" height="480"></canvas>
+        </div>
+        <div class="card cam-card">
+          <div class="cam-label">Stereo</div>
+          <canvas id="camStereo" class="cam" width="640" height="480"></canvas>
+        </div>
+        <div class="card cam-card">
+          <div class="cam-label">LiDAR View</div>
+          <canvas id="scanCanvas" class="cam" width="640" height="480"></canvas>
+        </div>
+      </div>
+    </section>
 
-  <div class="row">
-    <div class="card grow">
-      <div class="controls">
-        <label><input type="checkbox" id="layerSensors" checked> Sensor layer</label>
-        <label><input type="checkbox" id="layerAnalytics" checked> Analytics layer</label>
-        <label><input type="checkbox" id="layerTrail" checked> Rover trail</label>
+    <section class="right-pane">
+      <div class="card field-wrap">
+        <div class="field-canvas-wrap">
+          <canvas id="fieldCanvas" width="1100" height="760"></canvas>
+        </div>
       </div>
-      <canvas id="fieldCanvas" width="1000" height="420"></canvas>
-      <div class="kv" id="fieldStats"></div>
-    </div>
-    <div class="card" style="width: 330px;">
-      <h3>Control</h3>
-      <div class="control-row">
-        <button id="btnStart">Start</button>
-        <button id="btnStop">Stop</button>
-        <button id="btnModeToggle">Switch to Manual</button>
+      <div class="card bottom-right-split">
+        <div class="kv tiny telemetry-card" id="telemetryPanel">Waiting for data...</div>
+        <div class="route-actions-card">
+          <div class="group-title">Saved Routes</div>
+          <div id="routeList" class="route-list tiny">No saved routes</div>
+          <div class="button-grid control-secondary" style="margin-top: 6px;">
+            <button id="btnRouteSelect">Select</button>
+            <button id="btnRouteDelete">Delete</button>
+            <button id="btnRouteTrim">Trim Last</button>
+          </div>
+          <div class="group-title" style="margin-top: 8px;">Route/Row Actions</div>
+          <div class="button-grid control-secondary" style="margin-top: 6px;">
+            <button id="btnRouteRename">Rename</button>
+            <button id="btnRouteMetaSave">Save Meta</button>
+            <button id="btnRowAdd">Add Row</button>
+          </div>
+          <div class="button-grid control-primary" style="margin-top: 6px;">
+            <button id="btnRowRemove">Remove Row</button>
+            <span class="tiny" id="selectedRouteInfo">Selected: none</span>
+          </div>
+        </div>
       </div>
-      <div class="kv" id="controlStatus">Mode: auto | Status: stopped</div>
-      <div class="kv">Keyboard: W/S/A/D + Space</div>
-      <h3>Telemetry</h3>
-      <div class="kv" id="telemetryPanel">Waiting for data...</div>
-      <button id="openDetail">Open Rover Detail</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Main Cameras</h3>
-    <div class="cam-grid">
-      <div><div>Front</div><canvas id="camFront" class="cam" width="640" height="480"></canvas></div>
-      <div><div>Bottom</div><canvas id="camBottom" class="cam" width="640" height="480"></canvas></div>
-      <div><div>Stereo (combined)</div><canvas id="camStereo" class="cam" width="640" height="480"></canvas></div>
-    </div>
-  </div>
-
-  <div class="card" id="detailPanel">
-    <h3>Rover Detail</h3>
-    <div class="row">
-      <div class="grow">
-        <canvas id="miniMapCanvas" width="700" height="240"></canvas>
-        <div class="kv" id="scanPanel">LiDAR: waiting...</div>
-      </div>
-      <div style="width: 320px;">
-        <h4>Arm Cameras (mock)</h4>
-        <div class="mini-previews" id="armCams"></div>
-        <h4>Rear LiDAR (mock)</h4>
-        <div class="kv">status: mock stream</div>
-      </div>
-    </div>
+    </section>
   </div>
 
   <script src="/static/dashboard.js"></script>

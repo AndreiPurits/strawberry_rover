@@ -1,0 +1,12 @@
+# Never track Markdown docs in this repo
+*.md
+
+# Common ROS2/colcon artifacts (keep repo lean)
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+

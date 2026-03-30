@@ -23,7 +23,7 @@ class RoverPoseSimulator(Node):
         self.declare_parameter("x0", 0.0)
         self.declare_parameter("y0", 0.0)
         self.declare_parameter("yaw0", 0.0)
-        self.declare_parameter("motion_mode", "scripted_rows")
+        self.declare_parameter("motion_mode", "cmd_vel")
         self.declare_parameter("row_count", 5)
         self.declare_parameter("row_spacing", 1.8)
         self.declare_parameter("row_length", 20.0)

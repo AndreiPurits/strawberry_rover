@@ -112,6 +112,137 @@ def api_control_state() -> Dict[str, Any]:
     return _bridge.get_control_snapshot()
 
 
+@app.get("/api/routes")
+def api_routes() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return _bridge.get_route_snapshot()
+
+
+@app.post("/api/routes/start")
+def api_routes_start() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.start_route_recording()}
+
+
+@app.post("/api/routes/stop")
+def api_routes_stop() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.stop_route_recording()}
+
+
+@app.post("/api/routes/save")
+def api_routes_save() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    return {"ok": True, "routes": _bridge.save_current_route()}
+
+
+@app.post("/api/routes/select")
+async def api_routes_select(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    try:
+        routes = _bridge.select_route(route_id)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/rename")
+async def api_routes_rename(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    name = str(payload.get("name", "")).strip()
+    try:
+        routes = _bridge.rename_route(route_id, name)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/delete")
+async def api_routes_delete(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    try:
+        routes = _bridge.delete_route(route_id)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/metadata")
+async def api_routes_metadata(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    metadata_patch = payload.get("metadata", {})
+    if not isinstance(metadata_patch, dict):
+        raise HTTPException(status_code=400, detail="metadata_must_be_object")
+    try:
+        routes = _bridge.update_route_metadata(route_id, metadata_patch)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/rows/add")
+async def api_routes_rows_add(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    row = payload.get("row", {})
+    if not isinstance(row, dict):
+        raise HTTPException(status_code=400, detail="row_must_be_object")
+    try:
+        routes = _bridge.add_route_row_metadata(route_id, row)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/rows/remove")
+async def api_routes_rows_remove(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    try:
+        row_index = int(payload.get("row_index", -1))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="invalid_row_index") from exc
+    try:
+        routes = _bridge.remove_route_row_metadata(route_id, row_index)
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/routes/trim_last")
+async def api_routes_trim_last(request: Request) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"error": "bridge_not_ready"}
+    payload = await request.json()
+    route_id = str(payload.get("route_id", "")).strip()
+    points_to_trim = payload.get("points_to_trim", 20)
+    try:
+        routes = _bridge.trim_route_last_points(route_id, int(points_to_trim))
+        return {"ok": True, "routes": routes}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 def _apply_control(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _bridge is None:
         raise HTTPException(status_code=503, detail="bridge_not_ready")

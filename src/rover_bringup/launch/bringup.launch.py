@@ -4,17 +4,21 @@ from ament_index_python.packages import get_package_share_directory
 from launch.actions import ExecuteProcess
 from launch.actions import DeclareLaunchArgument
 from launch.actions import RegisterEventHandler
+from launch.actions import IncludeLaunchDescription
 from launch import LaunchDescription
 from launch.conditions import IfCondition
+from launch.conditions import UnlessCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 
 def generate_launch_description() -> LaunchDescription:
-    """Integrated bringup for field-row simulation and fake sensors."""
+    """Integrated bringup for field-row simulation and sensors."""
     description_share = get_package_share_directory("rover_description")
     fake_lidar_share = get_package_share_directory("rover_fake_lidar")
+    rplidar_share = get_package_share_directory("rplidar_ros")
     simulation_share = get_package_share_directory("rover_simulation")
     fake_camera_share = get_package_share_directory("rover_fake_camera")
     fake_stereo_share = get_package_share_directory("rover_fake_stereo")
@@ -54,6 +58,21 @@ def generate_launch_description() -> LaunchDescription:
         default_value="false",
         description="Start rover_navigation_node (disabled by default for scripted route mode).",
     )
+    use_fake_lidar_arg = DeclareLaunchArgument(
+        "use_fake_lidar",
+        default_value="false",
+        description="Use rover_fake_lidar instead of real RPLIDAR C1.",
+    )
+    lidar_serial_port_arg = DeclareLaunchArgument(
+        "lidar_serial_port",
+        default_value="/dev/ttyUSB0",
+        description="Serial port for RPLIDAR C1.",
+    )
+    lidar_frame_id_arg = DeclareLaunchArgument(
+        "lidar_frame_id",
+        default_value="lidar_link",
+        description="Frame id published by RPLIDAR node.",
+    )
     auto_cleanup_arg = DeclareLaunchArgument(
         "auto_cleanup_before_start",
         default_value="true",
@@ -67,7 +86,8 @@ def generate_launch_description() -> LaunchDescription:
             (
                 "pkill -f '__node:=robot_state_publisher|__node:=fake_lidar_node|"
                 "__node:=rover_pose_simulator|__node:=fake_camera_node|"
-                "__node:=fake_stereo_node|__node:=rover_navigation_node' || true"
+                "__node:=fake_stereo_node|__node:=rover_navigation_node|"
+                "__node:=rplidar_node' || true"
             ),
         ],
         shell=False,
@@ -89,6 +109,18 @@ def generate_launch_description() -> LaunchDescription:
         name="fake_lidar_node",
         output="screen",
         parameters=[fake_lidar_config],
+        condition=IfCondition(LaunchConfiguration("use_fake_lidar")),
+    )
+
+    rplidar_c1 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(rplidar_share, "launch", "rplidar_c1_launch.py")
+        ),
+        launch_arguments={
+            "serial_port": LaunchConfiguration("lidar_serial_port"),
+            "frame_id": LaunchConfiguration("lidar_frame_id"),
+        }.items(),
+        condition=UnlessCondition(LaunchConfiguration("use_fake_lidar")),
     )
 
     rover_pose_simulator = Node(
@@ -136,6 +168,7 @@ def generate_launch_description() -> LaunchDescription:
     startup_actions = [
         robot_state_publisher,
         fake_lidar,
+        rplidar_c1,
         rover_pose_simulator,
         fake_camera,
         fake_stereo,
@@ -156,6 +189,9 @@ def generate_launch_description() -> LaunchDescription:
             simulation_config_arg,
             navigation_config_arg,
             enable_navigation_arg,
+            use_fake_lidar_arg,
+            lidar_serial_port_arg,
+            lidar_frame_id_arg,
             auto_cleanup_arg,
             pre_cleanup,
             start_after_cleanup,

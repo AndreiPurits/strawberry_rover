@@ -17,6 +17,7 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>rover_description</exec_depend>
   <exec_depend>rover_fake_lidar</exec_depend>
+  <exec_depend>rplidar_ros</exec_depend>
   <exec_depend>rover_simulation</exec_depend>
   <exec_depend>rover_fake_camera</exec_depend>
   <exec_depend>rover_fake_stereo</exec_depend>

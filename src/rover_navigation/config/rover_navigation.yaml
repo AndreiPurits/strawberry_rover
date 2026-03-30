@@ -47,5 +47,7 @@
     recovery_keep_current_distance: 0.45
     recovery_speed: 0.14
     recovery_target_x_margin: 0.8
+    post_recovery_straight_time: 1.5
+    post_recovery_deadband: 0.18
     web_control_started_topic: "/web/control/started"
     web_control_mode_topic: "/web/control/mode"
