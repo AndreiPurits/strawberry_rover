@@ -47,6 +47,10 @@ __pycache__/
 *.log
 *.tmp
 
+# --- Local prompts / temp markers
+PROMPTS/
+reports/**/benchmark.pid
+
 # --- Datasets (keep outside git by default)
 data/
 
