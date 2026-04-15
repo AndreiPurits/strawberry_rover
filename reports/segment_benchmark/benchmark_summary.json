@@ -1,0 +1,53 @@
+[
+  {
+    "model_name": "yolov8n-seg",
+    "weights_path": "/home/andrei/project/strawberry_rover_ws/runs/segment_benchmark/yolov8n_seg_benchmark/weights/best.pt",
+    "weights_size_mb": 6.483518600463867,
+    "epochs_completed": 150,
+    "run_status": "completed",
+    "box_precision": 0.9278289067253798,
+    "box_recall": 0.8765430789822738,
+    "box_map50": 0.9421151649629957,
+    "box_map50_95": 0.8608050006871675,
+    "mask_precision": 0.9296357857851667,
+    "mask_recall": 0.8777050421934403,
+    "mask_map50": 0.9460355954995209,
+    "mask_map50_95": 0.8187955409784194,
+    "inference_time_ms_per_image": 34.2951135635376,
+    "fps": 29.15867294468432
+  },
+  {
+    "model_name": "yolov8s-seg",
+    "weights_path": "/home/andrei/project/strawberry_rover_ws/runs/segment_benchmark/yolov8s_seg_benchmark/weights/best.pt",
+    "weights_size_mb": 22.763547897338867,
+    "epochs_completed": 138,
+    "run_status": "partial",
+    "box_precision": 0.9128518789596033,
+    "box_recall": 0.9108391608391608,
+    "box_map50": 0.9529074788035059,
+    "box_map50_95": 0.8789015545975479,
+    "mask_precision": 0.9172641275646669,
+    "mask_recall": 0.9047202797202797,
+    "mask_map50": 0.9527401499929292,
+    "mask_map50_95": 0.8363478742734525,
+    "inference_time_ms_per_image": 52.00267028808594,
+    "fps": 19.22978174890194
+  },
+  {
+    "model_name": "yolov8m-seg",
+    "weights_path": "/home/andrei/project/strawberry_rover_ws/runs/segment_benchmark/yolov8m_seg_benchmark/weights/best.pt",
+    "weights_size_mb": 156.45860958099365,
+    "epochs_completed": 66,
+    "run_status": "partial",
+    "box_precision": 0.9129912060092998,
+    "box_recall": 0.9080560800546474,
+    "box_map50": 0.9468508632805784,
+    "box_map50_95": 0.865421986637949,
+    "mask_precision": 0.9100290457986201,
+    "mask_recall": 0.9106766117073162,
+    "mask_map50": 0.9489415938113241,
+    "mask_map50_95": 0.82358399584722,
+    "inference_time_ms_per_image": 99.73434352874756,
+    "fps": 10.026636408468049
+  }
+]

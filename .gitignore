@@ -1,15 +1,60 @@
-# Never track Markdown docs in this repo
-*.md
+############################
+# Strawberry Rover — gitignore
+############################
 
-# Common ROS2/colcon artifacts (keep repo lean)
+# --- Simulation / ROS2 build artifacts (not versioned here)
 build/
 install/
 log/
 
-# Python
+# --- Generated runs / diagnostics (heavy artifacts; stored outside git)
+diagnostics/
+runs/
+
+# --- Virtual environments / caches
+.venv/
+.venv_*/
+.venv_cuda/
+venv/
+.cache/
+
+# --- Model weights / binaries (stored on Google Drive)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.whl
+*.deb
+
+# --- Python
 __pycache__/
 *.pyc
+*.pyo
 
-# Local helper scripts (do not version)
+# --- OS / editor
+.DS_Store
+
+# --- Images (do not store in git)
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+*.tiff
+
+# --- Large temp logs / dumps
+*.log
+*.tmp
+
+# --- Datasets (keep outside git by default)
+data/
+
+# --- Third party payloads (binaries / vendored deps should not live in git)
+third_party/openblas_deb/
+third_party/openblas_root/
+third_party/vision/
+
+# --- Local helper scripts (local-only)
 restart_sim.sh
 

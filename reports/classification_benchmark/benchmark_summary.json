@@ -1,0 +1,213 @@
+{
+  "ts": "2026-04-15T18:41:58Z",
+  "data_root": "data/classification_dataset_v2",
+  "results": [
+    {
+      "model_name": "mobilenet_v3_small",
+      "status": "ok",
+      "error": "",
+      "best_epoch": 16,
+      "best_weights_path": "runs/classification_benchmark_v2/mobilenet_v3_small/best.pt",
+      "model_size_mb": 5.922900199890137,
+      "test_loss": 0.42136216943646654,
+      "metrics": {
+        "accuracy": 0.8962962962962963,
+        "precision_macro": 0.9066015052241944,
+        "recall_macro": 0.9000000000000001,
+        "f1_macro": 0.9027118970917711,
+        "per_class": {
+          "green": {
+            "precision": 0.896551724137931,
+            "recall": 0.8666666666666667,
+            "f1": 0.8813559322033899
+          },
+          "turning": {
+            "precision": 0.7982456140350878,
+            "recall": 0.8666666666666667,
+            "f1": 0.8310502283105023
+          },
+          "ripe": {
+            "precision": 0.9491525423728814,
+            "recall": 0.9333333333333333,
+            "f1": 0.9411764705882353
+          },
+          "rotten": {
+            "precision": 0.9824561403508771,
+            "recall": 0.9333333333333333,
+            "f1": 0.9572649572649572
+          }
+        }
+      },
+      "confusion_matrix": [
+        [
+          104,
+          16,
+          0,
+          0
+        ],
+        [
+          11,
+          91,
+          3,
+          0
+        ],
+        [
+          0,
+          7,
+          112,
+          1
+        ],
+        [
+          1,
+          0,
+          3,
+          56
+        ]
+      ],
+      "timing": {
+        "inference_time_ms_per_image": 1.1902135961196,
+        "fps": 840.1853274574034
+      },
+      "preview_dir": "/home/andrei/project/strawberry_rover_ws/data/classification_preview/mobilenet_v3_small",
+      "history": []
+    },
+    {
+      "model_name": "resnet18",
+      "status": "ok",
+      "error": "",
+      "best_epoch": 14,
+      "best_weights_path": "runs/classification_benchmark_v2/resnet18/best.pt",
+      "model_size_mb": 42.711567878723145,
+      "test_loss": 0.35981258183349796,
+      "metrics": {
+        "accuracy": 0.8740740740740741,
+        "precision_macro": 0.8745882818228634,
+        "recall_macro": 0.8785714285714286,
+        "f1_macro": 0.8760390719916001,
+        "per_class": {
+          "green": {
+            "precision": 0.8849557522123894,
+            "recall": 0.8333333333333334,
+            "f1": 0.8583690987124464
+          },
+          "turning": {
+            "precision": 0.803921568627451,
+            "recall": 0.780952380952381,
+            "f1": 0.7922705314009661
+          },
+          "ripe": {
+            "precision": 0.90625,
+            "recall": 0.9666666666666667,
+            "f1": 0.9354838709677419
+          },
+          "rotten": {
+            "precision": 0.9032258064516129,
+            "recall": 0.9333333333333333,
+            "f1": 0.9180327868852459
+          }
+        }
+      },
+      "confusion_matrix": [
+        [
+          100,
+          17,
+          0,
+          3
+        ],
+        [
+          13,
+          82,
+          9,
+          1
+        ],
+        [
+          0,
+          2,
+          116,
+          2
+        ],
+        [
+          0,
+          1,
+          3,
+          56
+        ]
+      ],
+      "timing": {
+        "inference_time_ms_per_image": 2.4872106664321003,
+        "fps": 402.05681549062285
+      },
+      "preview_dir": "/home/andrei/project/strawberry_rover_ws/data/classification_preview/resnet18",
+      "history": []
+    },
+    {
+      "model_name": "efficientnet_b0",
+      "status": "ok",
+      "error": "",
+      "best_epoch": 9,
+      "best_weights_path": "runs/classification_benchmark_v2/efficientnet_b0/best.pt",
+      "model_size_mb": 15.573164939880371,
+      "test_loss": 0.3109250654408961,
+      "metrics": {
+        "accuracy": 0.9259259259259259,
+        "precision_macro": 0.930170656737305,
+        "recall_macro": 0.9300595238095238,
+        "f1_macro": 0.9295317326524924,
+        "per_class": {
+          "green": {
+            "precision": 0.896,
+            "recall": 0.9333333333333333,
+            "f1": 0.9142857142857143
+          },
+          "turning": {
+            "precision": 0.90625,
+            "recall": 0.8285714285714286,
+            "f1": 0.8656716417910447
+          },
+          "ripe": {
+            "precision": 0.9512195121951219,
+            "recall": 0.975,
+            "f1": 0.9629629629629629
+          },
+          "rotten": {
+            "precision": 0.9672131147540983,
+            "recall": 0.9833333333333333,
+            "f1": 0.9752066115702478
+          }
+        }
+      },
+      "confusion_matrix": [
+        [
+          112,
+          8,
+          0,
+          0
+        ],
+        [
+          13,
+          87,
+          5,
+          0
+        ],
+        [
+          0,
+          1,
+          117,
+          2
+        ],
+        [
+          0,
+          0,
+          1,
+          59
+        ]
+      ],
+      "timing": {
+        "inference_time_ms_per_image": 5.258518106797163,
+        "fps": 190.1676441329354
+      },
+      "preview_dir": "/home/andrei/project/strawberry_rover_ws/data/classification_preview/efficientnet_b0",
+      "history": []
+    }
+  ]
+}

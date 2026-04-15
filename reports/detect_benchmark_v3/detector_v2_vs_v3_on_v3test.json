@@ -1,0 +1,48 @@
+{
+  "ts": "2026-04-14T07:07:11Z",
+  "data": "data/yolo_detection_dataset_v3/data.yaml",
+  "test_dir": "/home/andrei/project/strawberry_rover_ws/data/yolo_detection_dataset_v3/images/test",
+  "conf": 0.25,
+  "iou": 0.7,
+  "v2_on_v3test": {
+    "weights": "runs/detect_benchmark_v2/yolov8s_v2_resplit_fastnms/weights/best.pt",
+    "weights_size_mb": 21.475879669189453,
+    "metrics": {
+      "mAP50": 0.9205412468262677,
+      "mAP50_95": 0.761848504598801,
+      "precision": 0.888074224934032,
+      "recall": 0.9382691205786147
+    },
+    "timing": {
+      "ms_per_image": 58.99625672234429,
+      "fps": 16.95022795609436
+    },
+    "test_images": 225,
+    "preview_images": 80
+  },
+  "v3": {
+    "weights": "runs/detect_benchmark_v3/yolov8s_v3_lowdensity/weights/best.pt",
+    "weights_size_mb": 21.485645294189453,
+    "metrics": {
+      "mAP50": 0.9582878458215184,
+      "mAP50_95": 0.8775167897984968,
+      "precision": 0.9400857261432626,
+      "recall": 0.9305912596401028
+    },
+    "timing": {
+      "ms_per_image": 54.86091189914279,
+      "fps": 18.22791429056842
+    },
+    "test_images": 225,
+    "preview_images": 80
+  },
+  "delta_v3_minus_v2": {
+    "mAP50": 0.03774659899525068,
+    "mAP50_95": 0.11566828519969574,
+    "precision": 0.05201150120923059,
+    "recall": -0.00767786093851186,
+    "ms_per_image": -4.1353448232015,
+    "fps": 1.2776863344740619,
+    "weights_size_mb": 0.009765625
+  }
+}

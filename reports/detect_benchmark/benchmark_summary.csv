@@ -1,0 +1,5 @@
+model_name,params_count,batch_size,imgsz,epochs_completed,train_time_total,avg_epoch_time,mAP50,mAP50-95,precision,recall,inference_time_ms_per_image,fps,best_weights_path,weights_size_mb,status
+yolov8n,3157200,64,640,50,1387.146,27.549,0.922563,0.767641,0.905571,0.875697,76.0222,13.1540,/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8n_benchmark/weights/best.pt,5.9582,ok
+yolov8s,11166560,64,640,50,2124.632,42.255,0.928053,0.772015,0.928146,0.881960,87.9919,11.3647,/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8s_benchmark/weights/best.pt,21.4740,ok
+yolov8m,25902640,64,640,50,3761.005,74.833,0.932360,0.770892,0.923589,0.861438,117.8285,8.4869,/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8m_benchmark/weights/best.pt,49.6184,ok
+yolo11n,2624080,64,640,50,1531.192,30.404,0.933320,0.761461,0.924286,0.870035,76.9169,13.0010,/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov11n_benchmark/weights/best.pt,5.2171,ok

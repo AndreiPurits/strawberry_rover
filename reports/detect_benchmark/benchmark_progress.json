@@ -1,0 +1,110 @@
+{
+  "runs": [
+    {
+      "model_name": "yolov8n",
+      "params_count": "3157200",
+      "batch_size": "64",
+      "imgsz": 640,
+      "epochs_completed": "50",
+      "train_time_total_s": "1387.146",
+      "avg_epoch_time_s": "27.549",
+      "mAP50": "0.922563",
+      "mAP50_95": "0.767641",
+      "precision": "0.905571",
+      "recall": "0.875697",
+      "inference_time_ms_per_image": "76.0222",
+      "fps": "13.1540",
+      "best_weights_path": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8n_benchmark/weights/best.pt",
+      "weights_size_mb": "5.9582",
+      "status": "ok",
+      "error": "",
+      "actual_run_dir": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8n_benchmark",
+      "weights_file": "",
+      "note": ""
+    },
+    {
+      "model_name": "yolov8s",
+      "params_count": "11166560",
+      "batch_size": "64",
+      "imgsz": 640,
+      "epochs_completed": "50",
+      "train_time_total_s": "2124.632",
+      "avg_epoch_time_s": "42.255",
+      "mAP50": "0.928053",
+      "mAP50_95": "0.772015",
+      "precision": "0.928146",
+      "recall": "0.881960",
+      "inference_time_ms_per_image": "87.9919",
+      "fps": "11.3647",
+      "best_weights_path": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8s_benchmark/weights/best.pt",
+      "weights_size_mb": "21.4740",
+      "status": "ok",
+      "error": "",
+      "actual_run_dir": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8s_benchmark",
+      "weights_file": "",
+      "note": ""
+    },
+    {
+      "model_name": "yolov8m",
+      "params_count": "25902640",
+      "batch_size": "64",
+      "imgsz": 640,
+      "epochs_completed": "50",
+      "train_time_total_s": "3761.005",
+      "avg_epoch_time_s": "74.833",
+      "mAP50": "0.932360",
+      "mAP50_95": "0.770892",
+      "precision": "0.923589",
+      "recall": "0.861438",
+      "inference_time_ms_per_image": "117.8285",
+      "fps": "8.4869",
+      "best_weights_path": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8m_benchmark/weights/best.pt",
+      "weights_size_mb": "49.6184",
+      "status": "ok",
+      "error": "",
+      "actual_run_dir": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov8m_benchmark",
+      "weights_file": "",
+      "note": ""
+    },
+    {
+      "model_name": "yolo11n",
+      "params_count": "2624080",
+      "batch_size": "64",
+      "imgsz": 640,
+      "epochs_completed": "50",
+      "train_time_total_s": "1531.192",
+      "avg_epoch_time_s": "30.404",
+      "mAP50": "0.933320",
+      "mAP50_95": "0.761461",
+      "precision": "0.924286",
+      "recall": "0.870035",
+      "inference_time_ms_per_image": "76.9169",
+      "fps": "13.0010",
+      "best_weights_path": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov11n_benchmark/weights/best.pt",
+      "weights_size_mb": "5.2171",
+      "status": "ok",
+      "error": "",
+      "actual_run_dir": "/home/andrei/project/strawberry_rover_ws/runs/detect_benchmark/yolov11n_benchmark",
+      "weights_file": "",
+      "note": ""
+    }
+  ],
+  "notes": [
+    {
+      "time": "2026-04-12T11:49:58Z",
+      "msg": "benchmark session start",
+      "models": [
+        "yolov8n",
+        "yolov8s",
+        "yolov8m",
+        "yolo11n"
+      ],
+      "preview_count": 30,
+      "workers": 4
+    },
+    {
+      "time": "2026-04-12T14:19:25Z",
+      "msg": "benchmark session complete"
+    }
+  ]
+}
