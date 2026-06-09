@@ -1,0 +1,52 @@
+{
+  "repo_root": ".",
+  "groups": {
+    "01_fast_initial": {
+      "weights": {
+        "detector": {
+          "path": "runs/detect_benchmark/yolov8n_benchmark/weights/best.pt",
+          "exists": true,
+          "size_mb": 5.96
+        },
+        "classifier": {
+          "path": "runs/classification_benchmark_v2/mobilenet_v3_small/best.pt",
+          "exists": true,
+          "size_mb": 5.92
+        },
+        "segmenter": {
+          "path": "runs/segment_benchmark/yolov8n_seg_benchmark/weights/best.pt",
+          "exists": true,
+          "size_mb": 6.48
+        }
+      },
+      "runtime_preset": null
+    },
+    "02_lightened_current": {
+      "weights": {
+        "detector": {
+          "path": "runs/detect_benchmark_v3/yolov8s_v3_lowdensity/weights/best.pt",
+          "exists": true,
+          "size_mb": 21.49
+        },
+        "classifier": {
+          "path": "runs/classification_benchmark_v2/efficientnet_b0/best.pt",
+          "exists": true,
+          "size_mb": 15.57
+        },
+        "segmenter": {
+          "path": "runs/segment_benchmark/yolov8n_seg_benchmark/weights/best.pt",
+          "exists": true,
+          "size_mb": 6.48
+        }
+      },
+      "runtime_preset": {
+        "name": "very_fast",
+        "det_imgsz": 480,
+        "seg_imgsz": 320,
+        "det_conf": 0.45,
+        "max_det": 5,
+        "seg_every": 3
+      }
+    }
+  }
+}

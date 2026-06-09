@@ -1,0 +1,10 @@
+{
+  "group": "01_fast_initial",
+  "purpose": "Самые быстрые модели из имеющихся best.pt без дополнительного тюнинга/дообучения.",
+  "weights": {
+    "detector": "runs/detect_benchmark/yolov8n_benchmark/weights/best.pt",
+    "classifier": "runs/classification_benchmark_v2/mobilenet_v3_small/best.pt",
+    "segmenter": "runs/segment_benchmark/yolov8n_seg_benchmark/weights/best.pt"
+  },
+  "notes": "Сравнивать на data/ФПС ДАТАСЕТ. Детектор/сегментер YOLO, классификатор MobileNetV3-Small."
+}

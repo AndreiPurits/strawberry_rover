@@ -24,13 +24,29 @@
 3) **Segmentation** → уточняет маску/контуры  
 4) Далее: **stereo / distance / grasp pipeline** (следующий слой интеграции)
 
+## Новый Jetson Orin
+
+```bash
+git clone git@github.com:AndreiPurits/strawberry_rover.git
+cd strawberry_rover
+git submodule update --init --recursive
+bash bootstrap/orin_bootstrap.sh
+```
+
+Полный гайд: `docs/orin_new_device_setup.md` · Промпт для агента: `docs/NEW_ORIN_AGENT_PROMPT.md`
+
 ## Структура репозитория
 
-- `scripts/` — утилиты и пайплайн‑скрипты (подготовка датасетов, обучение, бенчмарки, инференс)
-- `config/` — рабочие конфиги/таблицы (например маппинг классов)
-- `docs/` — инженерная документация (выбор модели, планы датасетов, обзоры)
-- `reports/` — маленькие текстовые отчёты/сводки (md/csv/json)
-- `arduino/` — скетчи и библиотеки (если требуется для стенда/железа)
+- `AGENTS.md` — onboarding для Cursor-агента
+- `bootstrap/` — установка Orin (Python, CUDA, TensorRT, RealSense)
+- `pipelines/` — ensemble inference
+- `models/model_groups/` — группы моделей + manifest
+- `tools/` — бенчмарки FPS, TensorRT export, labeling
+- `scripts/` — обучение, GUI, jetson fixes
+- `docs/` — документация
+- `reports/` — отчёты бенчмарков
+- `src/` — ROS2 workspace (rover_*, Orbbec submodule, rplidar submodule)
+- `arduino/` — скетчи Mega
 
 **Не храним в git:**
 - `diagnostics/`, `runs/`

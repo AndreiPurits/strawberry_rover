@@ -6,6 +6,10 @@
 build/
 install/
 log/
+Log/
+
+# --- Cloned by bootstrap (not submodules)
+src/realsense-ros/
 
 # --- Generated runs / diagnostics (heavy artifacts; stored outside git)
 diagnostics/

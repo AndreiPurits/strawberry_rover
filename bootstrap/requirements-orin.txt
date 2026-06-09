@@ -1,0 +1,6 @@
+# Orin Python deps (install torch separately from Jetson wheel if needed)
+# PyQt5: use apt (python3-pyqt5), not pip — pip builds from source on aarch64.
+ultralytics>=8.0.0
+opencv-python-headless>=4.5.0
+numpy>=1.21.0
+pillow>=9.0.0

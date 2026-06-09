@@ -1,0 +1,13 @@
+{
+  "holdout": "data/ФПС ДАТАСЕТ/images",
+  "images_count": 8099,
+  "model_group": "02_lightened_current",
+  "comparison": [
+    {"preset": "baseline", "det": 640, "seg": 384, "pt_fps": 21.76, "trt_fps": 31.92, "boost_pct": 47},
+    {"preset": "fast", "det": 512, "seg": 320, "pt_fps": 23.30, "trt_fps": 31.47, "boost_pct": 35},
+    {"preset": "very_fast", "det": 480, "seg": 320, "pt_fps": 23.12, "trt_fps": 38.01, "boost_pct": 64},
+    {"preset": "ultra_low", "det": 416, "seg": 256, "pt_fps": 23.12, "trt_fps": 34.13, "boost_pct": 48}
+  ],
+  "recommended_preset": "very_fast",
+  "recommended_trt_fps": 38.01
+}
