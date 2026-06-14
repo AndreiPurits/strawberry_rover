@@ -9,6 +9,7 @@ import rclpy
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
@@ -124,13 +125,13 @@ class RosWebBridge(Node):
         self.create_subscription(PoseStamped, "/sim/rover_pose", self._on_pose, 10)
         self.create_subscription(MarkerArray, "/sim/scene_markers", self._on_scene, 10)
         self.create_subscription(Marker, "/debug/nav_state", self._on_nav_state, 10)
-        self.create_subscription(LaserScan, "/scan", self._on_scan, 10)
+        self.create_subscription(LaserScan, "/scan", self._on_scan, qos_profile_sensor_data)
         if self._real_front_camera_topic:
             self.create_subscription(
                 Image,
                 self._real_front_camera_topic,
                 lambda msg: self._on_image("front", msg),
-                10,
+                qos_profile_sensor_data,
             )
         self.create_subscription(
             Image,
