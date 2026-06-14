@@ -2,7 +2,8 @@
 # Run on Orin: push telemetry to AXM hub while chassis web is up.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+AGENT_DIR="$REPO_ROOT/ops/axm-monitor/agent"
+cd "$AGENT_DIR"
 
 ENV_FILE="${AXM_FLEET_ENV:-$HOME/.config/axm/fleet-agent.env}"
 if [ -f "$ENV_FILE" ]; then
@@ -19,4 +20,4 @@ fi
 export AXM_LOCAL_WEB="${AXM_LOCAL_WEB:-http://127.0.0.1:8080}"
 export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
 
-python3 "$REPO_ROOT/ops/axm-monitor/agent/fleet_agent.py" "$@"
+python3 "$AGENT_DIR/fleet_agent.py" "$@"

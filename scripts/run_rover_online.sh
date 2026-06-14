@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Keep rover ONLINE on rover.axm.tech: chassis web + fleet agent.
+set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
+ENV_FILE="${AXM_FLEET_ENV:-$HOME/.config/axm/fleet-agent.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+: "${AXM_HUB_URL:?Set AXM_HUB_URL in $ENV_FILE}"
+: "${AXM_ROVER_TOKEN:?Set AXM_ROVER_TOKEN in $ENV_FILE}"
+
+source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
+pip install -q pyserial 2>/dev/null || true
+
+MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
+LOG_DIR="${AXM_LOG_DIR:-$HOME/.local/log/axm}"
+mkdir -p "$LOG_DIR"
+
+run_chassis() {
+  exec MEGA_PORT="$MEGA_PORT" "$REPO_ROOT/scripts/run_chassis_web.sh"
+}
+
+run_agent() {
+  exec "$REPO_ROOT/scripts/run_fleet_agent.sh"
+}
+
+case "${1:-all}" in
+  chassis)
+    run_chassis
+    ;;
+  agent)
+    run_agent
+    ;;
+  all|*)
+    echo "[rover_online] logs: $LOG_DIR"
+    echo "[rover_online] hub: $AXM_HUB_URL rover: ${AXM_ROVER_ID:-rover-01}"
+    if groups | grep -q dialout; then
+      MEGA_PORT="$MEGA_PORT" "$REPO_ROOT/scripts/run_chassis_web.sh" >>"$LOG_DIR/chassis.log" 2>&1 &
+    else
+      echo "[rover_online] WARN: not in dialout — run: newgrp dialout"
+      MEGA_PORT="$MEGA_PORT" "$REPO_ROOT/scripts/run_chassis_web.sh" >>"$LOG_DIR/chassis.log" 2>&1 &
+    fi
+    CH_PID=$!
+    sleep 8
+    "$REPO_ROOT/scripts/run_fleet_agent.sh" >>"$LOG_DIR/fleet-agent.log" 2>&1 &
+    AG_PID=$!
+    echo "[rover_online] chassis pid=$CH_PID agent pid=$AG_PID"
+    trap 'kill $CH_PID $AG_PID 2>/dev/null || true' EXIT INT TERM
+    wait $AG_PID
+    ;;
+esac

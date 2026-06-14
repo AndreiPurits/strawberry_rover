@@ -5,12 +5,13 @@ import json
 import os
 import secrets
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import bcrypt
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -19,11 +20,13 @@ SESSION_COOKIE = "axm_session"
 SESSION_TTL_S = 60 * 60 * 12
 AGENT_STALE_S = 45
 
-app = FastAPI(title="AXM Fleet Monitor", version="0.1.0")
+app = FastAPI(title="AXM Fleet Monitor", version="0.3.0")
 
 _sessions: Dict[str, float] = {}
 _dashboard_clients: Set[WebSocket] = set()
 _rovers: Dict[str, Dict[str, Any]] = {}
+_command_queues: Dict[str, List[Dict[str, Any]]] = {}
+_command_log: List[Dict[str, Any]] = []
 
 
 def _env(name: str, default: str = "") -> str:
@@ -43,7 +46,6 @@ def _admin_password_hash() -> bytes:
 
 
 def _agent_tokens() -> Dict[str, str]:
-    """ROVER_ID:token pairs from AXM_AGENT_TOKENS JSON or ROVER_1_TOKEN style."""
     out: Dict[str, str] = {}
     blob = _env("AXM_AGENT_TOKENS")
     if blob:
@@ -113,6 +115,7 @@ def _rover_public(row: Dict[str, Any]) -> Dict[str, Any]:
         "last_seen_ago_s": max(0.0, now - last) if last else None,
         "telemetry": row.get("telemetry", {}),
         "meta": row.get("meta", {}),
+        "last_commands": row.get("last_commands", []),
     }
 
 
@@ -128,6 +131,20 @@ async def _broadcast_dashboard() -> None:
         _dashboard_clients.discard(ws)
 
 
+def _enqueue_command(rover_id: str, action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    cmd = {
+        "id": uuid.uuid4().hex[:12],
+        "action": action,
+        "params": params or {},
+        "queued_at": time.time(),
+    }
+    _command_queues.setdefault(rover_id, []).append(cmd)
+    entry = {"rover_id": rover_id, **cmd}
+    _command_log.append(entry)
+    _command_log[:] = _command_log[-100:]
+    return cmd
+
+
 class LoginBody(BaseModel):
     username: str
     password: str
@@ -139,11 +156,17 @@ class HeartbeatBody(BaseModel):
     name: Optional[str] = None
     telemetry: Dict[str, Any] = Field(default_factory=dict)
     meta: Dict[str, Any] = Field(default_factory=dict)
+    command_results: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class RoverCommandBody(BaseModel):
+    action: str = Field(min_length=1, max_length=32)
+    params: Dict[str, Any] = Field(default_factory=dict)
 
 
 @app.get("/healthz")
 def healthz() -> Dict[str, Any]:
-    return {"ok": True, "rovers": len(_rovers)}
+    return {"ok": True, "rovers": len(_rovers), "version": "0.3.0"}
 
 
 @app.get("/login")
@@ -191,10 +214,25 @@ def api_rovers(_user: str = Depends(require_user)) -> Dict[str, Any]:
     return {"ok": True, "rovers": [_rover_public(r) for r in rows]}
 
 
+@app.post("/api/rovers/{rover_id}/command")
+async def rover_command(
+    rover_id: str,
+    body: RoverCommandBody,
+    _user: str = Depends(require_user),
+) -> Dict[str, Any]:
+    if rover_id not in _rovers and rover_id not in _agent_tokens():
+        raise HTTPException(status_code=404, detail="rover_not_found")
+    cmd = _enqueue_command(rover_id, body.action, body.params)
+    await _broadcast_dashboard()
+    return {"ok": True, "command": cmd}
+
+
 @app.post("/api/agents/heartbeat")
 async def agent_heartbeat(body: HeartbeatBody) -> Dict[str, Any]:
     if not _verify_agent(body.rover_id, body.token):
         raise HTTPException(status_code=403, detail="invalid_agent_token")
+
+    pending = _command_queues.pop(body.rover_id, [])
     row = _rovers.setdefault(
         body.rover_id,
         {"id": body.rover_id, "name": body.rover_id, "telemetry": {}, "meta": {}},
@@ -204,8 +242,11 @@ async def agent_heartbeat(body: HeartbeatBody) -> Dict[str, Any]:
         row["name"] = body.name
     row["telemetry"] = body.telemetry
     row["meta"] = body.meta
+    if body.command_results:
+        row["last_commands"] = body.command_results[-5:]
     await _broadcast_dashboard()
-    return {"ok": True}
+
+    return {"ok": True, "commands": pending}
 
 
 @app.websocket("/ws/dashboard")

@@ -3,23 +3,93 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AXM Monitor</title>
+  <title>AXM Rover</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1>AXM Monitor</h1>
-      <p class="muted">Флот роверов</p>
+      <h1>AXM Rover</h1>
+      <p class="muted">Мониторинг и управление</p>
     </div>
     <button id="logout" class="ghost">Выйти</button>
   </header>
-  <main>
-    <section class="stats">
-      <div class="stat"><span id="online-count">0</span><small>онлайн</small></div>
-      <div class="stat"><span id="total-count">0</span><small>всего</small></div>
+
+  <main class="layout">
+    <aside class="sidebar card">
+      <label class="field-label" for="rover-select">Ровер</label>
+      <select id="rover-select" class="rover-select">
+        <option value="">— выберите ровер —</option>
+      </select>
+      <p id="rover-status" class="rover-status muted">Нет данных</p>
+      <ul id="rover-list" class="rover-list"></ul>
+    </aside>
+
+    <section class="workspace">
+      <div id="empty-state" class="card empty-panel">
+        Выберите ровер из списка слева. Orin с установленным agent появится как online.
+      </div>
+
+      <div id="rover-panel" class="hidden">
+        <div class="card panel-head">
+          <div>
+            <h2 id="panel-title">—</h2>
+            <p id="panel-sub" class="muted">—</p>
+          </div>
+          <span id="panel-badge" class="badge offline">OFFLINE</span>
+        </div>
+
+        <div class="card telemetry-panel">
+          <h3>Mega — датчики</h3>
+          <div class="telemetry-grid">
+            <div class="t-item"><span>Mega</span><strong id="t-mega">—</strong></div>
+            <div class="t-item"><span>ARM</span><strong id="t-arm">—</strong></div>
+            <div class="t-item"><span>Скорость</span><strong id="t-speed">—</strong></div>
+            <div class="t-item"><span>Левая гусеница</span><strong id="t-left">—</strong></div>
+            <div class="t-item"><span>Правая гусеница</span><strong id="t-right">—</strong></div>
+            <div class="t-item"><span>Ток A0</span><strong id="t-current">—</strong></div>
+            <div class="t-item"><span>Digital D0</span><strong id="t-d0">—</strong></div>
+            <div class="t-item"><span>Сигнал</span><strong id="t-ago">—</strong></div>
+          </div>
+        </div>
+
+        <div class="card mode-panel">
+          <h3>Режим езды</h3>
+          <div class="mode-toggle">
+            <button type="button" id="mode-joystick" class="mode-btn active" title="Джойстик">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-6 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
+              <span>Джойстик</span>
+            </button>
+            <button type="button" id="mode-auto" class="mode-btn" title="Авто">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 1 1 0 2h-1.07A7.001 7.001 0 0 1 13 22h-2a7.001 7.001 0 0 1-6.93-6H3a1 1 0 1 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Zm-1 9a1 1 0 0 0-1 1v3a1 1 0 1 0 2 0v-3a1 1 0 0 0-1-1Zm2 0a1 1 0 0 0-1 1v3a1 1 0 1 0 2 0v-3a1 1 0 0 0-1-1Z"/></svg>
+              <span>Авто</span>
+            </button>
+          </div>
+          <p id="mode-hint" class="muted small">Ручное управление: WASD или стрелки.</p>
+        </div>
+
+        <div id="joystick-panel" class="card">
+          <div class="controls compact">
+            <button type="button" id="btn-start">Start</button>
+            <button type="button" id="btn-stop" class="ghost">Stop</button>
+          </div>
+          <div class="drive-pad">
+            <button type="button" data-drive="0,0.55">▲</button>
+            <div class="drive-row">
+              <button type="button" data-drive="-0.55,0">◀</button>
+              <button type="button" data-drive="0,0">■</button>
+              <button type="button" data-drive="0.55,0">▶</button>
+            </div>
+            <button type="button" data-drive="0,-0.55">▼</button>
+          </div>
+        </div>
+
+        <div id="auto-panel" class="card hidden">
+          <p class="auto-stub">Автоматический режим — в разработке.</p>
+          <p class="muted small">Ровер будет ехать по маршруту без ручного управления.</p>
+        </div>
+      </div>
     </section>
-    <section id="rover-grid" class="grid"></section>
   </main>
   <script src="/static/dashboard.js"></script>
 </body>
