@@ -10,31 +10,43 @@
   <main class="card auth-card">
     <h1>AXM Monitor</h1>
     <p class="muted">Мониторинг роверов axm.tech</p>
-    <form id="login-form">
+    <form id="login-form" method="post" action="/api/login" autocomplete="on">
       <label>
         Логин
-        <input name="username" autocomplete="username" required />
+        <input id="username" name="username" type="text" autocomplete="username" required />
       </label>
       <label>
         Пароль
-        <input name="password" type="password" autocomplete="current-password" required />
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <label class="remember-row">
+        <input id="remember" name="remember" type="checkbox" checked />
+        Запомнить меня (30 дней)
       </label>
       <button type="submit">Войти</button>
       <p id="error" class="error hidden"></p>
     </form>
   </main>
   <script>
+    const USER_KEY = "axm_saved_username";
+    const userEl = document.getElementById("username");
+    const saved = localStorage.getItem(USER_KEY);
+    if (saved) userEl.value = saved;
+
     document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const err = document.getElementById("error");
       err.classList.add("hidden");
+      const username = String(fd.get("username") || "");
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
-          username: fd.get("username"),
+          username,
           password: fd.get("password"),
+          remember: document.getElementById("remember").checked,
         }),
       });
       if (!res.ok) {
@@ -42,6 +54,7 @@
         err.classList.remove("hidden");
         return;
       }
+      localStorage.setItem(USER_KEY, username);
       location.href = "/";
     });
   </script>

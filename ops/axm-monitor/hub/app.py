@@ -1,6 +1,8 @@
 """AXM fleet monitoring hub — central dashboard for rovers."""
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -18,11 +20,12 @@ from pydantic import BaseModel, Field
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SESSION_COOKIE = "axm_session"
 SESSION_TTL_S = 60 * 60 * 12
+SESSION_REMEMBER_TTL_S = 60 * 60 * 24 * 30
 AGENT_STALE_S = 45
 
 app = FastAPI(title="AXM Fleet Monitor", version="0.3.0")
 
-_sessions: Dict[str, float] = {}
+_sessions: Dict[str, float] = {}  # legacy; sessions are HMAC-signed cookies (survive hub restart)
 _dashboard_clients: Set[WebSocket] = set()
 _rovers: Dict[str, Dict[str, Any]] = {}
 _command_queues: Dict[str, List[Dict[str, Any]]] = {}
@@ -71,23 +74,35 @@ def _verify_password(username: str, password: str) -> bool:
         return False
 
 
-def _issue_session() -> str:
-    token = secrets.token_urlsafe(32)
-    _sessions[token] = time.time() + SESSION_TTL_S
-    return token
+def _session_secret() -> bytes:
+    raw = _env("AXM_SESSION_SECRET") or _env("AXM_ADMIN_PASSWORD_HASH") or _env("AXM_ADMIN_PASSWORD", "changeme")
+    return raw.encode()
+
+
+def _sign_session(expires_at: float) -> str:
+    payload = str(int(expires_at))
+    sig = hmac.new(_session_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
+
+
+def _issue_session(remember: bool = False) -> tuple[str, int]:
+    ttl = SESSION_REMEMBER_TTL_S if remember else SESSION_TTL_S
+    expires = time.time() + ttl
+    return _sign_session(expires), ttl
 
 
 def _session_valid(token: Optional[str]) -> bool:
-    if not token:
+    if not token or "." not in token:
         return False
-    expires = _sessions.get(token)
-    if expires is None:
+    payload, sig = token.rsplit(".", 1)
+    expected = hmac.new(_session_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
         return False
-    if expires < time.time():
-        _sessions.pop(token, None)
+    try:
+        expires = float(payload)
+    except ValueError:
         return False
-    _sessions[token] = time.time() + SESSION_TTL_S
-    return True
+    return expires >= time.time()
 
 
 def require_user(request: Request) -> str:
@@ -154,6 +169,7 @@ def _enqueue_command(rover_id: str, action: str, params: Optional[Dict[str, Any]
 class LoginBody(BaseModel):
     username: str
     password: str
+    remember: bool = False
 
 
 class HeartbeatBody(BaseModel):
@@ -184,7 +200,7 @@ def login_page() -> FileResponse:
 def api_login(body: LoginBody) -> JSONResponse:
     if not _verify_password(body.username, body.password):
         raise HTTPException(status_code=401, detail="invalid_credentials")
-    token = _issue_session()
+    token, ttl = _issue_session(body.remember)
     resp = JSONResponse({"ok": True})
     resp.set_cookie(
         SESSION_COOKIE,
@@ -192,18 +208,16 @@ def api_login(body: LoginBody) -> JSONResponse:
         httponly=True,
         secure=_env("AXM_COOKIE_SECURE", "true").lower() in ("1", "true", "yes"),
         samesite="lax",
-        max_age=SESSION_TTL_S,
+        max_age=ttl,
+        path="/",
     )
     return resp
 
 
 @app.post("/api/logout")
 def api_logout(request: Request) -> JSONResponse:
-    token = request.cookies.get(SESSION_COOKIE)
-    if token:
-        _sessions.pop(token, None)
     resp = JSONResponse({"ok": True})
-    resp.delete_cookie(SESSION_COOKIE)
+    resp.delete_cookie(SESSION_COOKIE, path="/")
     return resp
 
 
