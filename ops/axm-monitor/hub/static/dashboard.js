@@ -17,6 +17,26 @@ let lastFleet = [];
 let selectedId = localStorage.getItem("axm_rover_id") || "";
 let uiDriveMode = localStorage.getItem("axm_drive_mode") || "joystick";
 
+const DRIVE_INTERVAL_MS = 50;
+const GAMEPAD_DEADZONE = 0.18;
+const LINEAR_SPEED_MAX = 0.55;
+const ANGULAR_SPEED_MAX = 1.1;
+
+let lastDriveSentAt = 0;
+let pendingDrive = null;
+let driveTimer = null;
+let sessionStarted = false;
+
+const gamepadState = { index: null, connected: false, active: false };
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function applyDeadzone(v, dz) {
+  return Math.abs(v) < dz ? 0 : v;
+}
+
 function fmtAgo(sec) {
   if (sec == null) return "—";
   if (sec < 5) return "сейчас";
@@ -53,6 +73,26 @@ async function sendCommand(action, params = {}) {
   }
   if (res.status === 404) return null;
   return res.json();
+}
+
+function flushDrive() {
+  driveTimer = null;
+  if (!pendingDrive || !selectedId || uiDriveMode !== "joystick" || !sessionStarted) return;
+  const now = Date.now();
+  if (now - lastDriveSentAt < DRIVE_INTERVAL_MS) {
+    driveTimer = setTimeout(flushDrive, DRIVE_INTERVAL_MS - (now - lastDriveSentAt));
+    return;
+  }
+  lastDriveSentAt = now;
+  const { lx, az } = pendingDrive;
+  pendingDrive = null;
+  if (lx === 0 && az === 0) sendCommand("stop_drive");
+  else sendCommand("drive", { linear_x: lx, angular_z: az });
+}
+
+function queueDrive(lx, az) {
+  pendingDrive = { lx, az };
+  if (!driveTimer) flushDrive();
 }
 
 function renderRoverList() {
@@ -159,7 +199,7 @@ function applyModeUi(mode, notifyAgent = true) {
   autoPanel.classList.toggle("hidden", mode !== "auto");
   modeHint.textContent =
     mode === "joystick"
-      ? "Ручное управление: WASD, стрелки или кнопки ниже."
+      ? "Подключите Xbox к PC, откройте эту страницу в Chrome, нажмите Start. Левый стик — езда."
       : "Автоматический режим — заглушка, ручное управление отключено.";
   if (notifyAgent && selectedId) {
     sendCommand("set_drive_mode", { mode });
@@ -177,28 +217,87 @@ modeAuto.onclick = () => applyModeUi("auto");
 
 roverSelect.onchange = () => selectRover(roverSelect.value);
 
-document.getElementById("btn-start").onclick = () => sendCommand("session_start");
-document.getElementById("btn-stop").onclick = () => sendCommand("session_stop");
+document.getElementById("btn-start").onclick = async () => {
+  await sendCommand("session_start");
+  sessionStarted = true;
+};
+document.getElementById("btn-stop").onclick = async () => {
+  sessionStarted = false;
+  queueDrive(0, 0);
+  await sendCommand("session_stop");
+};
 
 document.querySelectorAll("[data-drive]").forEach((btn) => {
   btn.onclick = async () => {
-    if (uiDriveMode !== "joystick" || !selectedId) return;
+    if (uiDriveMode !== "joystick" || !selectedId || !sessionStarted) return;
     const [lx, az] = btn.getAttribute("data-drive").split(",").map(Number);
-    if (lx === 0 && az === 0) await sendCommand("stop_drive");
-    else await sendCommand("drive", { linear_x: lx, angular_z: az });
+    queueDrive(lx, az);
   };
 });
 
 function keyboardDrive() {
-  if (!selectedId || uiDriveMode !== "joystick") return;
+  if (!selectedId || uiDriveMode !== "joystick" || !sessionStarted) return;
   let lx = 0;
   let az = 0;
   if (keysDown.has("w") || keysDown.has("arrowup")) lx = 0.5;
   if (keysDown.has("s") || keysDown.has("arrowdown")) lx = -0.5;
   if (keysDown.has("a") || keysDown.has("arrowleft")) az = 0.7;
   if (keysDown.has("d") || keysDown.has("arrowright")) az = -0.7;
-  if (lx === 0 && az === 0) sendCommand("stop_drive");
-  else sendCommand("drive", { linear_x: lx, angular_z: az });
+  queueDrive(lx, az);
+}
+
+function renderGamepadStatus() {
+  const el = document.getElementById("gamepad-status");
+  if (!el) return;
+  if (!gamepadState.connected) {
+    el.textContent = "Геймпад: не подключён (USB/BT → нажмите A в Chrome на этой вкладке)";
+    return;
+  }
+  el.textContent = gamepadState.active
+    ? "Геймпад: активен — левый стик Y / X"
+    : "Геймпад: подключён — нажмите Start на сайте";
+}
+
+function currentGamepadCommand() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let idx = gamepadState.index;
+  if (idx === null) {
+    for (let i = 0; i < pads.length; i += 1) {
+      if (pads[i]) {
+        idx = i;
+        gamepadState.index = i;
+        break;
+      }
+    }
+  }
+  const pad = idx !== null ? pads[idx] : null;
+  if (!pad) {
+    gamepadState.connected = false;
+    gamepadState.active = false;
+    renderGamepadStatus();
+    return { lx: 0, az: 0, connected: false };
+  }
+  const leftX = applyDeadzone(Number(pad.axes[0] || 0), GAMEPAD_DEADZONE);
+  const leftY = applyDeadzone(Number(pad.axes[1] || 0), GAMEPAD_DEADZONE);
+  const rightX = applyDeadzone(Number(pad.axes[2] || 0), GAMEPAD_DEADZONE);
+  const turn = Math.abs(rightX) > 1e-3 ? rightX : leftX;
+  const lx = clamp(-leftY * LINEAR_SPEED_MAX, -LINEAR_SPEED_MAX, LINEAR_SPEED_MAX);
+  const az = clamp(-turn * ANGULAR_SPEED_MAX, -ANGULAR_SPEED_MAX, ANGULAR_SPEED_MAX);
+  gamepadState.connected = true;
+  gamepadState.active = Math.abs(lx) > 1e-3 || Math.abs(az) > 1e-3;
+  renderGamepadStatus();
+  return { lx, az, connected: true };
+}
+
+function gamepadLoop() {
+  if (selectedId && uiDriveMode === "joystick" && sessionStarted) {
+    const gp = currentGamepadCommand();
+    if (gp.connected && gp.active) queueDrive(gp.lx, gp.az);
+    else if (gp.connected && !gp.active) queueDrive(0, 0);
+  } else {
+    currentGamepadCommand();
+  }
+  requestAnimationFrame(gamepadLoop);
 }
 
 document.addEventListener("keydown", (e) => {
@@ -248,3 +347,20 @@ document.getElementById("logout").onclick = async () => {
 loadFleet();
 connectWs();
 setInterval(loadFleet, 10000);
+requestAnimationFrame(gamepadLoop);
+
+window.addEventListener("gamepadconnected", (evt) => {
+  gamepadState.index = evt.gamepad.index;
+  gamepadState.connected = true;
+  renderGamepadStatus();
+});
+window.addEventListener("gamepaddisconnected", (evt) => {
+  if (gamepadState.index === evt.gamepad.index) {
+    gamepadState.index = null;
+    gamepadState.connected = false;
+    gamepadState.active = false;
+    queueDrive(0, 0);
+    renderGamepadStatus();
+  }
+});
+renderGamepadStatus();

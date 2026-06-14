@@ -131,6 +131,9 @@ async def _broadcast_dashboard() -> None:
         _dashboard_clients.discard(ws)
 
 
+_DRIVE_ACTIONS = frozenset({"drive", "stop_drive", "command"})
+
+
 def _enqueue_command(rover_id: str, action: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     cmd = {
         "id": uuid.uuid4().hex[:12],
@@ -138,7 +141,10 @@ def _enqueue_command(rover_id: str, action: str, params: Optional[Dict[str, Any]
         "params": params or {},
         "queued_at": time.time(),
     }
-    _command_queues.setdefault(rover_id, []).append(cmd)
+    q = _command_queues.setdefault(rover_id, [])
+    if action in _DRIVE_ACTIONS:
+        q[:] = [c for c in q if c.get("action") not in _DRIVE_ACTIONS]
+    q.append(cmd)
     entry = {"rover_id": rover_id, **cmd}
     _command_log.append(entry)
     _command_log[:] = _command_log[-100:]

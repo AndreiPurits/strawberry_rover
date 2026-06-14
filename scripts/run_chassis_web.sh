@@ -13,6 +13,13 @@ fi
 
 MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
 
+if ss -tlnp 2>/dev/null | grep -q ':8080 ' || netstat -tln 2>/dev/null | grep -q ':8080 '; then
+  ORIN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  echo "[chassis_web] Port 8080 already in use — chassis web is already running."
+  echo "[chassis_web] Open http://${ORIN_IP:-127.0.0.1}:8080 → Start → Manual → gamepad/WASD."
+  exit 0
+fi
+
 echo "[chassis_web] Mega port: $MEGA_PORT"
 echo "[chassis_web] Open dashboard, click Start -> Manual, use keyboard or Xbox gamepad."
 

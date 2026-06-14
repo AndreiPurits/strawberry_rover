@@ -290,7 +290,7 @@ def main() -> int:
     parser.add_argument("--name", default=_env("AXM_ROVER_NAME"))
     parser.add_argument("--local-web", default=_env("AXM_LOCAL_WEB", "http://127.0.0.1:8080"))
     parser.add_argument("--mega-port", default=_env("MEGA_PORT", "/dev/ttyUSB0"))
-    parser.add_argument("--interval", type=float, default=float(_env("AXM_HEARTBEAT_INTERVAL", "8")))
+    parser.add_argument("--interval", type=float, default=float(_env("AXM_HEARTBEAT_INTERVAL", "0.05")))
     args = parser.parse_args()
 
     if not args.token:
@@ -343,7 +343,7 @@ def main() -> int:
         except Exception as exc:
             print(f"[fleet-agent] error: {exc}", file=__import__("sys").stderr)
 
-        time.sleep(max(3.0, args.interval))
+        time.sleep(max(0.05, min(float(args.interval), 60.0)))
 
 
 if __name__ == "__main__":
