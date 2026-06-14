@@ -15,6 +15,28 @@ from typing import Any, Dict, List, Optional
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
 
 _DRIVE_MODE = "joystick"
+_perception_tick = 0
+
+
+def _collect_perception(local_web: str) -> Dict[str, Any]:
+    global _perception_tick
+    _perception_tick += 1
+    base = local_web.rstrip("/")
+    out: Dict[str, Any] = {}
+    arc = _fetch_json(f"{base}/api/perception/lidar_arc", timeout=1.5) or {}
+    if arc.get("ok"):
+        out["lidar_arc"] = {k: v for k, v in arc.items() if k != "ok"}
+    # Camera ~1 Hz to keep heartbeat payload small
+    if _perception_tick % 20 == 0:
+        cam = _fetch_json(f"{base}/api/perception/front_camera", timeout=2.0) or {}
+        if cam.get("ok") and cam.get("jpeg_b64"):
+            out["front_camera"] = {
+                "jpeg_b64": cam["jpeg_b64"],
+                "width": cam.get("width"),
+                "height": cam.get("height"),
+                "stamp": cam.get("stamp"),
+            }
+    return out
 
 
 def _env(name: str, default: str = "") -> str:
@@ -136,6 +158,7 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
 
     arduino_data["connected"] = connected
     mega = _mega_status_dict(arduino_data)
+    perception = _collect_perception(base) if health.get("bridge_active") else {}
 
     return {
         "hostname": socket.gethostname(),
@@ -148,6 +171,7 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
         "telemetry_source": source,
         "drive_mode": _DRIVE_MODE,
         "mega": mega,
+        "perception": perception,
     }
 
 

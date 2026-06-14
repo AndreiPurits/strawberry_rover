@@ -56,6 +56,34 @@
           </div>
         </div>
 
+        <div class="card perception-panel">
+          <h3>Восприятие</h3>
+          <div class="perception-grid">
+            <div class="camera-panel">
+              <div class="camera-frame">
+                <img id="front-camera" alt="Передняя камера" class="hidden" />
+                <div id="camera-placeholder" class="camera-placeholder muted">Камера — нет сигнала</div>
+              </div>
+              <p id="cam-status" class="muted small">Передняя камера</p>
+            </div>
+            <div class="lidar-panel">
+              <svg id="lidar-arc" class="lidar-arc" viewBox="0 0 220 130" aria-label="Лидар — дуга препятствий">
+                <defs>
+                  <linearGradient id="arcGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#5b8cff" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path id="lidar-base-arc" d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="#24304a" stroke-width="10" stroke-linecap="round"/>
+                <g id="lidar-sectors"></g>
+                <circle cx="110" cy="110" r="8" fill="#141b2d" stroke="#5b8cff" stroke-width="2"/>
+                <path d="M110 102 L110 88 M104 94 L110 88 L116 94" stroke="#8fa0c5" stroke-width="2" fill="none" stroke-linecap="round"/>
+              </svg>
+              <p id="lidar-status" class="muted small">Лидар — ожидание</p>
+            </div>
+          </div>
+        </div>
+
         <div class="card mode-panel">
           <h3>Режим езды</h3>
           <div class="mode-toggle">

@@ -31,6 +31,10 @@ run_agent() {
 }
 
 case "${1:-all}" in
+  perception)
+    exec LIDAR_PORT="${LIDAR_PORT:-/dev/ttyUSB1}" CAMERA_DEVICE="${CAMERA_DEVICE:-0}" \
+      bash "$REPO_ROOT/scripts/run_perception_sensors.sh"
+    ;;
   chassis)
     run_chassis
     ;;
@@ -40,6 +44,13 @@ case "${1:-all}" in
   all|*)
     echo "[rover_online] logs: $LOG_DIR"
     echo "[rover_online] hub: $AXM_HUB_URL rover: ${AXM_ROVER_ID:-rover-01}"
+    LIDAR_PORT="${LIDAR_PORT:-/dev/ttyUSB1}"
+    CAMERA_DEVICE="${CAMERA_DEVICE:-0}"
+    echo "[rover_online] perception camera=${CAMERA_DEVICE} lidar=${LIDAR_PORT}"
+    LIDAR_PORT="$LIDAR_PORT" CAMERA_DEVICE="$CAMERA_DEVICE" \
+      bash "$REPO_ROOT/scripts/run_perception_sensors.sh" >>"$LOG_DIR/perception.log" 2>&1 &
+    PERC_PID=$!
+    sleep 6
     if groups | grep -q dialout; then
       MEGA_PORT="$MEGA_PORT" "$REPO_ROOT/scripts/run_chassis_web.sh" >>"$LOG_DIR/chassis.log" 2>&1 &
     else
@@ -50,8 +61,8 @@ case "${1:-all}" in
     sleep 8
     "$REPO_ROOT/scripts/run_fleet_agent.sh" >>"$LOG_DIR/fleet-agent.log" 2>&1 &
     AG_PID=$!
-    echo "[rover_online] chassis pid=$CH_PID agent pid=$AG_PID"
-    trap 'kill $CH_PID $AG_PID 2>/dev/null || true' EXIT INT TERM
+    echo "[rover_online] chassis pid=$CH_PID agent pid=$AG_PID perception pid=$PERC_PID"
+    trap 'kill $CH_PID $AG_PID $PERC_PID 2>/dev/null || true' EXIT INT TERM
     wait $AG_PID
     ;;
 esac

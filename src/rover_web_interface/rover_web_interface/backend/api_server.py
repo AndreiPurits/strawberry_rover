@@ -95,7 +95,19 @@ def root() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> Dict[str, Any]:
-    return {"ok": True, "bridge_active": _bridge is not None}
+    arduino = _bridge.get_arduino_snapshot() if _bridge else '{"connected":false}'
+    return {"ok": True, "bridge_active": _bridge is not None, "arduino": arduino}
+
+
+@app.get("/api/arduino/status")
+def arduino_status() -> Dict[str, Any]:
+    if _bridge is None:
+        raise HTTPException(status_code=503, detail="bridge_not_ready")
+    raw = _bridge.get_arduino_snapshot()
+    try:
+        return {"ok": True, "raw": raw, "data": json.loads(raw)}
+    except json.JSONDecodeError:
+        return {"ok": True, "raw": raw}
 
 
 @app.get("/api/state")
@@ -318,6 +330,20 @@ def api_scan() -> Dict[str, Any]:
     if _bridge is None:
         return {"error": "bridge_not_ready"}
     return _bridge.get_scan_snapshot()
+
+
+@app.get("/api/perception/lidar_arc")
+def api_lidar_arc() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"ok": False, "error": "bridge_not_ready"}
+    return {"ok": True, **(_bridge.get_lidar_arc_snapshot())}
+
+
+@app.get("/api/perception/front_camera")
+def api_front_camera() -> Dict[str, Any]:
+    if _bridge is None:
+        return {"ok": False, "error": "bridge_not_ready"}
+    return _bridge.get_front_camera_jpeg()
 
 
 @app.get("/api/cameras/{camera_name}")

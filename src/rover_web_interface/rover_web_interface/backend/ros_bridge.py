@@ -30,6 +30,9 @@ class RosWebBridge(Node):
         self.declare_parameter("row_spacing", 1.8)
         self.declare_parameter("trail_max_points", 300)
         self.declare_parameter("scan_downsample", 8)
+        self.declare_parameter("lidar_arc_sectors", 9)
+        self.declare_parameter("lidar_arc_fov_deg", 160.0)
+        self.declare_parameter("real_front_camera_topic", "/camera/image_raw")
         self.declare_parameter("control_publish_period_s", 0.05)
         self.declare_parameter("route_record_min_dt_s", 0.15)
         self.declare_parameter("route_record_min_dist_m", 0.05)
@@ -37,6 +40,13 @@ class RosWebBridge(Node):
         self._row_spacing = float(self.get_parameter("row_spacing").value)
         self._trail_max_points = int(self.get_parameter("trail_max_points").value)
         self._scan_downsample = max(1, int(self.get_parameter("scan_downsample").value))
+        self._lidar_arc_sectors = max(5, int(self.get_parameter("lidar_arc_sectors").value))
+        self._lidar_arc_fov_rad = math.radians(
+            float(self.get_parameter("lidar_arc_fov_deg").value)
+        )
+        self._real_front_camera_topic = str(
+            self.get_parameter("real_front_camera_topic").value
+        ).strip()
         self._control_publish_period_s = float(
             self.get_parameter("control_publish_period_s").value
         )
@@ -71,6 +81,14 @@ class RosWebBridge(Node):
             "range_max": 0.0,
             "points": [],
         }
+        self._lidar_arc: Dict[str, Any] = {
+            "connected": False,
+            "sectors": [],
+            "sector_count": self._lidar_arc_sectors,
+            "fov_deg": math.degrees(self._lidar_arc_fov_rad),
+            "stamp": 0.0,
+            "min_dist_m": None,
+        }
         self._images: Dict[str, Dict[str, Any]] = {
             "front": {},
             "bottom": {},
@@ -86,6 +104,7 @@ class RosWebBridge(Node):
         }
         self._pending_cmd = {"linear_x": 0.0, "angular_z": 0.0}
         self._force_zero_once = False
+        self._arduino_status: str = '{"connected":false}'
         self._route_recording = False
         self._current_route: Dict[str, Any] = {
             "id": "draft",
@@ -106,6 +125,13 @@ class RosWebBridge(Node):
         self.create_subscription(MarkerArray, "/sim/scene_markers", self._on_scene, 10)
         self.create_subscription(Marker, "/debug/nav_state", self._on_nav_state, 10)
         self.create_subscription(LaserScan, "/scan", self._on_scan, 10)
+        if self._real_front_camera_topic:
+            self.create_subscription(
+                Image,
+                self._real_front_camera_topic,
+                lambda msg: self._on_image("front", msg),
+                10,
+            )
         self.create_subscription(
             Image,
             "/sim/camera/front/image_raw",
@@ -124,6 +150,7 @@ class RosWebBridge(Node):
             lambda msg: self._on_image("stereo", msg),
             10,
         )
+        self.create_subscription(String, "/rover/arduino/status", self._on_arduino_status, 10)
         self.create_timer(self._control_publish_period_s, self._control_publish_tick)
         self._publish_control_state()
 
@@ -185,6 +212,58 @@ class RosWebBridge(Node):
         with self._lock:
             self._nav_state = msg.text if msg.text else "unknown"
 
+    def _lidar_level(self, dist_m: float, range_max: float) -> int:
+        if dist_m >= range_max * 0.98:
+            return 0
+        if dist_m < 0.4:
+            return 3
+        if dist_m < 0.8:
+            return 2
+        if dist_m < 1.5:
+            return 1
+        return 0
+
+    def _compute_lidar_arc(self, msg: LaserScan) -> Dict[str, Any]:
+        sectors_n = self._lidar_arc_sectors
+        fov_half = self._lidar_arc_fov_rad * 0.5
+        mins = [float(msg.range_max)] * sectors_n
+        angle = float(msg.angle_min)
+        inc = float(msg.angle_increment)
+        range_max = float(msg.range_max)
+        range_min = float(msg.range_min)
+
+        for rng in msg.ranges:
+            if math.isfinite(rng) and range_min <= float(rng) <= range_max:
+                if -fov_half <= angle <= fov_half:
+                    rel = angle + fov_half
+                    idx = int(rel / max(1e-6, self._lidar_arc_fov_rad) * sectors_n)
+                    idx = max(0, min(sectors_n - 1, idx))
+                    mins[idx] = min(mins[idx], float(rng))
+            angle += inc
+
+        sectors: List[Dict[str, Any]] = []
+        global_min = range_max
+        for i, dist in enumerate(mins):
+            level = self._lidar_level(dist, range_max)
+            if dist < global_min:
+                global_min = dist
+            sectors.append(
+                {
+                    "i": i,
+                    "dist_m": None if dist >= range_max * 0.98 else round(dist, 2),
+                    "level": level,
+                }
+            )
+
+        return {
+            "connected": True,
+            "sectors": sectors,
+            "sector_count": sectors_n,
+            "fov_deg": round(math.degrees(self._lidar_arc_fov_rad), 1),
+            "stamp": time.time(),
+            "min_dist_m": None if global_min >= range_max * 0.98 else round(global_min, 2),
+        }
+
     def _on_scan(self, msg: LaserScan) -> None:
         points: List[Dict[str, float]] = []
         angle = float(msg.angle_min)
@@ -192,6 +271,7 @@ class RosWebBridge(Node):
             if idx % self._scan_downsample == 0 and math.isfinite(rng):
                 points.append({"a": angle, "r": float(rng)})
             angle += float(msg.angle_increment)
+        arc = self._compute_lidar_arc(msg)
         with self._lock:
             self._scan_summary = {
                 "angle_min": float(msg.angle_min),
@@ -200,6 +280,7 @@ class RosWebBridge(Node):
                 "range_max": float(msg.range_max),
                 "points": points,
             }
+            self._lidar_arc = arc
 
     def _on_image(self, camera_name: str, msg: Image) -> None:
         # Keep bridge simple and format-agnostic for MVP:
@@ -215,6 +296,14 @@ class RosWebBridge(Node):
                 "data_b64": encoded,
             }
 
+    def _on_arduino_status(self, msg: String) -> None:
+        with self._lock:
+            self._arduino_status = str(msg.data)
+
+    def get_arduino_snapshot(self) -> str:
+        with self._lock:
+            return str(self._arduino_status)
+
     def get_state_snapshot(self) -> Dict[str, Any]:
         with self._lock:
             pose = dict(self._pose)
@@ -227,6 +316,7 @@ class RosWebBridge(Node):
             current_row = int(self._current_row)
             control = self._build_control_snapshot()
             routes = self._build_route_snapshot()
+            arduino_status = str(self._arduino_status)
 
         now = time.time()
         sensors = self._mock_sensor_grid(now)
@@ -255,11 +345,55 @@ class RosWebBridge(Node):
             "analytics": analytics,
             "control": control,
             "routes": routes,
+            "arduino": arduino_status,
         }
 
     def get_scan_snapshot(self) -> Dict[str, Any]:
         with self._lock:
             return dict(self._scan_summary)
+
+    def get_lidar_arc_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            return dict(self._lidar_arc)
+
+    def get_front_camera_jpeg(self) -> Dict[str, Any]:
+        with self._lock:
+            img = dict(self._images.get("front") or {})
+        if not img.get("data_b64"):
+            return {"ok": False, "reason": "no_frame"}
+        try:
+            import cv2
+            import numpy as np
+
+            raw = base64.b64decode(img["data_b64"])
+            height = int(img.get("height") or 0)
+            width = int(img.get("width") or 0)
+            encoding = str(img.get("encoding") or "bgr8")
+            if height <= 0 or width <= 0:
+                return {"ok": False, "reason": "bad_geometry"}
+            if encoding in ("bgr8", "rgb8"):
+                channels = 3
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width, channels))
+                if encoding == "rgb8":
+                    arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            elif encoding in ("mono8", "8UC1"):
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width))
+                arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+            else:
+                return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
+            small = cv2.resize(arr, (320, 180), interpolation=cv2.INTER_AREA)
+            ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 55])
+            if not ok:
+                return {"ok": False, "reason": "jpeg_encode_failed"}
+            return {
+                "ok": True,
+                "jpeg_b64": base64.b64encode(jpg.tobytes()).decode("ascii"),
+                "width": 320,
+                "height": 180,
+                "stamp": float(img.get("stamp") or time.time()),
+            }
+        except Exception as exc:
+            return {"ok": False, "reason": str(exc)}
 
     def get_camera_snapshot(self, camera_name: str) -> Dict[str, Any]:
         if camera_name not in self._images:

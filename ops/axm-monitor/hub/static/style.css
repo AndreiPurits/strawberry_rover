@@ -161,6 +161,49 @@ button.ghost { background: transparent; border: 1px solid var(--border); color: 
   color: var(--muted);
 }
 
+.perception-panel h3 { margin: 0 0 12px; font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+.perception-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .perception-grid { grid-template-columns: 1fr; }
+}
+.camera-frame {
+  background: #0d1324;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.camera-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.camera-placeholder { font-size: 0.85rem; padding: 12px; text-align: center; }
+.lidar-panel { display: grid; gap: 8px; justify-items: center; }
+.lidar-arc {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  display: block;
+}
+.lidar-sector {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke 0.15s ease, opacity 0.15s ease;
+}
+.lidar-sector.level-0 { stroke: #2a3550; stroke-width: 8; opacity: 0.45; }
+.lidar-sector.level-1 { stroke: #e6c84a; stroke-width: 10; opacity: 0.95; }
+.lidar-sector.level-2 { stroke: #ff9f43; stroke-width: 11; opacity: 1; }
+.lidar-sector.level-3 { stroke: #ff6b6b; stroke-width: 12; opacity: 1; filter: drop-shadow(0 0 6px rgba(255,107,107,0.55)); }
+
 .auth-page { display: grid; place-items: center; min-height: 100vh; }
 .auth-card { width: min(420px, 92vw); }
 .auth-card h1 { margin-top: 0; }

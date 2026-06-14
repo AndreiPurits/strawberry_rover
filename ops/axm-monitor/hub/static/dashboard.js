@@ -143,6 +143,64 @@ function selectRover(id, persist = true) {
   renderPanel();
 }
 
+const LIDAR_LEVEL_COLORS = ["#2a3550", "#e6c84a", "#ff9f43", "#ff6b6b"];
+
+function renderLidarArc(arc) {
+  const g = document.getElementById("lidar-sectors");
+  const status = document.getElementById("lidar-status");
+  if (!g || !status) return;
+  g.innerHTML = "";
+  if (!arc || !arc.connected || !arc.sectors || !arc.sectors.length) {
+    status.textContent = "Лидар — нет данных";
+    return;
+  }
+  const n = arc.sectors.length;
+  const cx = 110;
+  const cy = 110;
+  const r = 86;
+  const fov = (arc.fov_deg || 160) * (Math.PI / 180);
+  const start = -Math.PI / 2 - fov / 2;
+  const step = fov / n;
+  arc.sectors.forEach((sec, i) => {
+    const a0 = start + i * step + 0.04;
+    const a1 = start + (i + 1) * step - 0.04;
+    const x0 = cx + r * Math.cos(a0);
+    const y0 = cy + r * Math.sin(a0);
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", `M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`);
+    path.setAttribute("class", `lidar-sector level-${sec.level || 0}`);
+    g.appendChild(path);
+  });
+  const minD = arc.min_dist_m;
+  status.textContent =
+    minD != null ? `Лидар — ближайшее ${minD} м` : `Лидар — секторов ${n}, путь свободен`;
+}
+
+function renderFrontCamera(cam) {
+  const img = document.getElementById("front-camera");
+  const ph = document.getElementById("camera-placeholder");
+  const status = document.getElementById("cam-status");
+  if (!img || !ph || !status) return;
+  if (cam && cam.jpeg_b64) {
+    img.src = `data:image/jpeg;base64,${cam.jpeg_b64}`;
+    img.classList.remove("hidden");
+    ph.classList.add("hidden");
+    status.textContent = `Передняя камера · ${cam.width || "?"}×${cam.height || "?"}`;
+  } else {
+    img.classList.add("hidden");
+    ph.classList.remove("hidden");
+    status.textContent = "Передняя камера — нет кадра";
+  }
+}
+
+function renderPerception(t) {
+  const p = t.perception || {};
+  renderLidarArc(p.lidar_arc);
+  renderFrontCamera(p.front_camera);
+}
+
 function renderPanel() {
   const r = selectedRover();
   if (!r) {
@@ -183,6 +241,7 @@ function renderPanel() {
     m.humidity_pct != null ? `${m.humidity_pct} %` : "—";
   document.getElementById("t-vibration").textContent =
     m.vibration_d24 != null ? (m.vibration_d24 ? "сработал" : "тишина") : "—";
+  renderPerception(t);
   document.getElementById("t-ago").textContent = fmtAgo(r.last_seen_ago_s);
 
   const mode = t.drive_mode || uiDriveMode;
