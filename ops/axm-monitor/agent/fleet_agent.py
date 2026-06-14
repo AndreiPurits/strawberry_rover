@@ -63,7 +63,18 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
             mega = json.loads(status_raw)
         except json.JSONDecodeError:
             pass
-    for key in ("armed", "left_us", "right_us", "current_a0", "current_d0"):
+    for key in (
+        "armed",
+        "left_us",
+        "right_us",
+        "current_a0",
+        "current_d0",
+        "current_d22",
+        "temp_c",
+        "humidity_pct",
+        "vibration_d24",
+        "dht_ok",
+    ):
         if key in arduino_data and key not in mega:
             mega[key] = arduino_data[key]
 
@@ -88,6 +99,11 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
         "speed_mps": round(abs(linear_pct) * 0.015, 2),
         "current_a0": mega.get("current_a0"),
         "current_d0": mega.get("current_d0"),
+        "current_d22": mega.get("current_d22"),
+        "temp_c": mega.get("temp_c"),
+        "humidity_pct": mega.get("humidity_pct"),
+        "vibration_d24": mega.get("vibration_d24"),
+        "dht_ok": mega.get("dht_ok"),
     }
 
 

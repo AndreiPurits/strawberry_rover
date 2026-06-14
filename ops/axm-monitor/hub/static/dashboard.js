@@ -173,8 +173,16 @@ function renderPanel() {
     m.left_us != null ? `${m.left_us} µs (${m.left_pct ?? 0}%)` : "—";
   document.getElementById("t-right").textContent =
     m.right_us != null ? `${m.right_us} µs (${m.right_pct ?? 0}%)` : "—";
-  document.getElementById("t-current").textContent = m.current_a0 != null ? String(m.current_a0) : "—";
-  document.getElementById("t-d0").textContent = m.current_d0 != null ? String(m.current_d0) : "—";
+  document.getElementById("t-current-a0").textContent =
+    m.current_a0 != null ? String(m.current_a0) : "—";
+  document.getElementById("t-current-d22").textContent =
+    m.current_d22 != null ? String(m.current_d22) : m.current_d0 != null ? String(m.current_d0) : "—";
+  document.getElementById("t-temp").textContent =
+    m.temp_c != null ? `${m.temp_c} °C` : m.dht_ok === false ? "нет данных" : "—";
+  document.getElementById("t-humidity").textContent =
+    m.humidity_pct != null ? `${m.humidity_pct} %` : "—";
+  document.getElementById("t-vibration").textContent =
+    m.vibration_d24 != null ? (m.vibration_d24 ? "сработал" : "тишина") : "—";
   document.getElementById("t-ago").textContent = fmtAgo(r.last_seen_ago_s);
 
   const mode = t.drive_mode || uiDriveMode;
