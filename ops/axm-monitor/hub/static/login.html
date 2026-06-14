@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AXM Monitor — вход</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="auth-page">
+  <main class="card auth-card">
+    <h1>AXM Monitor</h1>
+    <p class="muted">Мониторинг роверов axm.tech</p>
+    <form id="login-form">
+      <label>
+        Логин
+        <input name="username" autocomplete="username" required />
+      </label>
+      <label>
+        Пароль
+        <input name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit">Войти</button>
+      <p id="error" class="error hidden"></p>
+    </form>
+  </main>
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const err = document.getElementById("error");
+      err.classList.add("hidden");
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: fd.get("username"),
+          password: fd.get("password"),
+        }),
+      });
+      if (!res.ok) {
+        err.textContent = "Неверный логин или пароль";
+        err.classList.remove("hidden");
+        return;
+      }
+      location.href = "/";
+    });
+  </script>
+</body>
+</html>

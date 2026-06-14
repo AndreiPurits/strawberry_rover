@@ -1,0 +1,13 @@
+# Caddy snippet — when n8n-caddy (or other) already owns :80/:443 on the VPS.
+# Add to your Caddyfile, then: docker exec n8n-caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# Hub must listen on host 127.0.0.1:8090:
+#   cd ops/axm-monitor && docker compose up -d hub
+
+rover.axm.tech {
+    reverse_proxy host.docker.internal:8090
+}
+
+# Linux Docker (if host.docker.internal missing):
+# reverse_proxy 172.17.0.1:8090
+# or add to caddy container: extra_hosts: ["host.docker.internal:host-gateway"]

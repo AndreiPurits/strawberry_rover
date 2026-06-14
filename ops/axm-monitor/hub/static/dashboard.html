@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AXM Monitor</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>AXM Monitor</h1>
+      <p class="muted">Флот роверов</p>
+    </div>
+    <button id="logout" class="ghost">Выйти</button>
+  </header>
+  <main>
+    <section class="stats">
+      <div class="stat"><span id="online-count">0</span><small>онлайн</small></div>
+      <div class="stat"><span id="total-count">0</span><small>всего</small></div>
+    </section>
+    <section id="rover-grid" class="grid"></section>
+  </main>
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

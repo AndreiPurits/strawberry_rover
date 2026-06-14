@@ -66,3 +66,6 @@ third_party/vision/
 # --- Local helper scripts (local-only)
 restart_sim.sh
 
+# --- Fleet monitor secrets (VPS / Orin)
+ops/axm-monitor/.env
+
