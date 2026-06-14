@@ -31,9 +31,6 @@ if [ ! -e "$PORT" ]; then
   exit 1
 fi
 
-echo "==> Ensure DHT library (DHT11 on D23)"
-"$CLI" lib install "DHT sensor library" 2>/dev/null || true
-
 echo "==> Compile $SKETCH_DIR"
 "$CLI" compile --fqbn "$FQBN" "$SKETCH_DIR"
 

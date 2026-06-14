@@ -31,7 +31,6 @@
 */
 
 #include <Arduino.h>
-#include <DHT.h>
 
 static const uint32_t BAUD = 115200;
 
@@ -45,7 +44,6 @@ static const uint8_t PIN_DHT11 = 23;
 static const uint8_t PIN_VIBRATION = 24;
 static const uint32_t DHT_INTERVAL_MS = 2000;
 
-static DHT dht(PIN_DHT11, DHT11);
 static float gTempC = NAN;
 static float gHumPct = NAN;
 static bool gDhtOk = false;
@@ -169,18 +167,52 @@ static bool str_eq_i(const char* a, const char* b) {
 }
 
 static void pollSensors() {
-  if ((uint32_t)(millis() - gLastDhtMs) >= DHT_INTERVAL_MS) {
-    gLastDhtMs = millis();
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
-    if (!isnan(h) && !isnan(t)) {
-      gHumPct = h;
-      gTempC = t;
-      gDhtOk = true;
-    } else {
-      gDhtOk = false;
-    }
+  if ((uint32_t)(millis() - gLastDhtMs) < DHT_INTERVAL_MS) return;
+  gLastDhtMs = millis();
+
+  uint8_t data[5] = {0};
+  pinMode(PIN_DHT11, OUTPUT);
+  digitalWrite(PIN_DHT11, LOW);
+  delay(20);
+  digitalWrite(PIN_DHT11, HIGH);
+  delayMicroseconds(40);
+  pinMode(PIN_DHT11, INPUT_PULLUP);
+
+  if (digitalRead(PIN_DHT11) != LOW) {
+    gDhtOk = false;
+    return;
   }
+  unsigned long t0 = micros();
+  while (digitalRead(PIN_DHT11) == LOW) {
+    if (micros() - t0 > 100) { gDhtOk = false; return; }
+  }
+  t0 = micros();
+  while (digitalRead(PIN_DHT11) == HIGH) {
+    if (micros() - t0 > 100) { gDhtOk = false; return; }
+  }
+
+  for (int i = 0; i < 40; i++) {
+    t0 = micros();
+    while (digitalRead(PIN_DHT11) == LOW) {
+      if (micros() - t0 > 100) { gDhtOk = false; return; }
+    }
+    unsigned long hi = micros();
+    while (digitalRead(PIN_DHT11) == HIGH) {
+      if (micros() - hi > 100) { gDhtOk = false; return; }
+    }
+    unsigned long dur = micros() - hi;
+    data[i / 8] <<= 1;
+    if (dur > 40) data[i / 8] |= 1;
+  }
+
+  uint8_t sum = data[0] + data[1] + data[2] + data[3];
+  if (sum != data[4]) {
+    gDhtOk = false;
+    return;
+  }
+  gHumPct = data[0];
+  gTempC = data[2] + data[3] * 0.1f;
+  gDhtOk = true;
 }
 
 static void printStatus() {
@@ -264,9 +296,8 @@ void setup() {
   stopMotors();
 
   pinMode(PIN_CURRENT_D22, INPUT);
-  pinMode(PIN_DHT11, INPUT);
+  pinMode(PIN_DHT11, INPUT_PULLUP);
   pinMode(PIN_VIBRATION, INPUT_PULLUP);
-  dht.begin();
 
   gArmed = false;
   gLastCmdMs = millis();
