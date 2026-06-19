@@ -5,6 +5,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENT_DIR="$REPO_ROOT/ops/axm-monitor/agent"
 cd "$AGENT_DIR"
 
+# shellcheck disable=SC1091
+source "$REPO_ROOT/scripts/axm_single_instance.sh"
+if ! axm_acquire_lock fleet-agent; then
+  echo "[fleet-agent] already running (lock: $AXM_LOCK_DIR/fleet-agent.lock)" >&2
+  exit 0
+fi
+
 ENV_FILE="${AXM_FLEET_ENV:-$HOME/.config/axm/fleet-agent.env}"
 if [ -f "$ENV_FILE" ]; then
   set -a
@@ -20,4 +27,4 @@ fi
 export AXM_LOCAL_WEB="${AXM_LOCAL_WEB:-http://127.0.0.1:8080}"
 export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
 
-python3 "$AGENT_DIR/fleet_agent.py" "$@"
+exec python3 "$AGENT_DIR/fleet_agent.py" "$@"
