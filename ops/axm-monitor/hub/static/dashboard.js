@@ -362,7 +362,7 @@ function renderRoverList() {
       return `<li class="${r.id === selectedId ? "active" : ""} ${r.online ? "online" : "offline"}" data-id="${escapeHtml(r.id)}">
         <strong>${escapeHtml(r.name || r.id)}</strong>
         <span>${escapeHtml(agent)}</span>
-        <em>${r.online ? "online" : "offline"}</em>
+        <em>${r.online ? "online" : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`}</em>
       </li>`;
     })
     .join("");

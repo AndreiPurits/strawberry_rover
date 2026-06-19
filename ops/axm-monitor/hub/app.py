@@ -22,7 +22,6 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 SESSION_COOKIE = "axm_session"
 SESSION_TTL_S = 60 * 60 * 12
 SESSION_REMEMBER_TTL_S = 60 * 60 * 24 * 30
-AGENT_STALE_S = 120
 OPERATOR_LOCK_TTL_S = 120
 MJPEG_BOUNDARY = b"frame"
 
@@ -40,6 +39,9 @@ _operator_locks: Dict[str, Dict[str, Any]] = {}
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
+
+
+AGENT_STALE_S = int(_env("AXM_AGENT_STALE_S", "300"))
 
 
 def _admin_user() -> str:
@@ -257,7 +259,26 @@ class RoverCommandBody(BaseModel):
 
 @app.get("/healthz")
 def healthz() -> Dict[str, Any]:
-    return {"ok": True, "rovers": len(_rovers), "version": "0.5.3"}
+    now = time.time()
+    fleet: List[Dict[str, Any]] = []
+    for row in sorted(_rovers.values(), key=lambda r: r.get("id", "")):
+        last = float(row.get("last_seen", 0))
+        ago = round(now - last, 1) if last else None
+        fleet.append(
+            {
+                "id": row.get("id"),
+                "name": row.get("name", row.get("id")),
+                "last_seen_ago_s": ago,
+                "online": bool(last and (now - last) <= AGENT_STALE_S),
+            }
+        )
+    return {
+        "ok": True,
+        "rovers": len(_rovers),
+        "online": sum(1 for f in fleet if f.get("online")),
+        "fleet": fleet,
+        "version": "0.5.4",
+    }
 
 
 @app.get("/login")

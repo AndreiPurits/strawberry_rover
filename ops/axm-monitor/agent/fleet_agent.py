@@ -31,7 +31,8 @@ _last_heartbeat_rtt_ms: Optional[float] = None
 
 WATCHDOG_TIMEOUT_S = 0.5
 LIDAR_GUARD_M = 0.2
-TELEMETRY_INTERVAL_S = 0.4
+TELEMETRY_INTERVAL_S = 2.0
+KEEPALIVE_INTERVAL_S = 3.0
 COMMAND_POLL_S = 0.025
 
 # Gecoma motor shield: cmd_vel axes swapped vs nominal (do not rewire).
@@ -671,6 +672,31 @@ def main() -> int:
     poll_thread = threading.Thread(target=_command_poll_loop, daemon=True, name="command-poll")
     poll_thread.start()
 
+    keepalive_stop = threading.Event()
+    keepalive_interval = float(_env("AXM_KEEPALIVE_INTERVAL", str(KEEPALIVE_INTERVAL_S)))
+
+    def _keepalive_loop() -> None:
+        """Minimal heartbeat on a slow cadence — keeps ONLINE on flaky uplink."""
+        while not keepalive_stop.is_set():
+            try:
+                payload = {
+                    "name": name,
+                    "telemetry": {
+                        "agent": "orin",
+                        "drive_mode": _DRIVE_MODE,
+                        "session_active": _session_active,
+                        "link": {"rtt_ms": _last_heartbeat_rtt_ms},
+                    },
+                    "meta": {"agent": "orin", "keepalive": True},
+                }
+                heartbeat(args.hub_url, args.rover_id, args.token, payload)
+            except Exception:
+                pass
+            keepalive_stop.wait(max(1.0, keepalive_interval))
+
+    keepalive_thread = threading.Thread(target=_keepalive_loop, daemon=True, name="keepalive")
+    keepalive_thread.start()
+
     telem_interval = float(_env("AXM_TELEMETRY_INTERVAL", str(TELEMETRY_INTERVAL_S)))
 
     try:
@@ -704,8 +730,10 @@ def main() -> int:
 
             time.sleep(max(0.05, min(telem_interval, 60.0)))
     finally:
+        keepalive_stop.set()
         poll_stop.set()
         cam_stop.set()
+        keepalive_thread.join(timeout=2.0)
         cam_thread.join(timeout=2.0)
         poll_thread.join(timeout=2.0)
 
