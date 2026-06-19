@@ -22,7 +22,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 SESSION_COOKIE = "axm_session"
 SESSION_TTL_S = 60 * 60 * 12
 SESSION_REMEMBER_TTL_S = 60 * 60 * 24 * 30
-AGENT_STALE_S = 45
+AGENT_STALE_S = 120
 OPERATOR_LOCK_TTL_S = 120
 MJPEG_BOUNDARY = b"frame"
 

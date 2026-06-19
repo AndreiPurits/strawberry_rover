@@ -49,6 +49,16 @@ def _camera_fps() -> float:
     return fps if fps > 0 else 30.0
 
 
+def _hub_camera_fps() -> float:
+    """JPEG upload rate to hub — keep low on flaky uplink so heartbeats survive."""
+    raw = _env("AXM_HUB_CAMERA_FPS", _env("AXM_CAMERA_FPS", "5"))
+    try:
+        fps = float(raw)
+    except ValueError:
+        fps = 5.0
+    return max(1.0, min(fps, 15.0))
+
+
 def _forward_min_dist(lidar_arc: Dict[str, Any]) -> Optional[float]:
     sectors = lidar_arc.get("sectors") or []
     n = len(sectors)
@@ -148,6 +158,28 @@ def _post_json(url: str, payload: Dict[str, Any], timeout: float = 5.0) -> Dict[
         return json.loads(resp.read().decode())
 
 
+def _post_json_retry(
+    url: str,
+    payload: Dict[str, Any],
+    *,
+    timeout: float = 8.0,
+    attempts: int = 8,
+    base_delay_s: float = 0.12,
+) -> Dict[str, Any]:
+    """Retry POST for flaky WiFi / VPS routes (heartbeat must get through)."""
+    last_exc: Optional[BaseException] = None
+    for attempt in range(attempts):
+        try:
+            return _post_json(url, payload, timeout=timeout)
+        except Exception as exc:
+            last_exc = exc
+            if attempt + 1 < attempts:
+                time.sleep(base_delay_s * (attempt + 1))
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("post_retry_failed")
+
+
 def _post_stereo_camera_frame(
     hub_url: str,
     rover_id: str,
@@ -203,7 +235,7 @@ def _camera_stream_loop(
     local_web: str,
     stop_event: threading.Event,
 ) -> None:
-    interval = 1.0 / min(_camera_fps(), 45.0)
+    interval = 1.0 / _hub_camera_fps()
     base = local_web.rstrip("/")
     while not stop_event.is_set():
         try:
@@ -538,7 +570,13 @@ def execute_command(
 
 def pull_commands(hub_url: str, rover_id: str, token: str) -> Dict[str, Any]:
     body = {"rover_id": rover_id, "token": token}
-    return _post_json(f"{hub_url.rstrip('/')}/api/agents/pull_commands", body, timeout=2.0)
+    return _post_json_retry(
+        f"{hub_url.rstrip('/')}/api/agents/pull_commands",
+        body,
+        timeout=4.0,
+        attempts=4,
+        base_delay_s=0.05,
+    )
 
 
 def heartbeat(
@@ -559,7 +597,13 @@ def heartbeat(
     if results:
         body["command_results"] = results
     t0 = time.monotonic()
-    resp = _post_json(f"{hub_url.rstrip('/')}/api/agents/heartbeat", body)
+    resp = _post_json_retry(
+        f"{hub_url.rstrip('/')}/api/agents/heartbeat",
+        body,
+        timeout=10.0,
+        attempts=8,
+        base_delay_s=0.12,
+    )
     _last_heartbeat_rtt_ms = round((time.monotonic() - t0) * 1000.0, 1)
     return resp
 
