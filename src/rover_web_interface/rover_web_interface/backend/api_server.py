@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import base64
 import json
 import os
 import sys
@@ -11,10 +12,11 @@ import uvicorn
 from ament_index_python.packages import get_package_share_directory
 from fastapi import FastAPI
 from fastapi import HTTPException
+from fastapi import Query
 from fastapi import Request
 from fastapi import WebSocket
 from fastapi import WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.utilities import remove_ros_args
@@ -339,11 +341,50 @@ def api_lidar_arc() -> Dict[str, Any]:
     return {"ok": True, **(_bridge.get_lidar_arc_snapshot())}
 
 
-@app.get("/api/perception/front_camera")
-def api_front_camera() -> Dict[str, Any]:
+@app.get("/api/perception/stereo_camera")
+def api_stereo_camera() -> Dict[str, Any]:
     if _bridge is None:
         return {"ok": False, "error": "bridge_not_ready"}
-    return _bridge.get_front_camera_jpeg()
+    return _bridge.get_stereo_camera_jpeg()
+
+
+@app.get("/api/perception/front_camera")
+def api_front_camera(hub: bool = Query(False)) -> Dict[str, Any]:
+    if _bridge is None:
+        return {"ok": False, "error": "bridge_not_ready"}
+    return _bridge.get_front_camera_jpeg(hub=hub)
+
+
+_MJPEG_BOUNDARY = b"frame"
+
+
+@app.get("/api/perception/front_camera/mjpeg")
+async def api_front_camera_mjpeg() -> StreamingResponse:
+    async def stream() -> Any:
+        last_stamp: Optional[float] = None
+        while True:
+            if _bridge is None:
+                await asyncio.sleep(0.1)
+                continue
+            cam = _bridge.get_front_camera_jpeg()
+            if cam.get("ok") and cam.get("jpeg_b64"):
+                stamp = float(cam.get("stamp") or 0.0)
+                if stamp != last_stamp:
+                    last_stamp = stamp
+                    data = base64.b64decode(cam["jpeg_b64"])
+                    header = (
+                        b"--" + _MJPEG_BOUNDARY + b"\r\n"
+                        b"Content-Type: image/jpeg\r\n"
+                        b"Content-Length: " + str(len(data)).encode() + b"\r\n\r\n"
+                    )
+                    yield header + data + b"\r\n"
+            await asyncio.sleep(1.0 / 30.0)
+
+    return StreamingResponse(
+        stream(),
+        media_type=f"multipart/x-mixed-replace; boundary={_MJPEG_BOUNDARY.decode()}",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 @app.get("/api/cameras/{camera_name}")

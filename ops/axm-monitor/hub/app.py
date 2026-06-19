@@ -41,7 +41,7 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
-AGENT_STALE_S = int(_env("AXM_AGENT_STALE_S", "300"))
+AGENT_STALE_S = int(_env("AXM_AGENT_STALE_S", "600"))
 
 
 def _admin_user() -> str:

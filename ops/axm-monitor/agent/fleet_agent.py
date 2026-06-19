@@ -28,12 +28,15 @@ _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
 _last_camera_stamp: Optional[float] = None
 _last_heartbeat_rtt_ms: Optional[float] = None
+_last_hub_ok_at: float = 0.0
+_hub_ok_lock = threading.Lock()
 
 WATCHDOG_TIMEOUT_S = 0.5
 LIDAR_GUARD_M = 0.2
-TELEMETRY_INTERVAL_S = 2.0
-KEEPALIVE_INTERVAL_S = 3.0
-COMMAND_POLL_S = 0.025
+TELEMETRY_INTERVAL_S = 5.0
+KEEPALIVE_INTERVAL_S = 2.0
+COMMAND_POLL_S = 0.25
+HUB_LINK_GRACE_S = 45.0
 
 # Gecoma motor shield: cmd_vel axes swapped vs nominal (do not rewire).
 def _remap_ui_drive(forward: float, turn: float) -> Tuple[float, float]:
@@ -51,13 +54,28 @@ def _camera_fps() -> float:
 
 
 def _hub_camera_fps() -> float:
-    """JPEG upload rate to hub — keep low on flaky uplink so heartbeats survive."""
-    raw = _env("AXM_HUB_CAMERA_FPS", _env("AXM_CAMERA_FPS", "5"))
+    """JPEG upload rate to hub — keep very low on flaky uplink."""
+    raw = _env("AXM_HUB_CAMERA_FPS", "2")
     try:
         fps = float(raw)
     except ValueError:
-        fps = 5.0
-    return max(1.0, min(fps, 15.0))
+        fps = 2.0
+    return max(0.5, min(fps, 5.0))
+
+
+def _hub_stereo_enabled() -> bool:
+    return _env("AXM_HUB_STEREO", "false").lower() in ("1", "true", "yes")
+
+
+def _touch_hub_ok() -> None:
+    global _last_hub_ok_at
+    with _hub_ok_lock:
+        _last_hub_ok_at = time.monotonic()
+
+
+def _hub_link_ok() -> bool:
+    with _hub_ok_lock:
+        return (time.monotonic() - _last_hub_ok_at) <= HUB_LINK_GRACE_S
 
 
 def _forward_min_dist(lidar_arc: Dict[str, Any]) -> Optional[float]:
@@ -181,6 +199,29 @@ def _post_json_retry(
     raise RuntimeError("post_retry_failed")
 
 
+def _post_bytes_retry(
+    url: str,
+    data: bytes,
+    *,
+    headers: Dict[str, str],
+    timeout: float = 6.0,
+    attempts: int = 3,
+) -> None:
+    last_exc: Optional[BaseException] = None
+    for attempt in range(attempts):
+        try:
+            req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                resp.read()
+            return
+        except Exception as exc:
+            last_exc = exc
+            if attempt + 1 < attempts:
+                time.sleep(0.08 * (attempt + 1))
+    if last_exc is not None:
+        raise last_exc
+
+
 def _post_stereo_camera_frame(
     hub_url: str,
     rover_id: str,
@@ -191,17 +232,13 @@ def _post_stereo_camera_frame(
     global _last_stereo_camera_stamp
     q = urllib.parse.urlencode({"rover_id": rover_id, "token": token})
     url = f"{hub_url.rstrip('/')}/api/agents/stereo_camera_frame?{q}"
-    req = urllib.request.Request(
+    _post_bytes_retry(
         url,
-        data=jpeg_bytes,
-        headers={
-            "Content-Type": "image/jpeg",
-            "X-Frame-Stamp": str(stamp),
-        },
-        method="POST",
+        jpeg_bytes,
+        headers={"Content-Type": "image/jpeg", "X-Frame-Stamp": str(stamp)},
+        timeout=5.0,
+        attempts=2,
     )
-    with urllib.request.urlopen(req, timeout=2.0) as resp:
-        resp.read()
     _last_stereo_camera_stamp = float(stamp)
 
 
@@ -215,17 +252,13 @@ def _post_camera_frame(
     global _last_camera_stamp
     q = urllib.parse.urlencode({"rover_id": rover_id, "token": token})
     url = f"{hub_url.rstrip('/')}/api/agents/camera_frame?{q}"
-    req = urllib.request.Request(
+    _post_bytes_retry(
         url,
-        data=jpeg_bytes,
-        headers={
-            "Content-Type": "image/jpeg",
-            "X-Frame-Stamp": str(stamp),
-        },
-        method="POST",
+        jpeg_bytes,
+        headers={"Content-Type": "image/jpeg", "X-Frame-Stamp": str(stamp)},
+        timeout=5.0,
+        attempts=2,
     )
-    with urllib.request.urlopen(req, timeout=2.0) as resp:
-        resp.read()
     _last_camera_stamp = float(stamp)
 
 
@@ -238,22 +271,30 @@ def _camera_stream_loop(
 ) -> None:
     interval = 1.0 / _hub_camera_fps()
     base = local_web.rstrip("/")
+    stereo = _hub_stereo_enabled()
     while not stop_event.is_set():
+        if not _hub_link_ok():
+            stop_event.wait(interval)
+            continue
         try:
             health = _fetch_json(f"{base}/api/health", 0.3) or {}
             if not health.get("bridge_active"):
                 stop_event.wait(interval)
                 continue
-            cam = _fetch_json(f"{base}/api/perception/front_camera", 0.5) or {}
+            cam = _fetch_json(f"{base}/api/perception/front_camera?hub=1", 0.4) or {}
             if cam.get("ok") and cam.get("jpeg_b64"):
                 jpeg = base64.b64decode(cam["jpeg_b64"])
-                stamp = float(cam.get("stamp") or time.time())
-                _post_camera_frame(hub_url, rover_id, token, jpeg, stamp)
-            stereo = _fetch_json(f"{base}/api/perception/stereo_camera", 0.5) or {}
-            if stereo.get("ok") and stereo.get("jpeg_b64"):
-                sjpeg = base64.b64decode(stereo["jpeg_b64"])
-                sstamp = float(stereo.get("stamp") or time.time())
-                _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
+                if len(jpeg) <= 120_000:
+                    stamp = float(cam.get("stamp") or time.time())
+                    _post_camera_frame(hub_url, rover_id, token, jpeg, stamp)
+                    _touch_hub_ok()
+            if stereo:
+                st = _fetch_json(f"{base}/api/perception/stereo_camera", 0.4) or {}
+                if st.get("ok") and st.get("jpeg_b64"):
+                    sjpeg = base64.b64decode(st["jpeg_b64"])
+                    if len(sjpeg) <= 120_000:
+                        sstamp = float(st.get("stamp") or time.time())
+                        _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
         except Exception:
             pass
         stop_event.wait(interval)
@@ -601,11 +642,12 @@ def heartbeat(
     resp = _post_json_retry(
         f"{hub_url.rstrip('/')}/api/agents/heartbeat",
         body,
-        timeout=10.0,
-        attempts=8,
-        base_delay_s=0.12,
+        timeout=12.0,
+        attempts=12,
+        base_delay_s=0.15,
     )
     _last_heartbeat_rtt_ms = round((time.monotonic() - t0) * 1000.0, 1)
+    _touch_hub_ok()
     return resp
 
 
@@ -650,7 +692,11 @@ def main() -> int:
     poll_stop = threading.Event()
 
     def _command_poll_loop() -> None:
+        poll_s = float(_env("AXM_COMMAND_POLL_S", str(COMMAND_POLL_S)))
         while not poll_stop.is_set():
+            if not _hub_link_ok():
+                poll_stop.wait(max(0.5, poll_s))
+                continue
             try:
                 health = _fetch_json(f"{args.local_web.rstrip('/')}/api/health", 0.3) or {}
                 prefer_web = bool(health.get("ok") and health.get("bridge_active"))
@@ -667,7 +713,7 @@ def main() -> int:
                     _stop_motors(args.local_web, prefer_web, args.mega_port)
             except Exception:
                 pass
-            poll_stop.wait(COMMAND_POLL_S)
+            poll_stop.wait(poll_s)
 
     poll_thread = threading.Thread(target=_command_poll_loop, daemon=True, name="command-poll")
     poll_thread.start()

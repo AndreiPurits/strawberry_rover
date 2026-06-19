@@ -34,6 +34,7 @@ class RosWebBridge(Node):
         self.declare_parameter("lidar_arc_sectors", 9)
         self.declare_parameter("lidar_arc_fov_deg", 160.0)
         self.declare_parameter("real_front_camera_topic", "/camera/image_raw")
+        self.declare_parameter("real_stereo_camera_topic", "/stereo_camera/image_raw")
         self.declare_parameter("control_publish_period_s", 0.05)
         self.declare_parameter("route_record_min_dt_s", 0.15)
         self.declare_parameter("route_record_min_dist_m", 0.05)
@@ -47,6 +48,9 @@ class RosWebBridge(Node):
         )
         self._real_front_camera_topic = str(
             self.get_parameter("real_front_camera_topic").value
+        ).strip()
+        self._real_stereo_camera_topic = str(
+            self.get_parameter("real_stereo_camera_topic").value
         ).strip()
         self._control_publish_period_s = float(
             self.get_parameter("control_publish_period_s").value
@@ -90,11 +94,14 @@ class RosWebBridge(Node):
             "stamp": 0.0,
             "min_dist_m": None,
         }
-        self._images: Dict[str, Dict[str, Any]] = {
+        self._images: Dict[str, Any] = {
             "front": {},
             "bottom": {},
             "stereo": {},
         }
+        self._front_camera_jpeg: Dict[str, Any] = {}
+        self._front_camera_jpeg_hub: Dict[str, Any] = {}
+        self._stereo_camera_jpeg: Dict[str, Any] = {}
         self._control_started = False
         self._control_mode = "auto"
         self._last_cmd = {
@@ -133,6 +140,13 @@ class RosWebBridge(Node):
                 lambda msg: self._on_image("front", msg),
                 qos_profile_sensor_data,
             )
+        if self._real_stereo_camera_topic:
+            self.create_subscription(
+                Image,
+                self._real_stereo_camera_topic,
+                lambda msg: self._on_image("stereo", msg),
+                qos_profile_sensor_data,
+            )
         self.create_subscription(
             Image,
             "/sim/camera/front/image_raw",
@@ -153,6 +167,7 @@ class RosWebBridge(Node):
         )
         self.create_subscription(String, "/rover/arduino/status", self._on_arduino_status, 10)
         self.create_timer(self._control_publish_period_s, self._control_publish_tick)
+        self.create_timer(2.0, self._publish_control_state)
         self._publish_control_state()
 
         self.get_logger().info("rover_web_bridge started.")
@@ -261,6 +276,8 @@ class RosWebBridge(Node):
             "sectors": sectors,
             "sector_count": sectors_n,
             "fov_deg": round(math.degrees(self._lidar_arc_fov_rad), 1),
+            "range_max_m": round(range_max, 2),
+            "display_max_m": round(min(4.0, range_max), 2),
             "stamp": time.time(),
             "min_dist_m": None if global_min >= range_max * 0.98 else round(global_min, 2),
         }
@@ -283,9 +300,66 @@ class RosWebBridge(Node):
             }
             self._lidar_arc = arc
 
+    def _encode_jpeg_bgr(self, arr: Any, width: int, height: int, quality: int) -> Dict[str, Any]:
+        import cv2
+
+        small = cv2.resize(arr, (width, height), interpolation=cv2.INTER_AREA)
+        ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)])
+        if not ok:
+            return {"ok": False, "reason": "jpeg_encode_failed"}
+        return {
+            "ok": True,
+            "jpeg_b64": base64.b64encode(jpg.tobytes()).decode("ascii"),
+            "width": width,
+            "height": height,
+        }
+
+    def _make_jpeg_from_image(self, msg: Image, *, hub: bool = False) -> Dict[str, Any]:
+        try:
+            import cv2
+            import numpy as np
+
+            height = int(msg.height)
+            width = int(msg.width)
+            encoding = str(msg.encoding or "bgr8")
+            if height <= 0 or width <= 0:
+                return {"ok": False, "reason": "bad_geometry"}
+            raw = bytes(msg.data)
+            if encoding in ("bgr8", "rgb8"):
+                channels = 3
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width, channels))
+                if encoding == "rgb8":
+                    arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            elif encoding in ("mono8", "8UC1"):
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width))
+                arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+            else:
+                return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
+            if hub:
+                out = self._encode_jpeg_bgr(arr, 320, 180, 28)
+            else:
+                out = self._encode_jpeg_bgr(arr, 640, 360, 45)
+            if not out.get("ok"):
+                return out
+            out["stamp"] = _ros_time_to_sec(msg.header.stamp)
+            return out
+        except Exception as exc:
+            return {"ok": False, "reason": str(exc)}
+
     def _on_image(self, camera_name: str, msg: Image) -> None:
-        # Keep bridge simple and format-agnostic for MVP:
-        # forward raw frame bytes as base64 and render in browser JS.
+        if camera_name in ("front", "stereo"):
+            jpeg = self._make_jpeg_from_image(msg, hub=False)
+            if jpeg.get("ok"):
+                with self._lock:
+                    if camera_name == "front":
+                        self._front_camera_jpeg = jpeg
+                        hub_jpeg = self._make_jpeg_from_image(msg, hub=True)
+                        if hub_jpeg.get("ok"):
+                            self._front_camera_jpeg_hub = hub_jpeg
+                    else:
+                        self._stereo_camera_jpeg = jpeg
+            return
+
         encoded = base64.b64encode(bytes(msg.data)).decode("ascii")
         with self._lock:
             self._images[camera_name] = {
@@ -357,7 +431,59 @@ class RosWebBridge(Node):
         with self._lock:
             return dict(self._lidar_arc)
 
-    def get_front_camera_jpeg(self) -> Dict[str, Any]:
+    def get_stereo_camera_jpeg(self) -> Dict[str, Any]:
+        with self._lock:
+            cached = dict(self._stereo_camera_jpeg)
+        if cached.get("ok") and cached.get("jpeg_b64"):
+            return cached
+
+        with self._lock:
+            img = dict(self._images.get("stereo") or {})
+        if not img.get("data_b64"):
+            return {"ok": False, "reason": "no_frame"}
+        try:
+            import cv2
+            import numpy as np
+
+            raw = base64.b64decode(img["data_b64"])
+            height = int(img.get("height") or 0)
+            width = int(img.get("width") or 0)
+            encoding = str(img.get("encoding") or "bgr8")
+            if height <= 0 or width <= 0:
+                return {"ok": False, "reason": "bad_geometry"}
+            if encoding in ("bgr8", "rgb8"):
+                channels = 3
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width, channels))
+                if encoding == "rgb8":
+                    arr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            elif encoding in ("mono8", "8UC1"):
+                arr = np.frombuffer(raw, dtype=np.uint8).reshape((height, width))
+                arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+            else:
+                return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
+            small = cv2.resize(arr, (640, 360), interpolation=cv2.INTER_AREA)
+            ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 45])
+            if not ok:
+                return {"ok": False, "reason": "jpeg_encode_failed"}
+            result = {
+                "ok": True,
+                "jpeg_b64": base64.b64encode(jpg.tobytes()).decode("ascii"),
+                "width": 640,
+                "height": 360,
+                "stamp": float(img.get("stamp") or time.time()),
+            }
+            with self._lock:
+                self._stereo_camera_jpeg = result
+            return result
+        except Exception as exc:
+            return {"ok": False, "reason": str(exc)}
+
+    def get_front_camera_jpeg(self, hub: bool = False) -> Dict[str, Any]:
+        with self._lock:
+            cached = dict(self._front_camera_jpeg_hub if hub else self._front_camera_jpeg)
+        if cached.get("ok") and cached.get("jpeg_b64"):
+            return cached
+
         with self._lock:
             img = dict(self._images.get("front") or {})
         if not img.get("data_b64"):
@@ -382,17 +508,19 @@ class RosWebBridge(Node):
                 arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
-            small = cv2.resize(arr, (320, 180), interpolation=cv2.INTER_AREA)
-            ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 55])
-            if not ok:
-                return {"ok": False, "reason": "jpeg_encode_failed"}
-            return {
-                "ok": True,
-                "jpeg_b64": base64.b64encode(jpg.tobytes()).decode("ascii"),
-                "width": 320,
-                "height": 180,
+            out = self._encode_jpeg_bgr(arr, 320, 180, 28) if hub else self._encode_jpeg_bgr(arr, 640, 360, 45)
+            if not out.get("ok"):
+                return out
+            result = {
+                **out,
                 "stamp": float(img.get("stamp") or time.time()),
             }
+            with self._lock:
+                if hub:
+                    self._front_camera_jpeg_hub = result
+                else:
+                    self._front_camera_jpeg = result
+            return result
         except Exception as exc:
             return {"ok": False, "reason": str(exc)}
 
