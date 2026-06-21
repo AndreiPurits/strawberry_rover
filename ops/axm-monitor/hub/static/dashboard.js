@@ -834,7 +834,12 @@ if (speedSlider) {
   };
 }
 
+let lastFleetRenderAt = 0;
+
 function renderFleet(data) {
+  const now = Date.now();
+  if (now - lastFleetRenderAt < 250) return;
+  lastFleetRenderAt = now;
   lastFleet = data.rovers || [];
   renderRoverList();
   renderPanel();
@@ -865,13 +870,23 @@ function connectWs() {
   };
 }
 
-document.getElementById("logout").onclick = async () => {
-  if (sessionStarted) {
-    await sendCommand("session_stop");
-    await releaseOperator();
+document.getElementById("logout").onclick = () => {
+  const stop = sessionStarted;
+  const rid = selectedId;
+  sessionStarted = false;
+  if (stop && rid) {
+    fetch(`/api/rovers/${encodeURIComponent(rid)}/command`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "session_stop", params: {} }),
+    }).catch(() => {});
+    fetch(`/api/rovers/${encodeURIComponent(rid)}/release`, { method: "POST" }).catch(() => {});
   }
-  await fetch("/api/logout", { method: "POST" });
-  location.href = "/login";
+  fetch("/api/logout", { method: "POST", credentials: "same-origin" })
+    .catch(() => {})
+    .finally(() => {
+      location.href = "/login";
+    });
 };
 
 loadFleet();

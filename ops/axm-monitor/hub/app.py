@@ -44,6 +44,10 @@ def _env(name: str, default: str = "") -> str:
 AGENT_STALE_S = int(_env("AXM_AGENT_STALE_S", "600"))
 
 
+def _cookie_secure() -> bool:
+    return _env("AXM_COOKIE_SECURE", "true").lower() in ("1", "true", "yes")
+
+
 def _admin_user() -> str:
     return _env("AXM_ADMIN_USER", "admin")
 
@@ -296,7 +300,7 @@ def api_login(body: LoginBody) -> JSONResponse:
         SESSION_COOKIE,
         token,
         httponly=True,
-        secure=_env("AXM_COOKIE_SECURE", "true").lower() in ("1", "true", "yes"),
+        secure=_cookie_secure(),
         samesite="lax",
         max_age=ttl,
         path="/",
@@ -307,7 +311,12 @@ def api_login(body: LoginBody) -> JSONResponse:
 @app.post("/api/logout")
 def api_logout(request: Request) -> JSONResponse:
     resp = JSONResponse({"ok": True})
-    resp.delete_cookie(SESSION_COOKIE, path="/")
+    resp.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=_cookie_secure(),
+        samesite="lax",
+    )
     return resp
 
 
