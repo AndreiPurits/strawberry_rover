@@ -846,12 +846,26 @@ function renderFleet(data) {
 }
 
 async function loadFleet() {
-  const res = await fetch("/api/rovers");
-  if (res.status === 401) {
-    location.href = "/login";
-    return;
+  const statusEl = document.getElementById("rover-status");
+  try {
+    const res = await fetch("/api/rovers", {
+      credentials: "same-origin",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.status === 401) {
+      location.href = "/login";
+      return;
+    }
+    if (!res.ok) {
+      if (statusEl) statusEl.textContent = `Ошибка сервера ${res.status}`;
+      return;
+    }
+    renderFleet(await res.json());
+  } catch (err) {
+    if (statusEl) {
+      statusEl.textContent = "Нет связи с сервером — обновите страницу (Ctrl+F5)";
+    }
   }
-  if (res.ok) renderFleet(await res.json());
 }
 
 function connectWs() {
@@ -864,8 +878,12 @@ function connectWs() {
       if (data.type === "fleet") renderFleet(data);
     } catch (_) {}
   };
-  ws.onclose = () => {
+  ws.onclose = (ev) => {
     fleetWs = null;
+    if (ev.code === 4401) {
+      location.href = "/login";
+      return;
+    }
     setTimeout(connectWs, 2000);
   };
 }
@@ -891,7 +909,7 @@ document.getElementById("logout").onclick = () => {
 
 loadFleet();
 connectWs();
-setInterval(loadFleet, 10000);
+setInterval(loadFleet, 3000);
 setInterval(() => {
   if (!sessionStarted) wakeGamepads();
 }, 2000);

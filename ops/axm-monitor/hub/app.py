@@ -320,6 +320,11 @@ def api_logout(request: Request) -> JSONResponse:
     return resp
 
 
+@app.get("/static/dashboard.html")
+def static_dashboard_redirect() -> RedirectResponse:
+    return RedirectResponse("/", status_code=302)
+
+
 @app.get("/")
 def root(request: Request):
     if not _session_valid(request.cookies.get(SESSION_COOKIE)):
