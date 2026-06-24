@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import os
 import socket
 import sys
@@ -23,7 +24,8 @@ _last_lidar_stamp: Optional[float] = None
 _last_lidar_arc: Dict[str, Any] = {}
 _last_drive_at: float = 0.0
 _motors_active: bool = False
-_lidar_stop_latched: bool = False
+_lidar_stop_latched_fwd: bool = False
+_lidar_stop_latched_rev: bool = False
 _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
 _last_camera_stamp: Optional[float] = None
@@ -32,11 +34,14 @@ _last_hub_ok_at: float = 0.0
 _hub_ok_lock = threading.Lock()
 
 WATCHDOG_TIMEOUT_S = 0.5
-LIDAR_GUARD_M = 0.2
+ROVER_WIDTH_M = 0.25
+LIDAR_GUARD_EXTRA_WIDTH_M = 0.12
+LIDAR_GUARD_M = 0.40
 TELEMETRY_INTERVAL_S = 5.0
 KEEPALIVE_INTERVAL_S = 2.0
-COMMAND_POLL_S = 0.25
+COMMAND_POLL_S = 0.1
 HUB_LINK_GRACE_S = 45.0
+LIDAR_ARC_MAX_AGE_S = 0.8
 
 # Gecoma motor shield: cmd_vel axes swapped vs nominal (do not rewire).
 def _remap_ui_drive(forward: float, turn: float) -> Tuple[float, float]:
@@ -64,7 +69,16 @@ def _hub_camera_fps() -> float:
 
 
 def _hub_stereo_enabled() -> bool:
-    return _env("AXM_HUB_STEREO", "false").lower() in ("1", "true", "yes")
+    return _env("AXM_HUB_STEREO", "true").lower() not in ("0", "false", "no")
+
+
+def _hub_stereo_fps() -> float:
+    raw = _env("AXM_HUB_STEREO_FPS", "1")
+    try:
+        fps = float(raw)
+    except ValueError:
+        fps = 1.0
+    return max(0.25, min(fps, 3.0))
 
 
 def _touch_hub_ok() -> None:
@@ -78,45 +92,124 @@ def _hub_link_ok() -> bool:
         return (time.monotonic() - _last_hub_ok_at) <= HUB_LINK_GRACE_S
 
 
-def _forward_min_dist(lidar_arc: Dict[str, Any]) -> Optional[float]:
+def _guard_half_angle_rad() -> float:
+    """Front cone half-angle so rover width fits at guard distance."""
+    effective_width = ROVER_WIDTH_M + LIDAR_GUARD_EXTRA_WIDTH_M
+    return math.atan((effective_width / 2.0) / LIDAR_GUARD_M)
+
+
+def _sector_indices_in_cone(lidar_arc: Dict[str, Any], center_rad: float, half_angle_rad: float) -> List[int]:
     sectors = lidar_arc.get("sectors") or []
     n = len(sectors)
     if n == 0:
+        return []
+    fov_deg = float(lidar_arc.get("fov_deg") or 160.0)
+    fov_half = math.radians(fov_deg / 2.0)
+    sector_width = math.radians(fov_deg) / n
+    indices: List[int] = []
+    for i in range(n):
+        sec_center = -fov_half + (i + 0.5) * sector_width
+        delta = math.atan2(math.sin(sec_center - center_rad), math.cos(sec_center - center_rad))
+        if abs(delta) <= (half_angle_rad + sector_width * 0.5):
+            indices.append(i)
+    return indices
+
+
+def _min_dist_from_indices(lidar_arc: Dict[str, Any], indices: List[int]) -> Optional[float]:
+    sectors = lidar_arc.get("sectors") or []
+    if not indices:
         return None
-    center = n // 2
     dists: List[float] = []
-    for i in range(max(0, center - 1), min(n, center + 2)):
+    for i in indices:
+        if i < 0 or i >= len(sectors):
+            continue
         d = sectors[i].get("dist_m")
         if d is not None:
             dists.append(float(d))
     return min(dists) if dists else None
 
 
+def _cone_min_dist(lidar_arc: Dict[str, Any], center_rad: float, half_angle_rad: float) -> Optional[float]:
+    primary_idx = _sector_indices_in_cone(lidar_arc, center_rad, half_angle_rad)
+    d = _min_dist_from_indices(lidar_arc, primary_idx)
+    if d is not None:
+        return d
+    # Fallback: widen cone if center bins are empty.
+    d = _min_dist_from_indices(lidar_arc, _sector_indices_in_cone(lidar_arc, center_rad, max(half_angle_rad, math.radians(45.0))))
+    if d is not None:
+        return d
+    # Last resort: nearest valid point from any sector.
+    sectors = lidar_arc.get("sectors") or []
+    vals = [float(s.get("dist_m")) for s in sectors if s.get("dist_m") is not None]
+    return min(vals) if vals else None
+
+
 def _lidar_guard_state(lidar_arc: Dict[str, Any]) -> Dict[str, Any]:
-    m = _forward_min_dist(lidar_arc)
-    blocked = m is not None and m < LIDAR_GUARD_M
+    half_rad = _guard_half_angle_rad()
+    fov_deg = float(lidar_arc.get("fov_deg") or 160.0)
+    stamp = lidar_arc.get("stamp")
+    now = time.time()
+    try:
+        age_s = (now - float(stamp)) if stamp is not None else None
+    except Exception:
+        age_s = None
+    lidar_stale = age_s is None or age_s > float(
+        _env("AXM_LIDAR_ARC_MAX_AGE_S", str(LIDAR_ARC_MAX_AGE_S))
+    )
+    m_fwd = _cone_min_dist(lidar_arc, 0.0, half_rad)
+    # Rear guard works only if arc covers rear hemisphere (near 360 deg).
+    m_rev = _cone_min_dist(lidar_arc, math.pi, half_rad) if fov_deg >= 300.0 else None
+    blocked_fwd = lidar_stale or (m_fwd is None) or (m_fwd < LIDAR_GUARD_M)
+    blocked_rev = (m_rev is not None) and (m_rev < LIDAR_GUARD_M)
+    half_deg = math.degrees(_guard_half_angle_rad())
+    idx_fwd = _sector_indices_in_cone(lidar_arc, 0.0, half_rad)
+    idx_rev = _sector_indices_in_cone(lidar_arc, math.pi, half_rad) if fov_deg >= 300.0 else []
     return {
-        "active": blocked,
-        "min_forward_m": round(m, 3) if m is not None else None,
+        "active": blocked_fwd or blocked_rev,
+        "active_forward": blocked_fwd,
+        "active_backward": blocked_rev,
+        "min_forward_m": round(m_fwd, 3) if m_fwd is not None else None,
+        "min_backward_m": round(m_rev, 3) if m_rev is not None else None,
         "threshold_m": LIDAR_GUARD_M,
+        "rover_width_m": ROVER_WIDTH_M,
+        "guard_effective_width_m": round(ROVER_WIDTH_M + LIDAR_GUARD_EXTRA_WIDTH_M, 3),
+        "guard_half_angle_deg": round(half_deg, 1),
+        "guard_full_angle_deg": round(2.0 * half_deg, 1),
+        "sector_indices": idx_fwd,
+        "rear_sector_indices": idx_rev,
+        "forward_data_ok": (m_fwd is not None) and (not lidar_stale),
+        "lidar_stale": lidar_stale,
+        "lidar_age_s": round(age_s, 3) if age_s is not None else None,
     }
 
 
-def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any]]:
-    """Block forward when obstacle ahead; latch stop until override."""
-    global _lidar_stop_latched
+def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any], bool]:
+    """Block movement on obstacle/no-data and latch stop until override."""
+    global _lidar_stop_latched_fwd, _lidar_stop_latched_rev
     guard = _lidar_guard_state(_last_lidar_arc)
     if override:
-        _lidar_stop_latched = False
-        return fwd, guard
-    if guard["active"] and fwd > 0:
-        _lidar_stop_latched = True
-        return 0.0, guard
-    if _lidar_stop_latched and fwd > 0:
-        return 0.0, guard
-    if fwd <= 0:
-        _lidar_stop_latched = False
-    return fwd, guard
+        _lidar_stop_latched_fwd = False
+        _lidar_stop_latched_rev = False
+        return fwd, guard, False
+    if fwd > 0:
+        if guard.get("active_forward"):
+            _lidar_stop_latched_fwd = True
+            return 0.0, guard, True
+        if _lidar_stop_latched_fwd:
+            return 0.0, guard, True
+        _lidar_stop_latched_rev = False
+        return fwd, guard, False
+    if fwd < 0:
+        if guard.get("active_backward"):
+            _lidar_stop_latched_rev = True
+            return 0.0, guard, True
+        if _lidar_stop_latched_rev:
+            return 0.0, guard, True
+        _lidar_stop_latched_fwd = False
+        return fwd, guard, False
+    _lidar_stop_latched_fwd = False
+    _lidar_stop_latched_rev = False
+    return 0.0, guard, False
 
 
 def _collect_perception(local_web: str) -> Dict[str, Any]:
@@ -270,6 +363,8 @@ def _camera_stream_loop(
     stop_event: threading.Event,
 ) -> None:
     interval = 1.0 / _hub_camera_fps()
+    stereo_interval = 1.0 / _hub_stereo_fps()
+    last_stereo_at = 0.0
     base = local_web.rstrip("/")
     stereo = _hub_stereo_enabled()
     while not stop_event.is_set():
@@ -288,13 +383,14 @@ def _camera_stream_loop(
                     stamp = float(cam.get("stamp") or time.time())
                     _post_camera_frame(hub_url, rover_id, token, jpeg, stamp)
                     _touch_hub_ok()
-            if stereo:
+            if stereo and (time.monotonic() - last_stereo_at) >= stereo_interval:
                 st = _fetch_json(f"{base}/api/perception/stereo_camera", 0.4) or {}
                 if st.get("ok") and st.get("jpeg_b64"):
                     sjpeg = base64.b64decode(st["jpeg_b64"])
                     if len(sjpeg) <= 120_000:
                         sstamp = float(st.get("stamp") or time.time())
                         _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
+                        last_stereo_at = time.monotonic()
         except Exception:
             pass
         stop_event.wait(interval)
@@ -315,14 +411,17 @@ def _parse_arduino(raw: Any) -> Dict[str, Any]:
 
 def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize Mega STATUS fields for the hub dashboard."""
-    status_raw = arduino_data.get("status")
     mega: Dict[str, Any] = {}
+    status_raw = arduino_data.get("status")
     if isinstance(status_raw, str) and status_raw.startswith("{"):
         try:
             mega = json.loads(status_raw)
         except json.JSONDecodeError:
             pass
-    for key in (
+    elif isinstance(status_raw, dict):
+        mega = dict(status_raw)
+
+    sensor_keys = (
         "armed",
         "fl_us",
         "fr_us",
@@ -339,8 +438,9 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
         "humidity_pct",
         "vibration_d24",
         "dht_ok",
-    ):
-        if key in arduino_data and key not in mega:
+    )
+    for key in sensor_keys:
+        if key in arduino_data and arduino_data[key] is not None:
             mega[key] = arduino_data[key]
 
     left = int(mega.get("left_us") or 1500)
@@ -514,7 +614,10 @@ def execute_command(
                 return result
             _DRIVE_MODE = mode
             if mode == "joystick":
-                # Joystick tab alone does not arm motors — only session_start does.
+                _touch_drive(0.0, 0.0)
+                _motors_active = False
+                if prefer_web:
+                    _drive_local(local_web, 0.0, 0.0)
                 result.update({"ok": True, "drive_mode": mode})
             else:
                 _session_active = False
@@ -534,6 +637,8 @@ def execute_command(
             _session_active = True
             _touch_drive(0.0, 0.0)
             if prefer_web:
+                # Pulse stop→start so Mega driver always sees started edge and re-ARMs.
+                _local_web_post(local_web, "/api/control/stop")
                 _local_web_post(local_web, "/api/control/start")
                 _local_web_post(local_web, "/api/control/mode", {"mode": "manual"})
                 result.update({"ok": True, "via": "local_web"})
@@ -574,11 +679,19 @@ def execute_command(
             fwd = float(params.get("forward", params.get("linear_x", 0.0))) * scale
             turn = float(params.get("turn", params.get("angular_z", 0.0))) * scale
             lidar_override = bool(params.get("lidar_override"))
-            fwd, guard = _apply_lidar_guard(fwd, lidar_override)
-            if _lidar_stop_latched and not lidar_override:
+            fwd, guard, guard_blocked = _apply_lidar_guard(fwd, lidar_override)
+            result["lidar_guard"] = guard
+            if guard_blocked and not lidar_override:
                 result["lidar_blocked"] = True
                 _stop_motors(local_web, prefer_web, mega_port)
-            result["lidar_guard"] = guard
+                _touch_drive(0.0, 0.0)
+                result.update({"ok": True, "via": "guard_stop", "forward": 0.0, "turn": 0.0})
+                print(
+                    "[fleet-agent] LIDAR_GUARD_STOP "
+                    f"fwd={guard.get('min_forward_m')}m back={guard.get('min_backward_m')}m "
+                    f"threshold={guard.get('threshold_m')}m"
+                )
+                return result
             lx, az = _remap_ui_drive(fwd, turn)
             _touch_drive(lx, az)
             if prefer_web:
@@ -658,7 +771,7 @@ def main() -> int:
     parser.add_argument("--token", default=_env("AXM_ROVER_TOKEN"))
     parser.add_argument("--name", default=_env("AXM_ROVER_NAME"))
     parser.add_argument("--local-web", default=_env("AXM_LOCAL_WEB", "http://127.0.0.1:8080"))
-    parser.add_argument("--mega-port", default=_env("MEGA_PORT", "/dev/ttyUSB0"))
+    parser.add_argument("--mega-port", default=_env("MEGA_PORT", "/dev/ttyUSB1"))
     parser.add_argument("--interval", type=float, default=None)
     args = parser.parse_args()
 
@@ -680,7 +793,11 @@ def main() -> int:
     )
 
     cam_stop = threading.Event()
-    start_gnss_reader(port=_env("RTK_PORT", "/dev/ttyACM0"))
+    try:
+        rtk_baud = int(_env("RTK_BAUD", "115200"))
+    except ValueError:
+        rtk_baud = 115200
+    start_gnss_reader(port=_env("RTK_PORT", "/dev/ttyACM0"), baud=rtk_baud)
     cam_thread = threading.Thread(
         target=_camera_stream_loop,
         args=(args.hub_url, args.rover_id, args.token, args.local_web, cam_stop),
@@ -709,7 +826,7 @@ def main() -> int:
                         prefer_web=prefer_web,
                     )
                 _watchdog_tick(args.local_web, prefer_web, args.mega_port)
-                if _lidar_stop_latched and _session_active and _motors_active:
+                if (_lidar_stop_latched_fwd or _lidar_stop_latched_rev) and _session_active and _motors_active:
                     _stop_motors(args.local_web, prefer_web, args.mega_port)
             except Exception:
                 pass

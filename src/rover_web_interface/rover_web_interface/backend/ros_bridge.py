@@ -391,8 +391,8 @@ class RosWebBridge(Node):
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
             if hub:
-                cropped = self._crop_center_aspect(arr, 4.0 / 3.0)
-                out = self._encode_jpeg_bgr_fit(cropped, 800, 600, 38, letterbox=False)
+                # Keep full camera FOV for hub stream; avoid center-crop.
+                out = self._encode_jpeg_bgr_fit(arr, 800, 600, 38, letterbox=True)
             else:
                 out = self._encode_jpeg_bgr(arr, 640, 480, 45)
             if not out.get("ok"):
@@ -565,9 +565,8 @@ class RosWebBridge(Node):
                 arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
-            cropped = self._crop_center_aspect(arr, 4.0 / 3.0) if hub else arr
             out = (
-                self._encode_jpeg_bgr_fit(cropped, 800, 600, 36, letterbox=False)
+                self._encode_jpeg_bgr_fit(arr, 800, 600, 36, letterbox=True)
                 if hub
                 else self._encode_jpeg_bgr_fit(arr, 640, 480, 45, letterbox=False)
             )
