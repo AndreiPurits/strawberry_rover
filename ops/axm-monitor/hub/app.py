@@ -19,7 +19,16 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from webrtc_relay import WEBRTC_OK, close_relay, create_relay_answer
+try:
+    from webrtc_relay import WEBRTC_OK, close_relay, create_relay_answer
+except ImportError:
+    WEBRTC_OK = False
+
+    def close_relay(_rover_id: str) -> None:
+        return None
+
+    async def create_relay_answer(*_args: Any, **_kwargs: Any) -> Dict[str, Any]:
+        raise RuntimeError("webrtc_not_available")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SESSION_COOKIE = "axm_session"
