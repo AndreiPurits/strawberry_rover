@@ -454,8 +454,8 @@ function logicalKey(e) {
   // Rover mount: A=forward, W=turn right, S=turn left, D=backward (UI key remap only).
   if (k === "w" || k === "ц" || e.code === "ArrowUp" || e.code === "KeyW") return "right";
   if (k === "s" || k === "ы" || e.code === "ArrowDown" || e.code === "KeyS") return "left";
-  if (k === "a" || k === "ф" || e.code === "ArrowLeft" || e.code === "KeyA") return "fwd";
-  if (k === "d" || k === "в" || e.code === "ArrowRight" || e.code === "KeyD") return "back";
+  if (k === "a" || k === "ф" || e.code === "ArrowLeft" || e.code === "KeyA") return "back";
+  if (k === "d" || k === "в" || e.code === "ArrowRight" || e.code === "KeyD") return "fwd";
   if (e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "KeyE" || e.code === "Space")
     return "override";
   return null;
@@ -463,8 +463,8 @@ function logicalKey(e) {
 
 function updateDriveKeyHighlight() {
   const activeHints = new Set();
-  if (keysLogical.has("fwd")) activeHints.add("a").add("arrowleft");
-  if (keysLogical.has("back")) activeHints.add("d").add("arrowright");
+  if (keysLogical.has("fwd")) activeHints.add("d").add("arrowright");
+  if (keysLogical.has("back")) activeHints.add("a").add("arrowleft");
   if (keysLogical.has("left")) activeHints.add("s").add("arrowdown");
   if (keysLogical.has("right")) activeHints.add("w").add("arrowup");
   const fwdBlocked = lidarForwardBlocked();
