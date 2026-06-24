@@ -574,6 +574,9 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "connected": arduino_data.get("connected"),
         "armed": mega.get("armed") if mega.get("armed") is not None else arduino_data.get("mega_armed"),
+        "mega_armed": mega.get("armed") if mega.get("armed") is not None else arduino_data.get("mega_armed"),
+        "web_started": arduino_data.get("web_started"),
+        "web_manual": arduino_data.get("web_manual"),
         "fl_us": mega.get("fl_us"),
         "fr_us": mega.get("fr_us"),
         "rl_us": mega.get("rl_us"),

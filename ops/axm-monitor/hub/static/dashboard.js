@@ -431,7 +431,11 @@ function renderSessionHint() {
     return;
   }
   if (!sessionStarted) {
-    el.textContent = "Нажмите Manual или Start — затем WASD / стрелки / Xbox";
+    if (uiDriveMode === "joystick") {
+      el.textContent = "Manual — ARM… (WASD после подключения)";
+    } else {
+      el.textContent = "Нажмите Manual — затем WASD / стрелки / Xbox";
+    }
     el.className = "session-hint muted";
     return;
   }
@@ -1018,6 +1022,15 @@ function renderPerception(r) {
   renderLidarGuardBadge(p.lidar_guard);
 }
 
+function updateStartStopButtons(mode, canControl, online) {
+  const startBtn = document.getElementById("btn-start");
+  const stopBtn = document.getElementById("btn-stop");
+  const manual = mode === "joystick";
+  // In Manual mode Start/Stop are redundant — Manual toggles session + ARM.
+  if (startBtn) startBtn.disabled = manual || !canControl;
+  if (stopBtn) stopBtn.disabled = manual || !online;
+}
+
 function renderPanel() {
   const r = selectedRover();
   if (!r) {
@@ -1045,17 +1058,20 @@ function renderPanel() {
 
   document.getElementById("t-mega").textContent =
     t.arduino_connected === true ? "OK" : t.arduino_connected === false ? "нет" : "—";
-  const megaArmed = m.armed === true || m.mega_armed === true;
+  const megaArmed =
+    m.armed === true || m.mega_armed === true || t.armed === true;
   document.getElementById("t-arm").textContent =
-    megaArmed ? "ARM" : m.armed === false || m.mega_armed === false ? "DIS" : "—";
+    megaArmed ? "ARM" : m.armed === false || m.mega_armed === false || t.armed === false ? "DIS" : "—";
   const armEl = document.getElementById("t-arm");
   if (armEl) {
-    armEl.classList.toggle("mega-dis", !megaArmed && (m.armed === false || m.mega_armed === false));
-    armEl.title = !megaArmed && sessionStarted
-      ? "Mega не armed — нажмите Stop → Start или перезапустите сессию"
-      : !megaArmed
-        ? "Нажмите «Start» для ARM"
-        : "";
+    armEl.classList.toggle(
+      "mega-dis",
+      !megaArmed &&
+        (m.armed === false || m.mega_armed === false || t.armed === false)
+    );
+    armEl.title = !megaArmed && uiDriveMode === "joystick"
+      ? "Нажмите Manual ещё раз для повторного ARM"
+      : "";
   }
 
   const motorPercent = (us) => {
@@ -1082,13 +1098,15 @@ function renderPanel() {
   document.getElementById("t-ago").textContent = fmtAgo(r.last_seen_ago_s);
 
   const mode = t.drive_mode || uiDriveMode;
+  if (t.session_active === true && mode === "joystick") {
+    sessionStarted = true;
+  }
   applyModeUi(mode, false);
 
   const online = r.online;
   const op = normalizeOperator(r.operator);
   const canControl = online && (!op.locked || op.you);
-  document.getElementById("btn-start").disabled = !canControl || mode !== "joystick";
-  document.getElementById("btn-stop").disabled = !online;
+  updateStartStopButtons(mode, canControl, online);
   modeJoystick.disabled = !online;
   modeAuto.disabled = !online;
   document.querySelectorAll("[data-fwd]").forEach((b) => {
@@ -1106,7 +1124,6 @@ function applySpeedUi() {
 }
 
 async function enterManualMode() {
-  const wasAuto = uiDriveMode === "auto";
   applyModeUi("joystick", true);
   queueDrive(0, 0);
   targetFwd = 0;
@@ -1124,19 +1141,17 @@ async function enterManualMode() {
     return;
   }
 
-  if (!sessionStarted || wasAuto) {
-    wakeGamepads();
-    const claim = await claimOperator();
-    if (!claim.ok) {
-      if (claim.conflict) alert("Ровер уже управляется другим оператором");
-      renderPanel();
-      return;
-    }
-    await sendCommand("session_start");
-    sessionStarted = true;
-    startOperatorRenew();
-    drivePad?.focus();
+  wakeGamepads();
+  const claim = await claimOperator();
+  if (!claim.ok) {
+    if (claim.conflict) alert("Ровер уже управляется другим оператором");
+    renderPanel();
+    return;
   }
+  await sendCommand("session_start");
+  sessionStarted = true;
+  startOperatorRenew();
+  drivePad?.focus();
   renderPanel();
 }
 
@@ -1154,7 +1169,7 @@ function applyModeUi(mode, notifyAgent = true) {
   const online = Boolean(r?.online);
   const op = normalizeOperator(r?.operator);
   const canControl = online && (!op.locked || op.you);
-  document.getElementById("btn-start").disabled = !canControl || mode !== "joystick";
+  updateStartStopButtons(mode, canControl, online);
   document.querySelectorAll("[data-fwd]").forEach((b) => {
     b.disabled = !canControl || mode !== "joystick" || !sessionStarted;
   });
@@ -1221,9 +1236,9 @@ function renderGamepadStatus() {
   }
   if (!sessionStarted) {
     if (gamepadState.connected) {
-      el.textContent = `Геймпад: ${gamepadState.name} — нажмите Manual или Start`;
+      el.textContent = `Геймпад: ${gamepadState.name} — нажмите Manual`;
     } else {
-      el.textContent = "Геймпад: USB/BT к этому ПК → Manual или Start";
+      el.textContent = "Геймпад: USB/BT к этому ПК → Manual";
     }
     return;
   }
