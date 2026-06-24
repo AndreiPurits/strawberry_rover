@@ -4,6 +4,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
+COPY webrtc_relay.py .
 COPY static ./static
 
 ENV AXM_COOKIE_SECURE=true

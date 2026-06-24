@@ -2,3 +2,7 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 bcrypt>=4.1
 pydantic>=2.6
+aiortc>=1.6.0
+av>=10.0.0
+numpy>=1.24.0
+Pillow>=10.0.0
