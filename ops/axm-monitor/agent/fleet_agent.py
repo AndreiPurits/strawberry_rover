@@ -184,31 +184,28 @@ def _lidar_guard_state(lidar_arc: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any], bool]:
-    """Block movement on obstacle/no-data and latch stop until override."""
+    """Block movement while danger points exist; release only on clear zone."""
     global _lidar_stop_latched_fwd, _lidar_stop_latched_rev
     guard = _lidar_guard_state(_last_lidar_arc)
-    if override:
+    if guard.get("active_forward"):
+        _lidar_stop_latched_fwd = True
+    elif guard.get("forward_data_ok"):
         _lidar_stop_latched_fwd = False
+    if guard.get("active_backward"):
+        _lidar_stop_latched_rev = True
+    elif guard.get("min_backward_m") is not None:
         _lidar_stop_latched_rev = False
+
+    if override:
         return fwd, guard, False
     if fwd > 0:
-        if guard.get("active_forward"):
-            _lidar_stop_latched_fwd = True
-            return 0.0, guard, True
         if _lidar_stop_latched_fwd:
             return 0.0, guard, True
-        _lidar_stop_latched_rev = False
         return fwd, guard, False
     if fwd < 0:
-        if guard.get("active_backward"):
-            _lidar_stop_latched_rev = True
-            return 0.0, guard, True
         if _lidar_stop_latched_rev:
             return 0.0, guard, True
-        _lidar_stop_latched_fwd = False
         return fwd, guard, False
-    _lidar_stop_latched_fwd = False
-    _lidar_stop_latched_rev = False
     return 0.0, guard, False
 
 

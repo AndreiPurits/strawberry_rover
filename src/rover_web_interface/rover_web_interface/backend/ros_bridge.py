@@ -31,7 +31,7 @@ class RosWebBridge(Node):
         self.declare_parameter("row_spacing", 1.8)
         self.declare_parameter("trail_max_points", 300)
         self.declare_parameter("scan_downsample", 8)
-        self.declare_parameter("lidar_arc_sectors", 9)
+        self.declare_parameter("lidar_arc_sectors", 21)
         self.declare_parameter("lidar_arc_fov_deg", 160.0)
         # UI forward direction offset (degrees in LaserScan frame).
         # 180 means lidar is mounted backwards relative to rover forward.
