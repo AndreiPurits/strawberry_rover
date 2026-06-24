@@ -281,6 +281,14 @@ def _apply_control(payload: Dict[str, Any]) -> Dict[str, Any]:
             raise HTTPException(status_code=400, detail="invalid_command_values") from exc
         source = str(payload.get("source", "web"))
         return _bridge.apply_manual_command(linear_x=linear_x, angular_z=angular_z, source=source)
+    if action == "tracks":
+        try:
+            left = float(payload.get("left", 0.0))
+            right = float(payload.get("right", 0.0))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="invalid_track_values") from exc
+        source = str(payload.get("source", "tracks"))
+        return _bridge.apply_track_command(left=left, right=right, source=source)
     if action == "zero":
         source = str(payload.get("source", "web"))
         return _bridge.publish_zero_cmd(source=source)
@@ -311,6 +319,13 @@ def api_control_stop() -> Dict[str, Any]:
 async def api_control_mode(request: Request) -> Dict[str, Any]:
     payload = await request.json()
     control = _apply_control({"action": "set_mode", "mode": payload.get("mode", "")})
+    return {"ok": True, "control": control}
+
+
+@app.post("/api/control/tracks")
+async def api_control_tracks(request: Request) -> Dict[str, Any]:
+    payload = await request.json()
+    control = _apply_control({"action": "tracks", **payload})
     return {"ok": True, "control": control}
 
 

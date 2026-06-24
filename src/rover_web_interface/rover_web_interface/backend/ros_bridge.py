@@ -36,6 +36,8 @@ class RosWebBridge(Node):
         # UI forward direction offset (degrees in LaserScan frame).
         # 180 means lidar is mounted backwards relative to rover forward.
         self.declare_parameter("lidar_forward_angle_deg", 180.0)
+        # RPLidar scan order vs rover-left: flip sector index for UI + guard.
+        self.declare_parameter("lidar_mirror_lr", True)
         self.declare_parameter("real_front_camera_topic", "/camera/image_raw")
         self.declare_parameter("real_stereo_camera_topic", "/stereo_camera/image_raw")
         self.declare_parameter("control_publish_period_s", 0.05)
@@ -52,6 +54,7 @@ class RosWebBridge(Node):
         self._lidar_forward_rad = math.radians(
             float(self.get_parameter("lidar_forward_angle_deg").value)
         )
+        self._lidar_mirror_lr = bool(self.get_parameter("lidar_mirror_lr").value)
         self._real_front_camera_topic = str(
             self.get_parameter("real_front_camera_topic").value
         ).strip()
@@ -261,6 +264,8 @@ class RosWebBridge(Node):
                     rel = rel_angle + fov_half
                     idx = int(rel / max(1e-6, self._lidar_arc_fov_rad) * sectors_n)
                     idx = max(0, min(sectors_n - 1, idx))
+                    if self._lidar_mirror_lr:
+                        idx = sectors_n - 1 - idx
                     mins[idx] = min(mins[idx], float(rng))
             angle += inc
 
@@ -928,6 +933,19 @@ class RosWebBridge(Node):
                 "stamp": time.time(),
             }
             return self._build_control_snapshot()
+
+    def apply_track_command(
+        self,
+        left: float,
+        right: float,
+        source: str = "tracks",
+    ) -> Dict[str, Any]:
+        """Tank tracks -1..1 -> cmd_vel (opposite tracks = turn in place)."""
+        l = max(-1.0, min(1.0, float(left)))
+        r = max(-1.0, min(1.0, float(right)))
+        linear_x = (l + r) * 0.5
+        angular_z = (r - l) * 0.5
+        return self.apply_manual_command(linear_x, angular_z, source=source)
 
     def publish_zero_cmd(self, source: str = "zero") -> Dict[str, Any]:
         # Publish an immediate zero command, then keep one extra zero on the next

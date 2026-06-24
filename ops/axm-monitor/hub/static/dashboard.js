@@ -385,7 +385,8 @@ function driveTick() {
   let fwd = kb.fwd;
   let turn = kb.turn;
   let override = kb.override || Boolean(gp?.override);
-  if (gp && (gp.active || Math.abs(gp.fwd) > 0.05 || Math.abs(gp.turn) > 0.05)) {
+  // Keyboard/arrow keys beat gamepad drift when operator uses WASD.
+  if (!kb.active && gp && (gp.active || Math.abs(gp.fwd) > 0.05 || Math.abs(gp.turn) > 0.05)) {
     fwd = gp.fwd;
     turn = gp.turn;
   }
@@ -1043,8 +1044,18 @@ function renderPanel() {
 
   document.getElementById("t-mega").textContent =
     t.arduino_connected === true ? "OK" : t.arduino_connected === false ? "нет" : "—";
+  const megaArmed = m.armed === true || m.mega_armed === true;
   document.getElementById("t-arm").textContent =
-    m.armed === true ? "ARM" : m.armed === false ? "DIS" : "—";
+    megaArmed ? "ARM" : m.armed === false || m.mega_armed === false ? "DIS" : "—";
+  const armEl = document.getElementById("t-arm");
+  if (armEl) {
+    armEl.classList.toggle("mega-dis", !megaArmed && (m.armed === false || m.mega_armed === false));
+    armEl.title = !megaArmed && sessionStarted
+      ? "Mega не armed — нажмите Stop → Start или перезапустите сессию"
+      : !megaArmed
+        ? "Нажмите «Start» для ARM"
+        : "";
+  }
 
   const motorPercent = (us) => {
     const n = Number(us);

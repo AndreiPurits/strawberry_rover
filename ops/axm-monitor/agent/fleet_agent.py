@@ -19,6 +19,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from gnss_reader import gnss_snapshot, start_gnss_reader
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
 
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
+from tank_drive import ui_to_cmd_vel, ui_to_pwm, ui_to_tracks  # noqa: E402
+
 _DRIVE_MODE = "joystick"
 _last_lidar_stamp: Optional[float] = None
 _last_lidar_arc: Dict[str, Any] = {}
@@ -56,9 +60,43 @@ COMMAND_POLL_S = 0.1
 HUB_LINK_GRACE_S = 45.0
 LIDAR_ARC_MAX_AGE_S = 0.8
 
+
+def _drive_signs() -> Tuple[float, float]:
+    try:
+        fs = float(_env("AXM_FORWARD_SIGN", "-1"))
+    except ValueError:
+        fs = -1.0
+    try:
+        ts = float(_env("AXM_TURN_SIGN", "1"))
+    except ValueError:
+        ts = 1.0
+    return fs, ts
+
+
 def _remap_ui_drive(forward: float, turn: float) -> Tuple[float, float]:
-    """UI forward/turn -> ROS linear_x, angular_z."""
-    return forward, turn
+    """UI W/S + A/D -> cmd_vel. Turn opposes tracks (tank skid-steer)."""
+    fs, ts = _drive_signs()
+    return ui_to_cmd_vel(forward, turn, forward_sign=fs, turn_sign=ts)
+
+
+def _apply_lidar_guard_twist(
+    linear_x: float, angular_z: float, override: bool
+) -> Tuple[float, float, Dict[str, Any], bool]:
+    """Block physical forward/backward motion from LiDAR latch (after drive remap)."""
+    guard = _current_lidar_guard()
+    lx = float(linear_x)
+    az = float(angular_z)
+    if lx > 0:
+        if bool(guard.get("latched_forward")) and not override:
+            return 0.0, az, guard, True
+        return lx, az, guard, False
+    if override:
+        return lx, az, guard, False
+    if lx < 0:
+        if bool(guard.get("latched_backward")):
+            return 0.0, az, guard, True
+        return lx, az, guard, False
+    return lx, az, guard, False
 
 
 def _camera_fps() -> float:
@@ -271,20 +309,15 @@ def _current_lidar_guard() -> Dict[str, Any]:
 
 
 def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any], bool]:
-    """Block movement while danger points exist; release only on clear zone."""
-    guard = _current_lidar_guard()
-    # Forward guard blocks motion ahead; override (Shift/E/Space/R2) bypasses it.
-    if fwd > 0:
-        if bool(guard.get("latched_forward")) and not override:
-            return 0.0, guard, True
-        return fwd, guard, False
-    if override:
-        return fwd, guard, False
-    if fwd < 0:
-        if bool(guard.get("latched_backward")):
-            return 0.0, guard, True
-        return fwd, guard, False
-    return 0.0, guard, False
+    """Legacy UI-forward guard (prefer _apply_lidar_guard_twist after remap)."""
+    lx, _az, guard, blocked = _apply_lidar_guard_twist(
+        _remap_ui_drive(fwd, 0.0)[0], 0.0, override
+    )
+    if fwd > 0 and blocked:
+        return 0.0, guard, True
+    if fwd < 0 and blocked:
+        return 0.0, guard, True
+    return fwd, guard, False
 
 
 def _collect_perception(local_web: str) -> Dict[str, Any]:
@@ -540,7 +573,7 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "connected": arduino_data.get("connected"),
-        "armed": mega.get("armed"),
+        "armed": mega.get("armed") if mega.get("armed") is not None else arduino_data.get("mega_armed"),
         "fl_us": mega.get("fl_us"),
         "fr_us": mega.get("fr_us"),
         "rl_us": mega.get("rl_us"),
@@ -628,7 +661,15 @@ def _local_web_post(local_web: str, path: str, payload: Optional[Dict[str, Any]]
     return _post_json(url, payload)
 
 
-def _drive_local(local_web: str, linear_x: float, angular_z: float) -> Dict[str, Any]:
+def _drive_local(local_web: str, left: float, right: float) -> Dict[str, Any]:
+    return _local_web_post(
+        local_web,
+        "/api/control/tracks",
+        {"left": left, "right": right, "source": "fleet"},
+    )
+
+
+def _drive_local_twist(local_web: str, linear_x: float, angular_z: float) -> Dict[str, Any]:
     return _local_web_post(
         local_web,
         "/api/control/command",
@@ -758,33 +799,44 @@ def execute_command(
             lidar_override = bool(params.get("lidar_override"))
             _note_lidar_override(lidar_override)
             fwd, guard, guard_blocked = _apply_lidar_guard(fwd, lidar_override)
-            if abs(fwd) > 1e-3 or lidar_override or guard_blocked:
+            fs, ts = _drive_signs()
+            l_tr, r_tr = ui_to_tracks(fwd, turn, forward_sign=fs, turn_sign=ts)
+            fl, fr, _, _ = ui_to_pwm(fwd, turn, forward_sign=fs, turn_sign=ts)
+            if abs(fwd) > 1e-3 or abs(turn) > 1e-3 or lidar_override or guard_blocked:
                 print(
                     "[fleet-agent] DRIVE "
-                    f"fwd={round(fwd,3)} turn={round(turn,3)} override={lidar_override} "
-                    f"blocked={guard_blocked} guard_fwd={guard.get('active_forward')} "
-                    f"min={guard.get('min_forward_m')} stale={guard.get('lidar_stale')}"
+                    f"ui_fwd={round(fwd,3)} ui_turn={round(turn,3)} "
+                    f"tracks L={round(l_tr,3)} R={round(r_tr,3)} "
+                    f"pwm FL={fl} FR={fr} override={lidar_override} blocked={guard_blocked}"
                 )
             result["lidar_guard"] = guard
             if guard_blocked and not lidar_override:
                 result["lidar_blocked"] = True
                 _stop_motors(local_web, prefer_web, mega_port)
                 _touch_drive(0.0, 0.0)
-                result.update({"ok": True, "via": "guard_stop", "forward": 0.0, "turn": 0.0})
+                result.update({"ok": True, "via": "guard_stop", "forward": fwd, "turn": turn})
                 print(
                     "[fleet-agent] LIDAR_GUARD_STOP "
                     f"fwd={guard.get('min_forward_m')}m back={guard.get('min_backward_m')}m "
                     f"threshold={guard.get('threshold_m')}m"
                 )
                 return result
-            lx, az = _remap_ui_drive(fwd, turn)
-            _touch_drive(lx, az)
+            phys_fwd = (l_tr + r_tr) * 0.5
+            _touch_drive(phys_fwd, 0.0)
             if prefer_web:
-                _drive_local(local_web, lx, az)
-                result.update({"ok": True, "via": "local_web", "forward": fwd, "turn": turn, "linear_x": lx, "angular_z": az})
+                _drive_local(local_web, l_tr, r_tr)
+                result.update({
+                    "ok": True,
+                    "via": "local_web_tracks",
+                    "forward": fwd,
+                    "turn": turn,
+                    "left_track": l_tr,
+                    "right_track": r_tr,
+                })
             else:
-                r = _drive_serial(mega_port, lx, az)
-                result.update({"ok": r.get("ok"), "via": "serial", "response": r.get("response")})
+                line = f"M FL={fl} FR={fr} RL={fl} RR={fr}"
+                r = send_command(mega_port, line)
+                result.update({"ok": r.get("ok"), "via": "serial_pwm", "response": r.get("response")})
 
         elif action == "stop_drive":
             _touch_drive(0.0, 0.0)
