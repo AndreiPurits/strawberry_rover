@@ -24,7 +24,11 @@
     PING                          -> PONG
     ARM / DISARM                  -> OK
     M FL=.. FR=.. RL=.. RR=..     -> OK  (only when ARMED)
-      Orin sends FL=RL=left, FR=RR=right (1000..2000, neutral 1500)
+  Orin sends canonical tank tracks (W/S forward/back, A/D turn):
+    left_us/right_us in 1000..2000 (1500 = stop).
+  Gecoma field wiring is rotated 90° — remap in applyTracks():
+    left_motor  <- -right_cmd
+    right_motor <-  left_cmd
     STATUS                        -> JSON
 
   SAFE BOOT: DISARMED, stopMotors() — no auto cycle, no movement until ARM.
@@ -112,6 +116,15 @@ static void driveSide(uint8_t in1, uint8_t in2, int us) {
   }
 }
 
+static void remapCanonicalTracks(int leftUsIn, int rightUsIn, int& leftUsOut, int& rightUsOut) {
+  // Calibrated 2026-06-25: A=fwd W=right D=back S=left before remap.
+  // Canonical Orin (L,R) -> wiring (L',R') = (-R, L).
+  const int l = leftUsIn - PWM_NEU;
+  const int r = rightUsIn - PWM_NEU;
+  leftUsOut = clamp_us(PWM_NEU - r);
+  rightUsOut = clamp_us(PWM_NEU + l);
+}
+
 static void applyTracks() {
   if (!gArmed) {
     stopMotors();
@@ -123,12 +136,15 @@ static void applyTracks() {
   // Orin: FL=RL=left track, FR=RR=right track
   int leftUs  = (gFL + gRL) / 2;
   int rightUs = (gFR + gRR) / 2;
+  int driveLeft = leftUs;
+  int driveRight = rightUs;
+  remapCanonicalTracks(leftUs, rightUs, driveLeft, driveRight);
   // Keep failsafe alive while a non-neutral command is active (no need to spam M).
   if (gArmed && (abs(leftUs - PWM_NEU) > DEADBAND || abs(rightUs - PWM_NEU) > DEADBAND)) {
     gLastCmdMs = millis();
   }
-  driveSide(LEFT_IN1,  LEFT_IN2,  leftUs);
-  driveSide(RIGHT_IN1, RIGHT_IN2, rightUs);
+  driveSide(LEFT_IN1,  LEFT_IN2,  driveLeft);
+  driveSide(RIGHT_IN1, RIGHT_IN2, driveRight);
 }
 
 static bool is_digit(char c) { return c >= '0' && c <= '9'; }
@@ -340,7 +356,7 @@ void setup() {
 
   Serial.begin(BAUD);
   delay(300);
-  Serial.println("MEGA_ROVER_GECOMA_READY DISARMED");
+  Serial.println("MEGA_ROVER_GECOMA_READY v2 CANONICAL_DRIVE DISARMED");
 }
 
 void loop() {
