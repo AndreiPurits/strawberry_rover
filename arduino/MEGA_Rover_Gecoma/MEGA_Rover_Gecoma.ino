@@ -15,10 +15,10 @@
   Stop:
     all D4..D7 = LOW
 
-  Peripherals (Gecoma field wiring):
-    Current sensor (blue):  A0 + D22
-    DHT11 temperature:      D23
-    Vibration module:       D24 (digital IN)
+  Peripherals (Gecoma field wiring — see project photos):
+    Current sensor (blue):  A0 analog + module D0 -> Mega D22
+    DHT11 (white):          OUT -> D23, + -> 5V, - -> GND
+    Vibration / RFID (blk): IN -> D24, VCC -> 5V, GND -> GND
 
   STATUS JSON: armed, tracks, current_a0, current_d22, temp_c, humidity_pct, vibration_d24
     PING                          -> PONG
@@ -34,14 +34,15 @@
 
 static const uint32_t BAUD = 115200;
 
-static const uint8_t LEFT_IN1  = 4;
-static const uint8_t LEFT_IN2  = 5;
-static const uint8_t RIGHT_IN1 = 6;
-static const uint8_t RIGHT_IN2 = 7;
+// --- Track H-bridge pins (swap LEFT<->RIGHT pairs here after drive test) ---
+static const uint8_t LEFT_IN1  = 4;  // was RIGHT: use 6
+static const uint8_t LEFT_IN2  = 5;  // was RIGHT: use 7
+static const uint8_t RIGHT_IN1 = 6;  // was LEFT:  use 4
+static const uint8_t RIGHT_IN2 = 7;  // was LEFT:  use 5
 
-static const uint8_t PIN_CURRENT_D22 = 22;
-static const uint8_t PIN_DHT11 = 23;
-static const uint8_t PIN_VIBRATION = 24;
+static const uint8_t PIN_CURRENT_D22 = 22;  // current module D0 (digital)
+static const uint8_t PIN_DHT11 = 23;       // DHT11 OUT
+static const uint8_t PIN_VIBRATION = 24;   // vibration / RFID IN (active HIGH)
 static const uint32_t DHT_INTERVAL_MS = 2000;
 
 static float gTempC = NAN;
@@ -54,6 +55,7 @@ static const int PWM_NEU = 1500;
 static const int PWM_MAX = 2000;
 static const int DEADBAND = 25;
 static const uint32_t FAILSAFE_TIMEOUT_MS = 500;
+static const uint32_t MOTOR_CYCLE_MS = 50;
 
 static volatile int gFL = PWM_NEU;
 static volatile int gFR = PWM_NEU;
@@ -78,18 +80,33 @@ static void stopMotors() {
   digitalWrite(RIGHT_IN2, LOW);
 }
 
+static int motionPct(int us) {
+  int d = abs(us - PWM_NEU);
+  if (d <= DEADBAND) return 0;
+  int span = (PWM_MAX - PWM_NEU) - DEADBAND;
+  if (span <= 0) return 0;
+  return constrain((d - DEADBAND) * 100 / span, 1, 100);
+}
+
 static void driveSide(uint8_t in1, uint8_t in2, int us) {
-  if (!gArmed || abs(us - PWM_NEU) <= DEADBAND) {
+  if (!gArmed || motionPct(us) == 0) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
     return;
   }
-  if (us > PWM_NEU) {
-    // вперёд — как moveForward() в тестовом скетче
+  const bool forward = us > PWM_NEU;
+  const int pct = motionPct(us);
+  const uint32_t phase = millis() % MOTOR_CYCLE_MS;
+  const uint32_t onMs = (MOTOR_CYCLE_MS * (uint32_t)pct) / 100U;
+  if (phase >= onMs) {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+    return;
+  }
+  if (forward) {
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
   } else {
-    // назад — как moveBackward()
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
@@ -106,6 +123,10 @@ static void applyTracks() {
   // Orin: FL=RL=left track, FR=RR=right track
   int leftUs  = (gFL + gRL) / 2;
   int rightUs = (gFR + gRR) / 2;
+  // Keep failsafe alive while a non-neutral command is active (no need to spam M).
+  if (gArmed && (abs(leftUs - PWM_NEU) > DEADBAND || abs(rightUs - PWM_NEU) > DEADBAND)) {
+    gLastCmdMs = millis();
+  }
   driveSide(LEFT_IN1,  LEFT_IN2,  leftUs);
   driveSide(RIGHT_IN1, RIGHT_IN2, rightUs);
 }
@@ -218,16 +239,31 @@ static void pollSensors() {
 static void printStatus() {
   int leftUs  = (gFL + gRL) / 2;
   int rightUs = (gFR + gRR) / 2;
+  int leftPct = motionPct(leftUs);
+  int rightPct = motionPct(rightUs);
   int d22 = digitalRead(PIN_CURRENT_D22);
   int vib = digitalRead(PIN_VIBRATION) ? 1 : 0;
+  int a0 = analogRead(A0);
   Serial.print(F("{\"armed\":"));
   Serial.print(gArmed ? F("true") : F("false"));
+  Serial.print(F(",\"fl_us\":"));
+  Serial.print(gFL);
+  Serial.print(F(",\"fr_us\":"));
+  Serial.print(gFR);
+  Serial.print(F(",\"rl_us\":"));
+  Serial.print(gRL);
+  Serial.print(F(",\"rr_us\":"));
+  Serial.print(gRR);
   Serial.print(F(",\"left_us\":"));
-  Serial.print(gArmed ? leftUs : PWM_NEU);
+  Serial.print(leftUs);
   Serial.print(F(",\"right_us\":"));
-  Serial.print(gArmed ? rightUs : PWM_NEU);
+  Serial.print(rightUs);
+  Serial.print(F(",\"left_power_pct\":"));
+  Serial.print(leftPct);
+  Serial.print(F(",\"right_power_pct\":"));
+  Serial.print(rightPct);
   Serial.print(F(",\"current_a0\":"));
-  Serial.print(analogRead(A0));
+  Serial.print(a0);
   Serial.print(F(",\"current_d22\":"));
   Serial.print(d22);
   Serial.print(F(",\"current_d0\":"));
@@ -297,7 +333,7 @@ void setup() {
 
   pinMode(PIN_CURRENT_D22, INPUT);
   pinMode(PIN_DHT11, INPUT_PULLUP);
-  pinMode(PIN_VIBRATION, INPUT_PULLUP);
+  pinMode(PIN_VIBRATION, INPUT);
 
   gArmed = false;
   gLastCmdMs = millis();

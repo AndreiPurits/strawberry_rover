@@ -12,7 +12,7 @@ def ui_to_tracks(
     forward: float,
     turn: float,
     *,
-    forward_sign: float = -1.0,
+    forward_sign: float = 1.0,
     turn_sign: float = 1.0,
 ) -> Tuple[float, float]:
     """
@@ -30,7 +30,7 @@ def ui_to_cmd_vel(
     forward: float,
     turn: float,
     *,
-    forward_sign: float = -1.0,
+    forward_sign: float = 1.0,
     turn_sign: float = 1.0,
 ) -> Tuple[float, float]:
     """Same as ui_to_tracks but as (linear_x, angular_z) for /cmd_vel."""
@@ -52,7 +52,7 @@ def ui_to_pwm(
     forward: float,
     turn: float,
     *,
-    forward_sign: float = -1.0,
+    forward_sign: float = 1.0,
     turn_sign: float = 1.0,
 ) -> Tuple[int, int, int, int]:
     left, right = ui_to_tracks(forward, turn, forward_sign=forward_sign, turn_sign=turn_sign)
