@@ -26,6 +26,9 @@ _last_drive_at: float = 0.0
 _motors_active: bool = False
 _lidar_stop_latched_fwd: bool = False
 _lidar_stop_latched_rev: bool = False
+_lidar_clear_streak_fwd: int = 0
+_lidar_clear_streak_rev: int = 0
+_lidar_guard_lock = threading.Lock()
 _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
 _last_camera_stamp: Optional[float] = None
@@ -37,16 +40,28 @@ WATCHDOG_TIMEOUT_S = 0.5
 ROVER_WIDTH_M = 0.25
 LIDAR_GUARD_EXTRA_WIDTH_M = 0.12
 LIDAR_GUARD_M = 0.40
+try:
+    LIDAR_GUARD_HALF_ANGLE_DEG = float(os.environ.get("AXM_LIDAR_GUARD_HALF_ANGLE_DEG", "20"))
+except ValueError:
+    LIDAR_GUARD_HALF_ANGLE_DEG = 20.0
+LIDAR_GUARD_FULL_ANGLE_DEG = 2.0 * LIDAR_GUARD_HALF_ANGLE_DEG
+try:
+    LIDAR_GUARD_RELEASE_M = float(os.environ.get("AXM_LIDAR_GUARD_RELEASE_M", str(LIDAR_GUARD_M + 0.08)))
+except ValueError:
+    LIDAR_GUARD_RELEASE_M = LIDAR_GUARD_M + 0.08
+try:
+    LIDAR_GUARD_CLEAR_FRAMES = max(1, int(os.environ.get("AXM_LIDAR_GUARD_CLEAR_FRAMES", "3")))
+except ValueError:
+    LIDAR_GUARD_CLEAR_FRAMES = 3
 TELEMETRY_INTERVAL_S = 5.0
 KEEPALIVE_INTERVAL_S = 2.0
 COMMAND_POLL_S = 0.1
 HUB_LINK_GRACE_S = 45.0
 LIDAR_ARC_MAX_AGE_S = 0.8
 
-# Gecoma motor shield: cmd_vel axes swapped vs nominal (do not rewire).
 def _remap_ui_drive(forward: float, turn: float) -> Tuple[float, float]:
-    """UI forward/turn -> ROS linear_x, angular_z (Gecoma axes swapped)."""
-    return -turn, forward
+    """UI forward/turn -> ROS linear_x, angular_z."""
+    return forward, turn
 
 
 def _camera_fps() -> float:
@@ -93,9 +108,19 @@ def _hub_link_ok() -> bool:
 
 
 def _guard_half_angle_rad() -> float:
-    """Front cone half-angle so rover width fits at guard distance."""
-    effective_width = ROVER_WIDTH_M + LIDAR_GUARD_EXTRA_WIDTH_M
-    return math.atan((effective_width / 2.0) / LIDAR_GUARD_M)
+    """Fixed forward guard cone half-angle (default 20° → 40° full)."""
+    try:
+        deg = float(_env("AXM_LIDAR_GUARD_HALF_ANGLE_DEG", str(LIDAR_GUARD_HALF_ANGLE_DEG)))
+    except ValueError:
+        deg = LIDAR_GUARD_HALF_ANGLE_DEG
+    return math.radians(max(5.0, min(deg, 89.0)))
+
+
+def _forward_guard_cone(lidar_arc: Dict[str, Any]) -> Tuple[Optional[float], List[int]]:
+    """Min distance and sector indices strictly inside the forward guard cone."""
+    half_rad = _guard_half_angle_rad()
+    idx = _sector_indices_in_cone(lidar_arc, 0.0, half_rad)
+    return _min_dist_from_indices(lidar_arc, idx), idx
 
 
 def _sector_indices_in_cone(lidar_arc: Dict[str, Any], center_rad: float, half_angle_rad: float) -> List[int]:
@@ -129,23 +154,9 @@ def _min_dist_from_indices(lidar_arc: Dict[str, Any], indices: List[int]) -> Opt
     return min(dists) if dists else None
 
 
-def _cone_min_dist(lidar_arc: Dict[str, Any], center_rad: float, half_angle_rad: float) -> Optional[float]:
-    primary_idx = _sector_indices_in_cone(lidar_arc, center_rad, half_angle_rad)
-    d = _min_dist_from_indices(lidar_arc, primary_idx)
-    if d is not None:
-        return d
-    # Fallback: widen cone if center bins are empty.
-    d = _min_dist_from_indices(lidar_arc, _sector_indices_in_cone(lidar_arc, center_rad, max(half_angle_rad, math.radians(45.0))))
-    if d is not None:
-        return d
-    # Last resort: nearest valid point from any sector.
-    sectors = lidar_arc.get("sectors") or []
-    vals = [float(s.get("dist_m")) for s in sectors if s.get("dist_m") is not None]
-    return min(vals) if vals else None
-
-
 def _lidar_guard_state(lidar_arc: Dict[str, Any]) -> Dict[str, Any]:
     half_rad = _guard_half_angle_rad()
+    half_deg = math.degrees(half_rad)
     fov_deg = float(lidar_arc.get("fov_deg") or 160.0)
     stamp = lidar_arc.get("stamp")
     now = time.time()
@@ -156,54 +167,109 @@ def _lidar_guard_state(lidar_arc: Dict[str, Any]) -> Dict[str, Any]:
     lidar_stale = age_s is None or age_s > float(
         _env("AXM_LIDAR_ARC_MAX_AGE_S", str(LIDAR_ARC_MAX_AGE_S))
     )
-    m_fwd = _cone_min_dist(lidar_arc, 0.0, half_rad)
-    # Rear guard works only if arc covers rear hemisphere (near 360 deg).
-    m_rev = _cone_min_dist(lidar_arc, math.pi, half_rad) if fov_deg >= 300.0 else None
-    blocked_fwd = lidar_stale or (m_fwd is None) or (m_fwd < LIDAR_GUARD_M)
-    blocked_rev = (m_rev is not None) and (m_rev < LIDAR_GUARD_M)
-    half_deg = math.degrees(_guard_half_angle_rad())
-    idx_fwd = _sector_indices_in_cone(lidar_arc, 0.0, half_rad)
-    idx_rev = _sector_indices_in_cone(lidar_arc, math.pi, half_rad) if fov_deg >= 300.0 else []
+    m_cone, idx_fwd = _forward_guard_cone(lidar_arc)
+    sectors = lidar_arc.get("sectors") or []
+    center_idx = len(sectors) // 2 if sectors else 0
+    center_d = None
+    if sectors and center_idx in idx_fwd and 0 <= center_idx < len(sectors):
+        raw_center = sectors[center_idx].get("dist_m")
+        if raw_center is not None:
+            center_d = float(raw_center)
+    # STOP only from points inside the ~40° forward cone; all other sectors ignored.
+    blocked_fwd = (m_cone is not None) and (m_cone < LIDAR_GUARD_M)
+    blocked_rev = False
     return {
-        "active": blocked_fwd or blocked_rev,
+        "active": blocked_fwd,
         "active_forward": blocked_fwd,
         "active_backward": blocked_rev,
-        "min_forward_m": round(m_fwd, 3) if m_fwd is not None else None,
-        "min_backward_m": round(m_rev, 3) if m_rev is not None else None,
+        "min_forward_m": round(m_cone, 3) if m_cone is not None else None,
+        "min_backward_m": None,
         "threshold_m": LIDAR_GUARD_M,
+        "release_m": round(LIDAR_GUARD_RELEASE_M, 3),
         "rover_width_m": ROVER_WIDTH_M,
         "guard_effective_width_m": round(ROVER_WIDTH_M + LIDAR_GUARD_EXTRA_WIDTH_M, 3),
         "guard_half_angle_deg": round(half_deg, 1),
         "guard_full_angle_deg": round(2.0 * half_deg, 1),
         "sector_indices": idx_fwd,
-        "rear_sector_indices": idx_rev,
-        "forward_data_ok": (m_fwd is not None) and (not lidar_stale),
+        "rear_sector_indices": [],
+        "forward_data_ok": (m_cone is not None) and (not lidar_stale),
+        "forward_cone_ok": m_cone is not None,
+        "center_forward_m": round(center_d, 3) if center_d is not None else None,
         "lidar_stale": lidar_stale,
         "lidar_age_s": round(age_s, 3) if age_s is not None else None,
     }
 
 
+def _apply_lidar_latches(guard: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply hysteresis/latch so guard state does not flap on noisy scans."""
+    global _lidar_stop_latched_fwd, _lidar_stop_latched_rev
+    global _lidar_clear_streak_fwd, _lidar_clear_streak_rev
+
+    m_center = guard.get("center_forward_m")
+    m_rev = guard.get("min_backward_m")
+
+    with _lidar_guard_lock:
+        if guard.get("active_forward"):
+            _lidar_stop_latched_fwd = True
+            _lidar_clear_streak_fwd = 0
+        elif (
+            guard.get("forward_data_ok")
+            and (m_center is not None)
+            and (float(m_center) >= LIDAR_GUARD_RELEASE_M)
+        ):
+            _lidar_clear_streak_fwd += 1
+            if _lidar_clear_streak_fwd >= LIDAR_GUARD_CLEAR_FRAMES:
+                _lidar_stop_latched_fwd = False
+        else:
+            _lidar_clear_streak_fwd = 0
+
+        if guard.get("active_backward"):
+            _lidar_stop_latched_rev = True
+            _lidar_clear_streak_rev = 0
+        elif m_rev is None:
+            # No rear data in front-only FOV modes: never block reverse by stale rear latch.
+            _lidar_stop_latched_rev = False
+            _lidar_clear_streak_rev = 0
+        elif float(m_rev) >= LIDAR_GUARD_RELEASE_M:
+            _lidar_clear_streak_rev += 1
+            if _lidar_clear_streak_rev >= LIDAR_GUARD_CLEAR_FRAMES:
+                _lidar_stop_latched_rev = False
+        else:
+            _lidar_clear_streak_rev = 0
+
+        latched_fwd = _lidar_stop_latched_fwd
+        latched_rev = _lidar_stop_latched_rev
+        clear_fwd = _lidar_clear_streak_fwd
+        clear_rev = _lidar_clear_streak_rev
+
+    guard["latched_forward"] = latched_fwd
+    guard["latched_backward"] = latched_rev
+    guard["clear_streak_forward"] = clear_fwd
+    guard["clear_streak_backward"] = clear_rev
+    guard["active_effective_forward"] = latched_fwd
+    guard["active_effective_backward"] = latched_rev
+    # UI / telemetry STOP is forward-only; reverse guard still blocks backward motion.
+    guard["active_effective"] = latched_fwd
+    guard["active"] = latched_fwd
+    return guard
+
+
+def _current_lidar_guard() -> Dict[str, Any]:
+    return _apply_lidar_latches(_lidar_guard_state(_last_lidar_arc))
+
+
 def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any], bool]:
     """Block movement while danger points exist; release only on clear zone."""
-    global _lidar_stop_latched_fwd, _lidar_stop_latched_rev
-    guard = _lidar_guard_state(_last_lidar_arc)
-    if guard.get("active_forward"):
-        _lidar_stop_latched_fwd = True
-    elif guard.get("forward_data_ok"):
-        _lidar_stop_latched_fwd = False
-    if guard.get("active_backward"):
-        _lidar_stop_latched_rev = True
-    elif guard.get("min_backward_m") is not None:
-        _lidar_stop_latched_rev = False
-
-    if override:
-        return fwd, guard, False
+    guard = _current_lidar_guard()
+    # Forward guard blocks motion ahead; override (Shift/E/Space/R2) bypasses it.
     if fwd > 0:
-        if _lidar_stop_latched_fwd:
+        if bool(guard.get("latched_forward")) and not override:
             return 0.0, guard, True
         return fwd, guard, False
+    if override:
+        return fwd, guard, False
     if fwd < 0:
-        if _lidar_stop_latched_rev:
+        if bool(guard.get("latched_backward")):
             return 0.0, guard, True
         return fwd, guard, False
     return 0.0, guard, False
@@ -223,7 +289,7 @@ def _collect_perception(local_web: str) -> Dict[str, Any]:
             _last_lidar_stamp = stamp
         out["lidar_arc"] = arc_data
 
-    out["lidar_guard"] = _lidar_guard_state(_last_lidar_arc)
+    out["lidar_guard"] = _current_lidar_guard()
     return out
 
 
@@ -677,6 +743,13 @@ def execute_command(
             turn = float(params.get("turn", params.get("angular_z", 0.0))) * scale
             lidar_override = bool(params.get("lidar_override"))
             fwd, guard, guard_blocked = _apply_lidar_guard(fwd, lidar_override)
+            if abs(fwd) > 1e-3 or lidar_override or guard_blocked:
+                print(
+                    "[fleet-agent] DRIVE "
+                    f"fwd={round(fwd,3)} turn={round(turn,3)} override={lidar_override} "
+                    f"blocked={guard_blocked} guard_fwd={guard.get('active_forward')} "
+                    f"min={guard.get('min_forward_m')} stale={guard.get('lidar_stale')}"
+                )
             result["lidar_guard"] = guard
             if guard_blocked and not lidar_override:
                 result["lidar_blocked"] = True

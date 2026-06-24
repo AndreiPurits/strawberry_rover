@@ -186,12 +186,21 @@ async function sendCommand(action, params = {}) {
 
 function applyLidarLockUi() {
   if (lidarBlock) lidarBlock.classList.toggle("guard-active", lidarGuardActive);
-  if (controlsRail) controlsRail.classList.toggle("lidar-locked", lidarGuardActive && !lidarOverrideActive);
-  if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !(lidarGuardActive && !lidarOverrideActive));
+  if (controlsRail) controlsRail.classList.toggle("lidar-locked", lidarGuardActive);
+  if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !lidarGuardActive);
+}
+
+function forwardGuardActive(guard) {
+  if (!guard) return false;
+  if (guard.active_effective_forward != null) return Boolean(guard.active_effective_forward);
+  if (guard.latched_forward != null) return Boolean(guard.latched_forward);
+  if (guard.active_forward != null) return Boolean(guard.active_forward);
+  return Boolean(guard.active_effective ?? guard.active);
 }
 
 function applyLidarGuard(fwd, override) {
-  if (fwd > 0 && lidarGuardActive && !override) return 0;
+  if (override) return fwd;
+  if (fwd > 0 && lidarGuardActive) return 0;
   return fwd;
 }
 
@@ -376,12 +385,12 @@ function renderSessionHint() {
     el.className = "session-hint muted";
     return;
   }
-  if (lidarGuardActive && !lidarOverrideActive) {
-    el.textContent = "LiDAR СТОП: нажмите Shift / E / R2, чтобы проехать";
+  if (lidarGuardActive) {
+    el.textContent = "LiDAR СТОП: движение вперед заблокировано";
     el.className = "session-hint guard-stop";
     return;
   }
-  el.textContent = "Manual: WASD / стрелки / Xbox · Shift/E/Пробел или R2 = снять LiDAR-стоп · LB/RB = скорость";
+  el.textContent = "Manual: WASD / стрелки / Xbox · LB/RB = скорость";
   el.className = "session-hint ready";
 }
 
@@ -518,9 +527,8 @@ function renderLidarGuardZone(arc, guard) {
   const { cx, cy, minR } = radii;
   const thresholdM = Number(guard.threshold_m || 0.4);
   const lookaheadM = 2.0;
-  const halfDeg = Number(guard.guard_half_angle_deg || 17.4);
+  const halfDeg = Number(guard.guard_half_angle_deg || 20);
   const halfRad = (halfDeg * Math.PI) / 180;
-  const lookHalfRad = Math.min((arc.fov_deg || 160) * (Math.PI / 180) * 0.5, halfRad * 1.35);
   const center = -Math.PI / 2;
   const makeZonePath = (halfAngleRad, distM, className) => {
     const a0 = center - halfAngleRad;
@@ -543,8 +551,8 @@ function renderLidarGuardZone(arc, guard) {
     g.appendChild(path);
   };
 
-  // Far corridor (gray) up to 2m.
-  makeZonePath(lookHalfRad, lookaheadM, "lidar-guard-zone");
+  // Guard corridor = fixed ~40° cone ahead; side points are ignored for STOP.
+  makeZonePath(halfRad, lookaheadM, "lidar-guard-zone");
   // Near danger zone (red) inside corridor.
   makeZonePath(halfRad, Math.min(thresholdM, lookaheadM), "lidar-danger-zone");
 }
@@ -601,8 +609,9 @@ function renderLidarArc(arc, guard) {
       `M ${x0i} ${y0i} L ${x0o} ${y0o} A ${r + band} ${r + band} 0 0 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${Math.max(minR, r - band)} ${Math.max(minR, r - band)} 0 0 0 ${x0i} ${y0i} Z`
     );
     const guardIdx = new Set((guard?.sector_indices || []).map((x) => Number(x)));
-    const inGuard = guardIdx.size ? guardIdx.has(i) : Math.abs(i - (n - 1) / 2) <= 1;
-    const blocked = guard?.active && inGuard && dist != null && dist < (guard.threshold_m || 0.4);
+    const inGuard = guardIdx.has(i);
+    const guardActive = forwardGuardActive(guard);
+    const blocked = guardActive && inGuard && dist != null && dist < (guard.threshold_m || 0.4);
     path.setAttribute("class", `lidar-sector level-${blocked ? 3 : sec.level || 0}`);
     g.appendChild(path);
   });
@@ -915,35 +924,33 @@ function renderLinkIndicator(r) {
 
 function renderLidarGuardBadge(guard) {
   if (!lidarGuardBadge) return;
-  lidarGuardActive = Boolean(guard?.active);
+  const guardActive = forwardGuardActive(guard);
+  lidarGuardActive = guardActive;
   applyLidarLockUi();
   if (lidarGuardBanner) {
-    if (!lidarGuardActive) {
+    if (!guardActive) {
       lidarGuardBanner.classList.add("hidden");
       lidarGuardBanner.textContent = "";
-    } else if (lidarOverrideActive) {
-      lidarGuardBanner.classList.remove("hidden");
-      lidarGuardBanner.textContent = "СТОП СНЯТ";
     } else {
       lidarGuardBanner.classList.remove("hidden");
       lidarGuardBanner.textContent = "СТОП";
     }
   }
-  if (!lidarGuardActive) {
+  if (!guardActive) {
     lidarGuardBadge.classList.add("hidden");
     lidarGuardBadge.classList.remove("override", "stop-active");
     return;
   }
   lidarGuardBadge.classList.remove("hidden");
   if (lidarOverrideActive) {
-    lidarGuardBadge.textContent = "OVERRIDE (R2)";
+    lidarGuardBadge.textContent = "OVERRIDE";
     lidarGuardBadge.classList.add("override");
     lidarGuardBadge.classList.remove("stop-active");
-  } else {
-    lidarGuardBadge.textContent = "СТОП";
-    lidarGuardBadge.classList.remove("override");
-    lidarGuardBadge.classList.add("stop-active");
+    return;
   }
+  lidarGuardBadge.textContent = "СТОП";
+  lidarGuardBadge.classList.remove("override");
+  lidarGuardBadge.classList.add("stop-active");
 }
 
 function renderOperatorBadge(op) {
@@ -1175,7 +1182,7 @@ function renderGamepadStatus() {
     el.textContent = "Геймпад: не виден — подключите к ПК с браузером";
     return;
   }
-  const guardHint = lidarGuardActive ? " · R2 = снять стоп" : "";
+  const guardHint = lidarGuardActive ? " · LiDAR STOP" : "";
   const speedHint = " · LB/RB = скорость";
   el.textContent = gamepadState.active
     ? `Геймпад: ${gamepadState.name} — стик / D-pad / RT${guardHint}${speedHint}`

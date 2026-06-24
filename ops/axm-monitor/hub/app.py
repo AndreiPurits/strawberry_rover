@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import time
 import uuid
@@ -14,9 +15,11 @@ from typing import Any, Dict, List, Optional, Set
 
 import bcrypt
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+from webrtc_relay import WEBRTC_OK, close_relay, create_relay_answer
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SESSION_COOKIE = "axm_session"
@@ -25,10 +28,11 @@ SESSION_REMEMBER_TTL_S = 60 * 60 * 24 * 30
 OPERATOR_LOCK_TTL_S = 120
 MJPEG_BOUNDARY = b"frame"
 
-app = FastAPI(title="AXM Fleet Monitor", version="0.5.3")
+app = FastAPI(title="AXM Fleet Monitor", version="0.7.0")
 
 _sessions: Dict[str, float] = {}
 _dashboard_clients: Set[WebSocket] = set()
+_dashboard_ws_users: Dict[WebSocket, str] = {}
 _rovers: Dict[str, Dict[str, Any]] = {}
 _command_queues: Dict[str, List[Dict[str, Any]]] = {}
 _command_log: List[Dict[str, Any]] = []
@@ -77,9 +81,45 @@ def _agent_tokens() -> Dict[str, str]:
     return out
 
 
+def _normalize_username(username: str) -> str:
+    user = (username or "").strip()
+    if not re.fullmatch(r"[a-zA-Z0-9._-]{2,32}", user):
+        raise ValueError("invalid_username")
+    return user
+
+
+def _auth_users() -> Optional[Dict[str, bytes]]:
+    blob = _env("AXM_USERS_JSON")
+    if not blob:
+        return None
+    try:
+        parsed = json.loads(blob)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    out: Dict[str, bytes] = {}
+    for key, val in parsed.items():
+        if not val:
+            continue
+        out[str(key)] = val.encode() if isinstance(val, str) else bytes(val)
+    return out or None
+
+
 def _verify_password(username: str, password: str) -> bool:
-    if username != _admin_user():
+    try:
+        user = _normalize_username(username)
+    except ValueError:
         return False
+    users = _auth_users()
+    if users is not None:
+        phash = users.get(user)
+        if not phash:
+            return False
+        try:
+            return bcrypt.checkpw(password.encode(), phash)
+        except ValueError:
+            return False
     try:
         return bcrypt.checkpw(password.encode(), _admin_password_hash())
     except ValueError:
@@ -91,36 +131,52 @@ def _session_secret() -> bytes:
     return raw.encode()
 
 
-def _sign_session(expires_at: float) -> str:
-    payload = str(int(expires_at))
+def _sign_session(username: str, expires_at: float) -> str:
+    payload = f"{username}:{int(expires_at)}"
     sig = hmac.new(_session_secret(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
 
 
-def _issue_session(remember: bool = False) -> tuple[str, int]:
+def _issue_session(username: str, remember: bool = False) -> tuple[str, int]:
     ttl = SESSION_REMEMBER_TTL_S if remember else SESSION_TTL_S
     expires = time.time() + ttl
-    return _sign_session(expires), ttl
+    return _sign_session(username, expires), ttl
 
 
-def _session_valid(token: Optional[str]) -> bool:
+def _parse_session(token: Optional[str]) -> Optional[tuple[str, float]]:
     if not token or "." not in token:
-        return False
+        return None
     payload, sig = token.rsplit(".", 1)
     expected = hmac.new(_session_secret(), payload.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, expected):
-        return False
-    try:
-        expires = float(payload)
-    except ValueError:
-        return False
-    return expires >= time.time()
+        return None
+    if ":" in payload:
+        user_part, exp_part = payload.split(":", 1)
+        try:
+            expires = float(exp_part)
+        except ValueError:
+            return None
+        user = user_part
+    else:
+        try:
+            expires = float(payload)
+        except ValueError:
+            return None
+        user = _admin_user()
+    if expires < time.time():
+        return None
+    return user, expires
+
+
+def _session_valid(token: Optional[str]) -> bool:
+    return _parse_session(token) is not None
 
 
 def require_user(request: Request) -> str:
-    if not _session_valid(request.cookies.get(SESSION_COOKIE)):
+    parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
+    if not parsed:
         raise HTTPException(status_code=401, detail="login_required")
-    return _admin_user()
+    return parsed[0]
 
 
 def _verify_agent(rover_id: str, token: str) -> bool:
@@ -164,13 +220,49 @@ def _link_status(rtt_ms: Optional[float], camera_age_ms: Optional[float]) -> str
 
 
 def _merge_telemetry(prev: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
-    telemetry = dict(new or {})
-    prev_p = (prev or {}).get("perception") or {}
-    perception = dict(telemetry.get("perception") or {})
-    if not perception.get("lidar_arc") and prev_p.get("lidar_arc"):
-        perception["lidar_arc"] = prev_p["lidar_arc"]
-    telemetry["perception"] = perception
-    return telemetry
+    if not new:
+        return dict(prev or {})
+    merged = dict(prev or {})
+    for key, val in new.items():
+        if key == "perception" and isinstance(val, dict):
+            p = dict(merged.get("perception") or {})
+            p.update(val)
+            prev_p = (prev or {}).get("perception") or {}
+            if not val.get("lidar_arc") and prev_p.get("lidar_arc"):
+                p["lidar_arc"] = prev_p["lidar_arc"]
+            if not val.get("lidar_guard") and prev_p.get("lidar_guard"):
+                p["lidar_guard"] = prev_p["lidar_guard"]
+            elif val.get("lidar_guard") and prev_p.get("lidar_guard"):
+                ng = dict(val["lidar_guard"])
+                min_fwd = ng.get("min_forward_m")
+                thresh = float(ng.get("threshold_m") or 0.4)
+                eff_fwd = ng.get("active_effective_forward")
+                if eff_fwd is None:
+                    eff_fwd = ng.get("active_effective")
+                if (
+                    not bool(eff_fwd)
+                    and min_fwd is not None
+                    and float(min_fwd) < thresh
+                ):
+                    ng["active_effective_forward"] = True
+                    ng["active_effective"] = True
+                    ng["active"] = True
+                    ng["latched_forward"] = True
+                    p["lidar_guard"] = ng
+            merged["perception"] = p
+        elif key == "mega" and isinstance(val, dict):
+            m = dict(merged.get("mega") or {})
+            for mk, mv in val.items():
+                if mv is not None:
+                    m[mk] = mv
+            merged["mega"] = m
+        elif key == "link" and isinstance(val, dict):
+            merged["link"] = {**(merged.get("link") or {}), **val}
+        elif key == "rtk" and isinstance(val, dict):
+            merged["rtk"] = {**(merged.get("rtk") or {}), **val}
+        else:
+            merged[key] = val
+    return merged
 
 
 def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Dict[str, Any]:
@@ -202,18 +294,28 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
 
 
 async def _broadcast_dashboard() -> None:
-    payload = {
+    payload_generic = {
         "type": "fleet",
-        "rovers": [_rover_public(r) for r in _rovers.values()],
+        "rovers": [_rover_public(r, None) for r in _rovers.values()],
     }
     stale: List[WebSocket] = []
     for ws in _dashboard_clients:
+        user = _dashboard_ws_users.get(ws)
+        payload = (
+            {
+                "type": "fleet",
+                "rovers": [_rover_public(r, user) for r in _rovers.values()],
+            }
+            if user
+            else payload_generic
+        )
         try:
             await ws.send_json(payload)
         except Exception:
             stale.append(ws)
     for ws in stale:
         _dashboard_clients.discard(ws)
+        _dashboard_ws_users.pop(ws, None)
 
 
 _DRIVE_ACTIONS = frozenset({"drive", "stop_drive", "command"})
@@ -256,6 +358,16 @@ class AgentPullBody(BaseModel):
     token: str
 
 
+class WebRtcViewerOfferBody(BaseModel):
+    rover_id: str = Field(min_length=1, max_length=64)
+    sdp: str = Field(min_length=10)
+
+
+class WebRtcIceBody(BaseModel):
+    rover_id: str = Field(min_length=1, max_length=64)
+    candidate: Dict[str, Any]
+
+
 class RoverCommandBody(BaseModel):
     action: str = Field(min_length=1, max_length=32)
     params: Dict[str, Any] = Field(default_factory=dict)
@@ -294,8 +406,12 @@ def login_page() -> FileResponse:
 def api_login(body: LoginBody) -> JSONResponse:
     if not _verify_password(body.username, body.password):
         raise HTTPException(status_code=401, detail="invalid_credentials")
-    token, ttl = _issue_session(body.remember)
-    resp = JSONResponse({"ok": True})
+    try:
+        username = _normalize_username(body.username)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="invalid_credentials")
+    token, ttl = _issue_session(username, body.remember)
+    resp = JSONResponse({"ok": True, "username": username})
     resp.set_cookie(
         SESSION_COOKIE,
         token,
@@ -325,11 +441,41 @@ def static_dashboard_redirect() -> RedirectResponse:
     return RedirectResponse("/", status_code=302)
 
 
+@app.get("/api/me")
+def api_me(user: str = Depends(require_user)) -> Dict[str, Any]:
+    return {"ok": True, "username": user}
+
+
 @app.get("/")
 def root(request: Request):
-    if not _session_valid(request.cookies.get(SESSION_COOKIE)):
+    parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
+    if not parsed:
         return RedirectResponse("/login", status_code=302)
-    return FileResponse(STATIC_DIR / "dashboard.html")
+    user, _ = parsed
+    rows = sorted(_rovers.values(), key=lambda r: r.get("name", r["id"]))
+    fleet = {"ok": True, "rovers": [_rover_public(r, user) for r in rows]}
+    html = (STATIC_DIR / "dashboard.html").read_text(encoding="utf-8")
+    boot = json.dumps(fleet, ensure_ascii=False)
+    user_json = json.dumps(user, ensure_ascii=False)
+    inject = (
+        f'  <script>window.__AXM_BOOT_FLEET__={boot};</script>\n'
+        f'  <script>window.__AXM_USER__={user_json};</script>\n'
+        "  <script>\n"
+        "  document.addEventListener('DOMContentLoaded',function(){\n"
+        "    var d=window.__AXM_BOOT_FLEET__;\n"
+        "    if(!d||!d.rovers||!d.rovers.length)return;\n"
+        "    var sel=document.getElementById('rover-select');\n"
+        "    var st=document.getElementById('rover-status');\n"
+        "    if(!sel)return;\n"
+        "    sel.innerHTML='<option value=\"\">— выберите ровер —</option>'+d.rovers.map(function(r){\n"
+        "      return '<option value=\"'+r.id+'\">'+(r.name||r.id)+(r.online?' ●':' ○')+'</option>';\n"
+        "    }).join('');\n"
+        "    if(st)st.textContent=d.rovers.filter(function(r){return r.online;}).length+' online / '+d.rovers.length+' всего';\n"
+        "  });\n"
+        "  </script>\n"
+    )
+    html = html.replace("</head>", inject + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/rovers")
@@ -492,6 +638,62 @@ async def agent_pull_commands(body: AgentPullBody) -> Dict[str, Any]:
     return {"ok": True, "commands": pending}
 
 
+def _ice_servers() -> List[Dict[str, Any]]:
+    raw = _env("AXM_ICE_SERVERS", "")
+    if raw:
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+    servers: List[Dict[str, Any]] = [{"urls": _env("AXM_STUN_URL", "stun:stun.l.google.com:19302")}]
+    turn_url = _env("AXM_TURN_URL", "")
+    if turn_url:
+        servers.append(
+            {
+                "urls": turn_url,
+                "username": _env("AXM_TURN_USER", ""),
+                "credential": _env("AXM_TURN_PASS", ""),
+            }
+        )
+    return servers
+
+
+@app.get("/api/webrtc/config")
+def api_webrtc_config(user: str = Depends(require_user)) -> Dict[str, Any]:
+    return {"ok": True, "iceServers": _ice_servers()}
+
+
+def _get_camera_jpeg(rover_id: str) -> tuple:
+    frame = _camera_frames.get(rover_id) or {}
+    data = frame.get("bytes")
+    stamp = float(frame.get("updated_at") or time.time())
+    return data, stamp
+
+
+@app.post("/api/webrtc/offer")
+async def api_webrtc_offer(body: WebRtcViewerOfferBody, user: str = Depends(require_user)) -> Dict[str, Any]:
+    if not WEBRTC_OK:
+        raise HTTPException(status_code=503, detail="webrtc_not_available")
+    if body.rover_id not in _rovers:
+        raise HTTPException(status_code=404, detail="rover_not_found")
+    try:
+        answer_sdp = await create_relay_answer(
+            body.rover_id,
+            body.sdp,
+            _get_camera_jpeg,
+            _ice_servers(),
+            fps=float(_env("AXM_WEBRTC_FPS", "15")),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"webrtc_failed:{exc}") from exc
+    return {"ok": True, "answer": answer_sdp}
+
+
+@app.post("/api/webrtc/ice")
+async def api_webrtc_viewer_ice(body: WebRtcIceBody, user: str = Depends(require_user)) -> Dict[str, Any]:
+    return {"ok": True}
+
+
 @app.post("/api/agents/heartbeat")
 async def agent_heartbeat(body: HeartbeatBody) -> Dict[str, Any]:
     if not _verify_agent(body.rover_id, body.token):
@@ -518,13 +720,19 @@ async def agent_heartbeat(body: HeartbeatBody) -> Dict[str, Any]:
 async def ws_dashboard(ws: WebSocket) -> None:
     await ws.accept()
     cookie = ws.cookies.get(SESSION_COOKIE)
-    if not _session_valid(cookie):
+    parsed = _parse_session(cookie)
+    if not parsed:
         await ws.close(code=4401)
         return
+    user, _ = parsed
     _dashboard_clients.add(ws)
+    _dashboard_ws_users[ws] = user
     try:
         await ws.send_json(
-            {"type": "fleet", "rovers": [_rover_public(r) for r in _rovers.values()]}
+            {
+                "type": "fleet",
+                "rovers": [_rover_public(r, user) for r in _rovers.values()],
+            }
         )
         while True:
             raw = await ws.receive_text()
@@ -534,16 +742,21 @@ async def ws_dashboard(ws: WebSocket) -> None:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
                 continue
-            if msg.get("type") != "drive":
+            msg_type = str(msg.get("type") or "")
+            if msg_type == "webrtc_ice":
+                continue
+            if msg_type != "drive":
                 continue
             rover_id = str(msg.get("rover_id") or "").strip()
             if not rover_id:
                 continue
-            user = _admin_user()
             try:
                 _require_operator_lock(rover_id, user)
             except HTTPException:
                 continue
+            lock = _operator_locks.get(rover_id)
+            if lock and lock.get("user") == user:
+                lock["expires"] = time.time() + OPERATOR_LOCK_TTL_S
             action = "stop_drive" if msg.get("stop") else "drive"
             params: Dict[str, Any] = {
                 "forward": float(msg.get("forward", 0.0)),
@@ -557,6 +770,7 @@ async def ws_dashboard(ws: WebSocket) -> None:
         pass
     finally:
         _dashboard_clients.discard(ws)
+        _dashboard_ws_users.pop(ws, None)
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
