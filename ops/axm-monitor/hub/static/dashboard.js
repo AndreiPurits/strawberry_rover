@@ -184,10 +184,15 @@ async function sendCommand(action, params = {}) {
   return res.json();
 }
 
+function lidarLockEngaged() {
+  return lidarGuardActive && !lidarOverrideActive;
+}
+
 function applyLidarLockUi() {
-  if (lidarBlock) lidarBlock.classList.toggle("guard-active", lidarGuardActive);
-  if (controlsRail) controlsRail.classList.toggle("lidar-locked", lidarGuardActive);
-  if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !lidarGuardActive);
+  const locked = lidarLockEngaged();
+  if (lidarBlock) lidarBlock.classList.toggle("guard-active", locked);
+  if (controlsRail) controlsRail.classList.toggle("lidar-locked", locked);
+  if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !locked);
 }
 
 function forwardGuardActive(guard) {
@@ -355,8 +360,10 @@ function driveTick() {
   if (now - lastDriveSentAt < DRIVE_INTERVAL_MS) return;
   lastDriveSentAt = now;
   const moving = Math.abs(smoothFwd) > 0.03 || Math.abs(smoothTurn) > 0.03;
-  if (!moving) sendDriveFast(0, 0, pendingOverride, true);
-  else sendDriveFast(smoothFwd, smoothTurn, pendingOverride, false);
+  if (!moving) {
+    if (pendingOverride) sendDriveFast(0, 0, true, false);
+    else sendDriveFast(0, 0, false, true);
+  } else sendDriveFast(smoothFwd, smoothTurn, pendingOverride, false);
 }
 
 function queueDrive(fwd, turn, override = false) {
@@ -383,6 +390,11 @@ function renderSessionHint() {
   if (!sessionStarted) {
     el.textContent = "Нажмите Manual или Start — затем WASD / стрелки / Xbox";
     el.className = "session-hint muted";
+    return;
+  }
+  if (lidarOverrideActive) {
+    el.textContent = "OVERRIDE: Shift/E/Space — проезд вперед разрешён";
+    el.className = "session-hint ready";
     return;
   }
   if (lidarGuardActive) {
@@ -527,7 +539,7 @@ function renderLidarGuardZone(arc, guard) {
   const { cx, cy, minR } = radii;
   const thresholdM = Number(guard.threshold_m || 0.4);
   const lookaheadM = 2.0;
-  const halfDeg = Number(guard.guard_half_angle_deg || 20);
+  const halfDeg = Number(guard.guard_half_angle_deg || 17.4);
   const halfRad = (halfDeg * Math.PI) / 180;
   const center = -Math.PI / 2;
   const makeZonePath = (halfAngleRad, distM, className) => {
@@ -926,9 +938,10 @@ function renderLidarGuardBadge(guard) {
   if (!lidarGuardBadge) return;
   const guardActive = forwardGuardActive(guard);
   lidarGuardActive = guardActive;
+  const showStop = guardActive && !lidarOverrideActive;
   applyLidarLockUi();
   if (lidarGuardBanner) {
-    if (!guardActive) {
+    if (!showStop) {
       lidarGuardBanner.classList.add("hidden");
       lidarGuardBanner.textContent = "";
     } else {
@@ -1182,7 +1195,7 @@ function renderGamepadStatus() {
     el.textContent = "Геймпад: не виден — подключите к ПК с браузером";
     return;
   }
-  const guardHint = lidarGuardActive ? " · LiDAR STOP" : "";
+  const guardHint = lidarLockEngaged() ? " · LiDAR STOP" : lidarOverrideActive ? " · OVERRIDE" : "";
   const speedHint = " · LB/RB = скорость";
   el.textContent = gamepadState.active
     ? `Геймпад: ${gamepadState.name} — стик / D-pad / RT${guardHint}${speedHint}`

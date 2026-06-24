@@ -29,6 +29,7 @@ _lidar_stop_latched_rev: bool = False
 _lidar_clear_streak_fwd: int = 0
 _lidar_clear_streak_rev: int = 0
 _lidar_guard_lock = threading.Lock()
+_lidar_override_until: float = 0.0
 _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
 _last_camera_stamp: Optional[float] = None
@@ -38,13 +39,8 @@ _hub_ok_lock = threading.Lock()
 
 WATCHDOG_TIMEOUT_S = 0.5
 ROVER_WIDTH_M = 0.25
-LIDAR_GUARD_EXTRA_WIDTH_M = 0.12
 LIDAR_GUARD_M = 0.40
-try:
-    LIDAR_GUARD_HALF_ANGLE_DEG = float(os.environ.get("AXM_LIDAR_GUARD_HALF_ANGLE_DEG", "20"))
-except ValueError:
-    LIDAR_GUARD_HALF_ANGLE_DEG = 20.0
-LIDAR_GUARD_FULL_ANGLE_DEG = 2.0 * LIDAR_GUARD_HALF_ANGLE_DEG
+LIDAR_OVERRIDE_HOLD_S = 0.55
 try:
     LIDAR_GUARD_RELEASE_M = float(os.environ.get("AXM_LIDAR_GUARD_RELEASE_M", str(LIDAR_GUARD_M + 0.08)))
 except ValueError:
@@ -108,12 +104,28 @@ def _hub_link_ok() -> bool:
 
 
 def _guard_half_angle_rad() -> float:
-    """Fixed forward guard cone half-angle (default 20° → 40° full)."""
-    try:
-        deg = float(_env("AXM_LIDAR_GUARD_HALF_ANGLE_DEG", str(LIDAR_GUARD_HALF_ANGLE_DEG)))
-    except ValueError:
-        deg = LIDAR_GUARD_HALF_ANGLE_DEG
-    return math.radians(max(5.0, min(deg, 89.0)))
+    """Half-angle of forward guard cone: rover width at guard distance."""
+    raw = _env("AXM_LIDAR_GUARD_HALF_ANGLE_DEG", "")
+    if raw:
+        try:
+            return math.radians(max(5.0, min(float(raw), 89.0)))
+        except ValueError:
+            pass
+    return math.atan((ROVER_WIDTH_M / 2.0) / LIDAR_GUARD_M)
+
+
+def _guard_full_angle_deg() -> float:
+    return round(math.degrees(_guard_half_angle_rad()) * 2.0, 1)
+
+
+def _note_lidar_override(active: bool) -> None:
+    global _lidar_override_until
+    if active:
+        _lidar_override_until = time.monotonic() + LIDAR_OVERRIDE_HOLD_S
+
+
+def _lidar_override_live() -> bool:
+    return time.monotonic() < _lidar_override_until
 
 
 def _forward_guard_cone(lidar_arc: Dict[str, Any]) -> Tuple[Optional[float], List[int]]:
@@ -187,7 +199,6 @@ def _lidar_guard_state(lidar_arc: Dict[str, Any]) -> Dict[str, Any]:
         "threshold_m": LIDAR_GUARD_M,
         "release_m": round(LIDAR_GUARD_RELEASE_M, 3),
         "rover_width_m": ROVER_WIDTH_M,
-        "guard_effective_width_m": round(ROVER_WIDTH_M + LIDAR_GUARD_EXTRA_WIDTH_M, 3),
         "guard_half_angle_deg": round(half_deg, 1),
         "guard_full_angle_deg": round(2.0 * half_deg, 1),
         "sector_indices": idx_fwd,
@@ -742,6 +753,7 @@ def execute_command(
             fwd = float(params.get("forward", params.get("linear_x", 0.0))) * scale
             turn = float(params.get("turn", params.get("angular_z", 0.0))) * scale
             lidar_override = bool(params.get("lidar_override"))
+            _note_lidar_override(lidar_override)
             fwd, guard, guard_blocked = _apply_lidar_guard(fwd, lidar_override)
             if abs(fwd) > 1e-3 or lidar_override or guard_blocked:
                 print(
@@ -896,7 +908,12 @@ def main() -> int:
                         prefer_web=prefer_web,
                     )
                 _watchdog_tick(args.local_web, prefer_web, args.mega_port)
-                if (_lidar_stop_latched_fwd or _lidar_stop_latched_rev) and _session_active and _motors_active:
+                if (
+                    (_lidar_stop_latched_fwd or _lidar_stop_latched_rev)
+                    and _session_active
+                    and _motors_active
+                    and not _lidar_override_live()
+                ):
                     _stop_motors(args.local_web, prefer_web, args.mega_port)
             except Exception:
                 pass
