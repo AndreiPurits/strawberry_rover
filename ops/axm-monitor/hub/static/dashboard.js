@@ -184,13 +184,59 @@ async function sendCommand(action, params = {}) {
   return res.json();
 }
 
-function lidarLockEngaged() {
+function lidarForwardBlocked() {
   return lidarGuardActive && !lidarOverrideActive;
+}
+
+function lidarLockEngaged() {
+  const kb = readKeyboardTargets();
+  const backIntent = kb.fwd < 0;
+  return lidarForwardBlocked() && !backIntent;
+}
+
+function readOverrideFromInputs() {
+  if (keysLogical.has("override")) return true;
+  if (!navigator.getGamepads) return false;
+  const pads = navigator.getGamepads();
+  for (let i = 0; i < pads.length; i += 1) {
+    const pad = pads[i];
+    if (pad && gamepadR2Pressed(pad)) return true;
+  }
+  return false;
+}
+
+function syncLidarGuardUi() {
+  const override = readOverrideFromInputs();
+  lidarOverrideActive = Boolean(override && lidarGuardActive);
+  applyLidarLockUi();
+  updateDriveKeyHighlight();
+  renderSessionHint();
+  if (lidarGuardBadge && lidarGuardActive) {
+    lidarGuardBadge.classList.remove("hidden");
+    if (lidarOverrideActive) {
+      lidarGuardBadge.textContent = "OVERRIDE";
+      lidarGuardBadge.classList.add("override");
+      lidarGuardBadge.classList.remove("stop-active");
+    } else {
+      lidarGuardBadge.textContent = "СТОП";
+      lidarGuardBadge.classList.remove("override");
+      lidarGuardBadge.classList.add("stop-active");
+    }
+  }
+  if (lidarGuardBanner) {
+    if (lidarLockEngaged()) {
+      lidarGuardBanner.classList.remove("hidden");
+      lidarGuardBanner.textContent = "СТОП";
+    } else {
+      lidarGuardBanner.classList.add("hidden");
+      lidarGuardBanner.textContent = "";
+    }
+  }
 }
 
 function applyLidarLockUi() {
   const locked = lidarLockEngaged();
-  if (lidarBlock) lidarBlock.classList.toggle("guard-active", locked);
+  if (lidarBlock) lidarBlock.classList.toggle("guard-active", lidarForwardBlocked());
   if (controlsRail) controlsRail.classList.toggle("lidar-locked", locked);
   if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !locked);
 }
@@ -301,13 +347,11 @@ function pollGamepad() {
     const override = gamepadR2Pressed(pad);
     const active = Math.abs(fwd) > 0.05 || Math.abs(turn) > 0.05;
     gamepadState.active = active;
-    lidarOverrideActive = override && lidarGuardActive;
     return { pad, fwd, turn, override, active, connected: true };
   }
   gamepadState.connected = false;
   gamepadState.active = false;
   gamepadState.name = "";
-  lidarOverrideActive = false;
   return null;
 }
 
@@ -340,16 +384,13 @@ function driveTick() {
 
   let fwd = kb.fwd;
   let turn = kb.turn;
-  let override = kb.override;
+  let override = kb.override || Boolean(gp?.override);
   if (gp && (gp.active || Math.abs(gp.fwd) > 0.05 || Math.abs(gp.turn) > 0.05)) {
     fwd = gp.fwd;
     turn = gp.turn;
   }
-  if (gp?.override) override = true;
-  lidarOverrideActive = Boolean(override && lidarGuardActive);
-  applyLidarLockUi();
-  renderSessionHint();
   pendingOverride = override;
+  syncLidarGuardUi();
   targetFwd = fwd;
   targetTurn = turn;
   const ramp = smoothRamp();
@@ -398,7 +439,7 @@ function renderSessionHint() {
     return;
   }
   if (lidarGuardActive) {
-    el.textContent = "LiDAR СТОП: движение вперед заблокировано";
+    el.textContent = "LiDAR СТОП вперед · S/▼ — назад · Shift/E/Space — override";
     el.className = "session-hint guard-stop";
     return;
   }
@@ -423,11 +464,16 @@ function updateDriveKeyHighlight() {
   if (keysLogical.has("back")) activeHints.add("s").add("arrowdown");
   if (keysLogical.has("left")) activeHints.add("a").add("arrowleft");
   if (keysLogical.has("right")) activeHints.add("d").add("arrowright");
+  const fwdBlocked = lidarForwardBlocked();
 
   document.querySelectorAll("[data-key-hint]").forEach((btn) => {
     const hints = (btn.getAttribute("data-key-hint") || "").split(",").filter(Boolean);
     const on = hints.some((h) => activeHints.has(h));
     btn.classList.toggle("key-active", on);
+  });
+  document.querySelectorAll("[data-fwd]").forEach((btn) => {
+    const f = Number(btn.getAttribute("data-fwd") || 0);
+    btn.disabled = fwdBlocked && f > 0;
   });
 }
 
@@ -936,34 +982,12 @@ function renderLinkIndicator(r) {
 
 function renderLidarGuardBadge(guard) {
   if (!lidarGuardBadge) return;
-  const guardActive = forwardGuardActive(guard);
-  lidarGuardActive = guardActive;
-  const showStop = guardActive && !lidarOverrideActive;
-  applyLidarLockUi();
-  if (lidarGuardBanner) {
-    if (!showStop) {
-      lidarGuardBanner.classList.add("hidden");
-      lidarGuardBanner.textContent = "";
-    } else {
-      lidarGuardBanner.classList.remove("hidden");
-      lidarGuardBanner.textContent = "СТОП";
-    }
-  }
-  if (!guardActive) {
+  lidarGuardActive = forwardGuardActive(guard);
+  syncLidarGuardUi();
+  if (!lidarGuardActive) {
     lidarGuardBadge.classList.add("hidden");
     lidarGuardBadge.classList.remove("override", "stop-active");
-    return;
   }
-  lidarGuardBadge.classList.remove("hidden");
-  if (lidarOverrideActive) {
-    lidarGuardBadge.textContent = "OVERRIDE";
-    lidarGuardBadge.classList.add("override");
-    lidarGuardBadge.classList.remove("stop-active");
-    return;
-  }
-  lidarGuardBadge.textContent = "СТОП";
-  lidarGuardBadge.classList.remove("override");
-  lidarGuardBadge.classList.add("stop-active");
 }
 
 function renderOperatorBadge(op) {
@@ -1165,7 +1189,7 @@ document.querySelectorAll("[data-fwd]").forEach((btn) => {
 });
 
 function keyboardDrive() {
-  updateDriveKeyHighlight();
+  syncLidarGuardUi();
 }
 
 function renderGamepadStatus() {

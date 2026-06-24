@@ -23,6 +23,7 @@ _DRIVE_MODE = "joystick"
 _last_lidar_stamp: Optional[float] = None
 _last_lidar_arc: Dict[str, Any] = {}
 _last_drive_at: float = 0.0
+_last_drive_linear_x: float = 0.0
 _motors_active: bool = False
 _lidar_stop_latched_fwd: bool = False
 _lidar_stop_latched_rev: bool = False
@@ -645,18 +646,20 @@ def _drive_serial(mega_port: str, linear_x: float, angular_z: float) -> Dict[str
 
 
 def _touch_drive(linear_x: float, angular_z: float) -> None:
-    global _last_drive_at, _motors_active
+    global _last_drive_at, _last_drive_linear_x, _motors_active
     _last_drive_at = time.monotonic()
+    _last_drive_linear_x = float(linear_x)
     _motors_active = abs(linear_x) > 1e-4 or abs(angular_z) > 1e-4
 
 
 def _stop_motors(local_web: str, prefer_web: bool, mega_port: str) -> None:
-    global _motors_active
+    global _motors_active, _last_drive_linear_x
     if prefer_web:
         _drive_local(local_web, 0.0, 0.0)
     else:
         send_command(mega_port, "M FL=1500 FR=1500 RL=1500 RR=1500")
     _motors_active = False
+    _last_drive_linear_x = 0.0
 
 
 def _watchdog_tick(local_web: str, prefer_web: bool, mega_port: str) -> None:
@@ -908,13 +911,11 @@ def main() -> int:
                         prefer_web=prefer_web,
                     )
                 _watchdog_tick(args.local_web, prefer_web, args.mega_port)
-                if (
-                    (_lidar_stop_latched_fwd or _lidar_stop_latched_rev)
-                    and _session_active
-                    and _motors_active
-                    and not _lidar_override_live()
-                ):
-                    _stop_motors(args.local_web, prefer_web, args.mega_port)
+                if _session_active and _motors_active and not _lidar_override_live():
+                    if _lidar_stop_latched_fwd and _last_drive_linear_x > 1e-4:
+                        _stop_motors(args.local_web, prefer_web, args.mega_port)
+                    elif _lidar_stop_latched_rev and _last_drive_linear_x < -1e-4:
+                        _stop_motors(args.local_web, prefer_web, args.mega_port)
             except Exception:
                 pass
             poll_stop.wait(poll_s)
