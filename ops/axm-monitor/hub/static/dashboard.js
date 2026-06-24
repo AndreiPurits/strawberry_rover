@@ -8,11 +8,15 @@ const panelSub = document.getElementById("panel-sub");
 const panelBadge = document.getElementById("panel-badge");
 const linkIndicator = document.getElementById("link-indicator");
 const lidarGuardBadge = document.getElementById("lidar-guard-badge");
+const lidarGuardBanner = document.getElementById("lidar-guard-banner");
+const lidarBlock = document.getElementById("lidar-block");
 const operatorBadge = document.getElementById("operator-badge");
 const modeJoystick = document.getElementById("mode-joystick");
 const modeAuto = document.getElementById("mode-auto");
 const joystickPanel = document.getElementById("joystick-panel");
 const autoPanel = document.getElementById("auto-panel");
+const controlsRail = document.querySelector(".controls-rail");
+const lidarLockOverlay = document.getElementById("lidar-lock-overlay");
 
 const keysDown = new Set();
 const keysLogical = new Set();
@@ -40,12 +44,51 @@ let fleetWs = null;
 let lastDriveSentAt = 0;
 let sessionStarted = false;
 let operatorLocked = false;
+let operatorRenewTimer = null;
+
+let currentUser = window.__AXM_USER__ || localStorage.getItem("axm_saved_username") || "admin";
+
+function localUsername() {
+  return currentUser;
+}
+
+function speedStorageKey() {
+  return `axm_speed_pct:${localUsername()}`;
+}
+
+function loadSpeedPct() {
+  const saved = Number(localStorage.getItem(speedStorageKey()));
+  if (Number.isFinite(saved) && saved >= 10 && saved <= 100) return saved;
+  const legacy = Number(localStorage.getItem("axm_speed_pct"));
+  if (Number.isFinite(legacy) && legacy >= 10 && legacy <= 100) return legacy;
+  return 35;
+}
+
+function saveSpeedPct() {
+  localStorage.setItem(speedStorageKey(), String(speedPct));
+}
+
+/** WS broadcast used to omit `you`; reconcile with logged-in user. */
+function normalizeOperator(op) {
+  if (!op) return { locked: false, holder: null, you: false };
+  const holder = op.holder;
+  if (op.locked && holder && holder === localUsername()) {
+    return { ...op, you: true };
+  }
+  return op;
+}
 let lidarGuardActive = false;
 let lidarOverrideActive = false;
+let speedPct = loadSpeedPct();
 
 const gamepadState = { index: null, connected: false, active: false, name: "" };
 let mjpegUrl = "";
 let stereoMjpegUrl = "";
+let lastMegaSticky = {};
+let webrtcPc = null;
+let webrtcPollTimer = null;
+let webrtcRoverId = "";
+let webrtcIceServers = null;
 const drivePad = document.getElementById("drive-pad");
 
 function clamp(v, lo, hi) {
@@ -83,6 +126,7 @@ async function claimOperator() {
   if (!selectedId) return { ok: false };
   const res = await fetch(`/api/rovers/${encodeURIComponent(selectedId)}/claim`, {
     method: "POST",
+    credentials: "same-origin",
   });
   if (res.status === 401) {
     location.href = "/login";
@@ -99,10 +143,22 @@ async function claimOperator() {
 
 async function releaseOperator() {
   if (!selectedId) return;
+  if (operatorRenewTimer) {
+    clearInterval(operatorRenewTimer);
+    operatorRenewTimer = null;
+  }
   await fetch(`/api/rovers/${encodeURIComponent(selectedId)}/release`, {
     method: "POST",
+    credentials: "same-origin",
   });
   operatorLocked = false;
+}
+
+function startOperatorRenew() {
+  if (operatorRenewTimer) clearInterval(operatorRenewTimer);
+  operatorRenewTimer = setInterval(() => {
+    if (sessionStarted && selectedId) claimOperator().catch(() => {});
+  }, 45000);
 }
 
 async function sendCommand(action, params = {}) {
@@ -126,6 +182,12 @@ async function sendCommand(action, params = {}) {
     return null;
   }
   return res.json();
+}
+
+function applyLidarLockUi() {
+  if (lidarBlock) lidarBlock.classList.toggle("guard-active", lidarGuardActive);
+  if (controlsRail) controlsRail.classList.toggle("lidar-locked", lidarGuardActive && !lidarOverrideActive);
+  if (lidarLockOverlay) lidarLockOverlay.classList.toggle("hidden", !(lidarGuardActive && !lidarOverrideActive));
 }
 
 function applyLidarGuard(fwd, override) {
@@ -181,7 +243,7 @@ function applyGamepadSpeedBumper(pad) {
   lastBumperSpeedAt = now;
   if (lb) speedPct = clamp(speedPct - 5, 10, 100);
   if (rb) speedPct = clamp(speedPct + 5, 10, 100);
-  localStorage.setItem("axm_speed_pct", String(speedPct));
+  saveSpeedPct();
   const speedSlider = document.getElementById("speed-slider");
   const speedLabel = document.getElementById("speed-label");
   if (speedSlider) speedSlider.value = String(speedPct);
@@ -270,6 +332,9 @@ function driveTick() {
     turn = gp.turn;
   }
   if (gp?.override) override = true;
+  lidarOverrideActive = Boolean(override && lidarGuardActive);
+  applyLidarLockUi();
+  renderSessionHint();
   pendingOverride = override;
   targetFwd = fwd;
   targetTurn = turn;
@@ -295,7 +360,7 @@ function renderSessionHint() {
   const el = document.getElementById("session-hint");
   if (!el) return;
   const r = selectedRover();
-  const op = r?.operator || {};
+  const op = normalizeOperator(r?.operator);
   if (!selectedId || !r?.online) {
     el.textContent = "Выберите online-ровер";
     el.className = "session-hint muted blocked";
@@ -307,11 +372,16 @@ function renderSessionHint() {
     return;
   }
   if (!sessionStarted) {
-    el.textContent = "Нажмите Start → клик по ▲◀▶▼ → WASD / стрелки / геймпад";
+    el.textContent = "Нажмите Manual или Start — затем WASD / стрелки / Xbox";
     el.className = "session-hint muted";
     return;
   }
-  el.textContent = "Управление активно · Shift/E/Пробел или R2 = снять LiDAR-стоп · LB/RB = скорость";
+  if (lidarGuardActive && !lidarOverrideActive) {
+    el.textContent = "LiDAR СТОП: нажмите Shift / E / R2, чтобы проехать";
+    el.className = "session-hint guard-stop";
+    return;
+  }
+  el.textContent = "Manual: WASD / стрелки / Xbox · Shift/E/Пробел или R2 = снять LiDAR-стоп · LB/RB = скорость";
   el.className = "session-hint ready";
 }
 
@@ -385,25 +455,39 @@ function selectRover(id, persist = true) {
     sessionStarted = false;
     operatorLocked = false;
     mjpegUrl = "";
+    stopWebRtcFront();
   }
   selectedId = id || "";
   if (persist) localStorage.setItem("axm_rover_id", selectedId);
   roverSelect.value = selectedId;
   renderRoverList();
   renderPanel();
+  if (selectedId) {
+    const r = getRover(selectedId);
+    if (r?.online) startWebRtcFront(selectedId);
+  }
+}
+
+function lidarRadii(maxDisplayM) {
+  const minR = 6;
+  const maxR = 94;
+  const ringMaxM = Math.min(2, maxDisplayM || 2);
+  return { cx: 100, cy: 102, minR, maxR, ringMaxM };
+}
+
+function distToRadius(distM, maxDisplayM, radii) {
+  const clamped = Math.min(Math.max(distM, 0.05), maxDisplayM);
+  return radii.minR + (clamped / maxDisplayM) * (radii.maxR - radii.minR);
 }
 
 function renderLidarRings(maxDisplayM) {
   const g = document.getElementById("lidar-rings");
   if (!g) return;
   g.innerHTML = "";
-  const cx = 100;
-  const cy = 102;
-  const minR = 16;
-  const maxR = 78;
-  [1, 2, 3].forEach((m) => {
-    if (m > maxDisplayM) return;
-    const r = minR + (m / maxDisplayM) * (maxR - minR);
+  const { cx, cy, minR, maxR, ringMaxM } = lidarRadii(maxDisplayM);
+  [1, 2].forEach((m) => {
+    if (m > ringMaxM) return;
+    const r = minR + (m / ringMaxM) * (maxR - minR);
     const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     ring.setAttribute("cx", String(cx));
     ring.setAttribute("cy", String(cy));
@@ -423,7 +507,49 @@ function renderLidarRings(maxDisplayM) {
   });
 }
 
-function renderLidarArc(arc) {
+function renderLidarGuardZone(arc, guard) {
+  const g = document.getElementById("lidar-guard-zone");
+  if (!g) return;
+  g.innerHTML = "";
+  if (!arc?.connected || !guard) return;
+
+  const maxDisplayM = Math.min(2, arc.display_max_m || arc.range_max_m || 2);
+  const radii = lidarRadii(maxDisplayM);
+  const { cx, cy, minR } = radii;
+  const thresholdM = Number(guard.threshold_m || 0.4);
+  const lookaheadM = 2.0;
+  const halfDeg = Number(guard.guard_half_angle_deg || 17.4);
+  const halfRad = (halfDeg * Math.PI) / 180;
+  const lookHalfRad = Math.min((arc.fov_deg || 160) * (Math.PI / 180) * 0.5, halfRad * 1.35);
+  const center = -Math.PI / 2;
+  const makeZonePath = (halfAngleRad, distM, className) => {
+    const a0 = center - halfAngleRad;
+    const a1 = center + halfAngleRad;
+    const r = distToRadius(distM, maxDisplayM, radii);
+    const x0 = cx + minR * Math.cos(a0);
+    const y0 = cy + minR * Math.sin(a0);
+    const x1 = cx + minR * Math.cos(a1);
+    const y1 = cy + minR * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a1);
+    const y2 = cy + r * Math.sin(a1);
+    const x3 = cx + r * Math.cos(a0);
+    const y3 = cy + r * Math.sin(a0);
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute(
+      "d",
+      `M ${x0} ${y0} A ${minR} ${minR} 0 0 1 ${x1} ${y1} L ${x2} ${y2} A ${r} ${r} 0 0 0 ${x3} ${y3} Z`
+    );
+    path.setAttribute("class", className);
+    g.appendChild(path);
+  };
+
+  // Far corridor (gray) up to 2m.
+  makeZonePath(lookHalfRad, lookaheadM, "lidar-guard-zone");
+  // Near danger zone (red) inside corridor.
+  makeZonePath(halfRad, Math.min(thresholdM, lookaheadM), "lidar-danger-zone");
+}
+
+function renderLidarArc(arc, guard) {
   const g = document.getElementById("lidar-sectors");
   if (!g) return;
   g.innerHTML = "";
@@ -439,14 +565,13 @@ function renderLidarArc(arc) {
     return;
   }
 
-  const maxDisplayM = arc.display_max_m || arc.range_max_m || 4;
+  const maxDisplayM = Math.min(2, arc.display_max_m || arc.range_max_m || 2);
   renderLidarRings(maxDisplayM);
+  renderLidarGuardZone(arc, guard);
 
   const n = arc.sectors.length;
-  const cx = 100;
-  const cy = 102;
-  const minR = 16;
-  const maxR = 78;
+  const radii = lidarRadii(maxDisplayM);
+  const { cx, cy, minR, maxR } = radii;
   const fov = (arc.fov_deg || 160) * (Math.PI / 180);
   const start = -Math.PI / 2 - fov / 2;
   const step = fov / n;
@@ -457,9 +582,9 @@ function renderLidarArc(arc) {
     const dist = sec.dist_m;
     if (dist == null) return;
 
-    const clamped = Math.min(Math.max(dist, 0.05), maxDisplayM);
-    const r = minR + (clamped / maxDisplayM) * (maxR - minR);
-    const band = Math.max(4, ((maxR - minR) / maxDisplayM) * 0.22);
+    const r = distToRadius(dist, maxDisplayM, radii);
+    // Sector thickness for visualization (reduced to avoid elongated blobs).
+    const band = Math.max(1.6, ((maxR - minR) / maxDisplayM) * 0.09);
 
     const x0o = cx + (r + band) * Math.cos(a0);
     const y0o = cy + (r + band) * Math.sin(a0);
@@ -475,41 +600,163 @@ function renderLidarArc(arc) {
       "d",
       `M ${x0i} ${y0i} L ${x0o} ${y0o} A ${r + band} ${r + band} 0 0 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${Math.max(minR, r - band)} ${Math.max(minR, r - band)} 0 0 0 ${x0i} ${y0i} Z`
     );
-    path.setAttribute("class", `lidar-sector level-${sec.level || 0}`);
+    const guardIdx = new Set((guard?.sector_indices || []).map((x) => Number(x)));
+    const inGuard = guardIdx.size ? guardIdx.has(i) : Math.abs(i - (n - 1) / 2) <= 1;
+    const blocked = guard?.active && inGuard && dist != null && dist < (guard.threshold_m || 0.4);
+    path.setAttribute("class", `lidar-sector level-${blocked ? 3 : sec.level || 0}`);
     g.appendChild(path);
   });
 }
 
-function renderStereoCamera(r) {
-  const img = document.getElementById("stereo-camera");
-  const ph = document.getElementById("stereo-camera-placeholder");
-  const status = document.getElementById("stereo-cam-status");
-  if (!img || !ph || !status) return;
+function mergeMega(m) {
+  const out = { ...lastMegaSticky };
+  for (const [k, v] of Object.entries(m || {})) {
+    if (v != null && v !== "") out[k] = v;
+  }
+  lastMegaSticky = out;
+  return out;
+}
 
-  const online = Boolean(r?.online);
-  const live = Boolean(r?.stereo_camera_live);
-  if (online && live && selectedId) {
-    const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
-    if (stereoMjpegUrl !== url) {
-      stereoMjpegUrl = url;
-      img.src = url;
-    }
-    img.classList.remove("hidden");
-    ph.classList.add("hidden");
-    status.textContent = "MJPEG · RealSense";
-  } else {
-    if (stereoMjpegUrl) {
-      img.removeAttribute("src");
-      stereoMjpegUrl = "";
-    }
-    img.classList.add("hidden");
-    ph.classList.remove("hidden");
-    status.textContent = online ? "Стерео — ожидание потока" : "Стерео — нет сигнала";
+async function loadIceServers() {
+  if (webrtcIceServers) return webrtcIceServers;
+  try {
+    const res = await fetch("/api/webrtc/config", { credentials: "same-origin" });
+    if (!res.ok) return [{ urls: "stun:stun.l.google.com:19302" }];
+    const data = await res.json();
+    webrtcIceServers = data.iceServers || [{ urls: "stun:stun.l.google.com:19302" }];
+  } catch (_) {
+    webrtcIceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+  }
+  return webrtcIceServers;
+}
+
+function stopWebRtcFront() {
+  if (webrtcPollTimer) {
+    clearInterval(webrtcPollTimer);
+    webrtcPollTimer = null;
+  }
+  if (webrtcPc) {
+    webrtcPc.close();
+    webrtcPc = null;
+  }
+  webrtcRoverId = "";
+  const video = document.getElementById("front-camera-webrtc");
+  if (video) {
+    video.srcObject = null;
+    video.classList.add("hidden");
   }
 }
 
-function renderFrontCamera(r) {
+async function pollWebRtcSession(roverId) {
+  if (!webrtcPc || webrtcRoverId !== roverId) return;
+  try {
+    const res = await fetch(`/api/webrtc/session/${encodeURIComponent(roverId)}`, {
+      credentials: "same-origin",
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.answer && webrtcPc.signalingState !== "stable") {
+      await webrtcPc.setRemoteDescription({ type: "answer", sdp: data.answer });
+    }
+    for (const cand of data.agent_ice || []) {
+      try {
+        await webrtcPc.addIceCandidate(cand);
+      } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+async function startWebRtcFront(roverId) {
+  if (!roverId) return;
+  if (webrtcRoverId === roverId && webrtcPc) return;
+  stopWebRtcFront();
+  webrtcRoverId = roverId;
+
+  const video = document.getElementById("front-camera-webrtc");
   const img = document.getElementById("front-camera");
+  const ph = document.getElementById("camera-placeholder");
+  const status = document.getElementById("cam-status");
+  if (!video || !ph) return;
+
+  ph.textContent = "WebRTC — подключение…";
+  ph.classList.remove("hidden");
+  img?.classList.add("hidden");
+  video.classList.add("hidden");
+
+  const iceServers = await loadIceServers();
+  const pc = new RTCPeerConnection({ iceServers });
+  webrtcPc = pc;
+
+  pc.ontrack = (ev) => {
+    if (!video) return;
+    video.srcObject = ev.streams[0] || new MediaStream([ev.track]);
+    video.classList.remove("hidden");
+    ph.classList.add("hidden");
+    img?.classList.add("hidden");
+    if (status) status.textContent = "WebRTC · live";
+  };
+  pc.onconnectionstatechange = () => {
+    if (!status) return;
+    if (pc.connectionState === "connected") {
+      status.textContent = "WebRTC · connected";
+      setTimeout(() => {
+        if (!videoHasFrames()) {
+          stopWebRtcFront();
+          renderFrontCameraMjpeg(getRover(roverId));
+        }
+      }, 2500);
+    } else if (pc.connectionState === "failed") {
+      status.textContent = "WebRTC — ошибка, MJPEG…";
+      stopWebRtcFront();
+      renderFrontCameraMjpeg(getRover(roverId));
+    }
+  };
+
+  pc.addTransceiver("video", { direction: "recvonly" });
+  pc.onicecandidate = (ev) => {
+    if (!ev.candidate) return;
+    fetch("/api/webrtc/ice", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rover_id: roverId,
+        candidate: {
+          candidate: ev.candidate.candidate,
+          sdpMid: ev.candidate.sdpMid,
+          sdpMLineIndex: ev.candidate.sdpMLineIndex,
+        },
+      }),
+    }).catch(() => {});
+  };
+
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    const res = await fetch("/api/webrtc/offer", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rover_id: roverId, sdp: offer.sdp }),
+    });
+    if (!res.ok) {
+      if (status) status.textContent = "WebRTC недоступен — MJPEG";
+      renderFrontCameraMjpeg(getRover(roverId));
+      return;
+    }
+    const data = await res.json();
+    if (data.answer) {
+      await pc.setRemoteDescription({ type: "answer", sdp: data.answer });
+    }
+  } catch (err) {
+    if (status) status.textContent = "WebRTC недоступен — MJPEG";
+    renderFrontCameraMjpeg(getRover(roverId));
+  }
+}
+
+function renderFrontCameraMjpeg(r) {
+  const img = document.getElementById("front-camera");
+  const video = document.getElementById("front-camera-webrtc");
   const ph = document.getElementById("camera-placeholder");
   const status = document.getElementById("cam-status");
   if (!img || !ph || !status) return;
@@ -522,19 +769,134 @@ function renderFrontCamera(r) {
       mjpegUrl = url;
       img.src = url;
     }
+    video?.classList.add("hidden");
     img.classList.remove("hidden");
     ph.classList.add("hidden");
     const age = r.link?.camera_age_ms;
-    status.textContent =
-      age != null ? `MJPEG · age ${Math.round(age)} ms` : "MJPEG · live";
+    status.textContent = age != null ? `MJPEG · ${Math.round(age)} ms` : "MJPEG · резерв";
   } else {
     if (mjpegUrl) {
       img.removeAttribute("src");
       mjpegUrl = "";
     }
     img.classList.add("hidden");
+    if (!video || video.classList.contains("hidden")) {
+      ph.classList.remove("hidden");
+      ph.textContent = online ? "Камера — ожидание" : "Камера — нет сигнала";
+    }
+    if (status && (!video || video.classList.contains("hidden"))) {
+      status.textContent = online ? "Передняя · ожидание" : "Передняя · offline";
+    }
+  }
+}
+
+function renderFrontCamera(r) {
+  renderFrontCameraMjpeg(r);
+}
+
+function videoHasFrames() {
+  const video = document.getElementById("front-camera-webrtc");
+  if (!video || video.classList.contains("hidden")) return false;
+  return video.readyState >= 2 && video.videoWidth > 0;
+}
+
+let rtkMap = null;
+let rtkMarker = null;
+let rtkTrail = null;
+const rtkTrack = [];
+
+function ensureRtkMap() {
+  if (rtkMap || typeof L === "undefined") return;
+  const el = document.getElementById("rtk-map");
+  if (!el) return;
+  rtkMap = L.map(el, {
+    zoomControl: false,
+    attributionControl: false,
+    dragging: true,
+    scrollWheelZoom: false,
+  }).setView([0, 0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 20,
+    opacity: 0.85,
+  }).addTo(rtkMap);
+  rtkTrail = L.polyline([], { color: "#5b8cff", weight: 2, opacity: 0.7 }).addTo(rtkMap);
+  setTimeout(() => rtkMap?.invalidateSize(), 200);
+}
+
+function renderRtkMap(rtk) {
+  ensureRtkMap();
+  const label = document.getElementById("s-rtk");
+  if (!rtk) {
+    if (label) label.textContent = "нет данных";
+    return;
+  }
+  const fixQ = Number(rtk.fix_quality ?? rtk.fix ?? 0);
+  const hasFix = fixQ > 0 && !rtk.stale;
+  const lat = hasFix ? rtk.lat : null;
+  const lon = hasFix ? rtk.lon : null;
+  const fix = rtk.fix_label || (rtk.fix != null ? `fix${rtk.fix}` : "—");
+  const sats = rtk.satellites != null ? `${rtk.satellites} sat` : "";
+  if (label) {
+    if (lat != null && lon != null) {
+      label.textContent = `${fix} · ${lat.toFixed(5)}, ${lon.toFixed(5)} ${sats}`.trim();
+      label.title = label.textContent;
+    } else if (rtk.connected) {
+      label.textContent = "ожидание fix…";
+    } else {
+      label.textContent = rtk.error ? String(rtk.error) : "нет fix";
+    }
+  }
+  if (!rtkMap || lat == null || lon == null) {
+    if (rtkMarker && rtkMap.hasLayer(rtkMarker)) rtkMap.removeLayer(rtkMarker);
+    return;
+  }
+  if (!rtkMarker) {
+    rtkMarker = L.circleMarker([lat, lon], {
+      radius: 5,
+      color: "#3ddc97",
+      fillColor: "#3ddc97",
+      fillOpacity: 0.9,
+    }).addTo(rtkMap);
+  } else if (!rtkMap.hasLayer(rtkMarker)) {
+    rtkMarker.addTo(rtkMap);
+  }
+  const pt = [lat, lon];
+  rtkMarker.setLatLng(pt);
+  const last = rtkTrack[rtkTrack.length - 1];
+  if (!last || Math.hypot(last[0] - lat, last[1] - lon) > 1e-6) {
+    rtkTrack.push(pt);
+    if (rtkTrack.length > 200) rtkTrack.shift();
+    rtkTrail.setLatLngs(rtkTrack);
+  }
+  if (rtkTrack.length <= 2) rtkMap.setView(pt, 18);
+}
+
+function renderStereoCamera(r) {
+  const img = document.getElementById("stereo-camera");
+  const ph = document.getElementById("stereo-camera-placeholder");
+  const status = document.getElementById("stereo-cam-status");
+  if (!img || !ph) return;
+
+  const online = Boolean(r?.online);
+  const live = Boolean(r?.stereo_camera_live);
+  if (online && live && selectedId) {
+    const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
+    if (stereoMjpegUrl !== url) {
+      stereoMjpegUrl = url;
+      img.src = url;
+    }
+    img.classList.remove("hidden");
+    ph.classList.add("hidden");
+    if (status) status.textContent = "2 fps";
+  } else {
+    if (stereoMjpegUrl) {
+      img.removeAttribute("src");
+      stereoMjpegUrl = "";
+    }
+    img.classList.add("hidden");
     ph.classList.remove("hidden");
-    status.textContent = online ? "Камера — ожидание потока" : "Камера — нет сигнала";
+    ph.textContent = online ? "ожидание…" : "offline";
+    if (status) status.textContent = online ? "нет потока" : "—";
   }
 }
 
@@ -547,31 +909,46 @@ function renderLinkIndicator(r) {
   linkIndicator.className = `link-badge link-${status}`;
   const rttTxt = rtt != null ? `${Math.round(rtt)} ms` : "—";
   const ageTxt = age != null ? `${Math.round(age)} ms` : "—";
-  linkIndicator.textContent = `● RTT ${rttTxt} · frame ${ageTxt}`;
-  linkIndicator.title = `Связь: ${status} (RTT ${rttTxt}, age кадра ${ageTxt})`;
+  linkIndicator.textContent = rtt != null ? `${Math.round(rtt)}ms` : "—";
+  linkIndicator.title = `RTT ${rttTxt}, кадр ${ageTxt}`;
 }
 
 function renderLidarGuardBadge(guard) {
   if (!lidarGuardBadge) return;
   lidarGuardActive = Boolean(guard?.active);
+  applyLidarLockUi();
+  if (lidarGuardBanner) {
+    if (!lidarGuardActive) {
+      lidarGuardBanner.classList.add("hidden");
+      lidarGuardBanner.textContent = "";
+    } else if (lidarOverrideActive) {
+      lidarGuardBanner.classList.remove("hidden");
+      lidarGuardBanner.textContent = "СТОП СНЯТ";
+    } else {
+      lidarGuardBanner.classList.remove("hidden");
+      lidarGuardBanner.textContent = "СТОП";
+    }
+  }
   if (!lidarGuardActive) {
     lidarGuardBadge.classList.add("hidden");
-    lidarGuardBadge.classList.remove("override");
+    lidarGuardBadge.classList.remove("override", "stop-active");
     return;
   }
   lidarGuardBadge.classList.remove("hidden");
   if (lidarOverrideActive) {
-    lidarGuardBadge.textContent = "LiDAR OVERRIDE (R2)";
+    lidarGuardBadge.textContent = "OVERRIDE (R2)";
     lidarGuardBadge.classList.add("override");
+    lidarGuardBadge.classList.remove("stop-active");
   } else {
-    const m = guard.min_forward_m;
-    lidarGuardBadge.textContent = "LiDAR СТОП — Shift/E/R2 чтобы ехать";
+    lidarGuardBadge.textContent = "СТОП";
     lidarGuardBadge.classList.remove("override");
+    lidarGuardBadge.classList.add("stop-active");
   }
 }
 
 function renderOperatorBadge(op) {
   if (!operatorBadge) return;
+  op = normalizeOperator(op);
   if (!op?.locked) {
     operatorBadge.classList.add("hidden");
     operatorBadge.classList.remove("locked-you", "locked-other");
@@ -588,9 +965,10 @@ function renderOperatorBadge(op) {
 function renderPerception(r) {
   const t = r?.telemetry || {};
   const p = t.perception || {};
-  renderLidarArc(p.lidar_arc);
+  renderLidarArc(p.lidar_arc, p.lidar_guard);
   renderFrontCamera(r);
   renderStereoCamera(r);
+  renderRtkMap(t.rtk);
   renderLidarGuardBadge(p.lidar_guard);
 }
 
@@ -606,69 +984,52 @@ function renderPanel() {
   roverPanel.classList.remove("hidden");
 
   const t = r.telemetry || {};
-  const m = t.mega || {};
+  const m = mergeMega(t.mega || {});
   const agentLabel = t.agent === "orin" ? "Jetson Orin" : t.hostname || "—";
 
   panelTitle.textContent = r.name || r.id;
-  panelSub.textContent = `${agentLabel} · ${t.mega_port || "Mega"}`;
-  panelBadge.textContent = r.online ? "ONLINE" : "OFFLINE";
+  panelSub.textContent = agentLabel;
+  panelBadge.textContent = r.online ? "ON" : "OFF";
   panelBadge.className = `badge ${r.online ? "online" : "offline"}`;
+  const topRover = document.getElementById("topbar-rover");
+  if (topRover) topRover.textContent = r.online ? `${r.name || r.id} · online` : `${r.name || r.id} · offline`;
 
   renderLinkIndicator(r);
   renderOperatorBadge(r.operator);
 
   document.getElementById("t-mega").textContent =
-    t.arduino_connected === true ? "подключена" : t.arduino_connected === false ? "нет" : "—";
+    t.arduino_connected === true ? "OK" : t.arduino_connected === false ? "нет" : "—";
   document.getElementById("t-arm").textContent =
-    m.armed === true ? "ARM — моторы разрешены" : m.armed === false ? "DISARM — стоп" : "—";
+    m.armed === true ? "ARM" : m.armed === false ? "DIS" : "—";
 
-  const trackDir = (us) => (us > 1505 ? "вперёд" : us < 1495 ? "назад" : "нейтраль");
-  const trackLine = (us, power, pct) => {
-    if (us == null) return "—";
-    const p = power != null ? Math.abs(Number(power)) : Math.abs(pct ?? 0);
-    return `${us} µs · ${trackDir(us)} · мощность ${p}%`;
+  const motorPercent = (us) => {
+    const n = Number(us);
+    if (!Number.isFinite(n)) return "—";
+    return `${Math.round(clamp((n - 1500) / 5, -100, 100))}`;
   };
-  document.getElementById("s-left").textContent = trackLine(m.left_us, m.left_power_pct, m.left_pct);
-  document.getElementById("s-right").textContent = trackLine(m.right_us, m.right_power_pct, m.right_pct);
+  document.getElementById("s-left").textContent = motorPercent(m.left_us);
+  document.getElementById("s-right").textContent = motorPercent(m.right_us);
   document.getElementById("s-speed").textContent =
-    m.speed_mps != null
-      ? `~${m.speed_mps} m/s (средняя мощность ${Math.abs(m.linear_pct ?? 0)}%)`
-      : "0 m/s";
+    m.speed_mps != null ? `${m.speed_mps}` : "0";
   document.getElementById("s-current-a0").textContent =
-    m.current_a0 != null ? `ADC ${m.current_a0} (0–1023, без калибр.)` : "—";
+    m.current_a0 != null ? `${m.current_a0}` : "—";
   document.getElementById("s-current-d22").textContent =
-    m.current_d22 != null ? `D22=${m.current_d22} (цифра)` : m.current_d0 != null ? `D0=${m.current_d0}` : "—";
+    m.current_d22 != null ? `${m.current_d22}` : m.current_d0 != null ? `${m.current_d0}` : "—";
   document.getElementById("s-temp").textContent =
-    m.temp_c != null ? `${m.temp_c} °C` : m.dht_ok === false ? "нет ответа (D23)" : "—";
+    m.temp_c != null ? `${m.temp_c}°` : "—";
   document.getElementById("s-humidity").textContent =
-    m.humidity_pct != null ? `${m.humidity_pct} %` : m.dht_ok === false ? "—" : "—";
+    m.humidity_pct != null ? `${m.humidity_pct}%` : "—";
   document.getElementById("s-vibration").textContent =
-    m.vibration_d24 != null
-      ? m.vibration_d24
-        ? "сработал (HIGH)"
-        : "нет (LOW)"
-      : "—";
-  const rtk = t.rtk || {};
-  const rtkEl = document.getElementById("s-rtk");
-  if (rtkEl) {
-    if (rtk.lat != null && rtk.lon != null) {
-      const fix = rtk.fix_label || "—";
-      const sats = rtk.satellites != null ? `${rtk.satellites} спутн.` : "—";
-      rtkEl.textContent = `${fix} · ${rtk.lat.toFixed(5)}, ${rtk.lon.toFixed(5)} · ${sats}`;
-    } else if (rtk.connected) {
-      rtkEl.textContent = "подключён — ожидание fix";
-    } else {
-      rtkEl.textContent = rtk.error ? String(rtk.error) : "нет данных";
-    }
-  }
+    m.vibration_d24 != null ? (m.vibration_d24 ? "H" : "L") : "—";
   renderPerception(r);
+  if (rtkMap) setTimeout(() => rtkMap.invalidateSize(), 150);
   document.getElementById("t-ago").textContent = fmtAgo(r.last_seen_ago_s);
 
   const mode = t.drive_mode || uiDriveMode;
   applyModeUi(mode, false);
 
   const online = r.online;
-  const op = r.operator || {};
+  const op = normalizeOperator(r.operator);
   const canControl = online && (!op.locked || op.you);
   document.getElementById("btn-start").disabled = !canControl || mode !== "joystick";
   document.getElementById("btn-stop").disabled = !online;
@@ -679,6 +1040,48 @@ function renderPanel() {
   });
   renderSessionHint();
   updateDriveKeyHighlight();
+}
+
+function applySpeedUi() {
+  const speedSlider = document.getElementById("speed-slider");
+  const speedLabel = document.getElementById("speed-label");
+  if (speedSlider) speedSlider.value = String(speedPct);
+  if (speedLabel) speedLabel.textContent = `${speedPct}%`;
+}
+
+async function enterManualMode() {
+  const wasAuto = uiDriveMode === "auto";
+  applyModeUi("joystick", true);
+  queueDrive(0, 0);
+  targetFwd = 0;
+  targetTurn = 0;
+  smoothFwd = 0;
+  smoothTurn = 0;
+  await sendCommand("stop_drive");
+
+  const r = selectedRover();
+  const online = Boolean(r?.online);
+  const op = normalizeOperator(r?.operator);
+  const canControl = online && (!op.locked || op.you);
+  if (!canControl) {
+    renderPanel();
+    return;
+  }
+
+  if (!sessionStarted || wasAuto) {
+    wakeGamepads();
+    const claim = await claimOperator();
+    if (!claim.ok) {
+      if (claim.conflict) alert("Ровер уже управляется другим оператором");
+      renderPanel();
+      return;
+    }
+    await sendCommand("session_start");
+    sessionStarted = true;
+    startOperatorRenew();
+    drivePad?.focus();
+  }
+  renderPanel();
 }
 
 function applyModeUi(mode, notifyAgent = true) {
@@ -693,7 +1096,7 @@ function applyModeUi(mode, notifyAgent = true) {
   }
   const r = selectedRover();
   const online = Boolean(r?.online);
-  const op = r?.operator || {};
+  const op = normalizeOperator(r?.operator);
   const canControl = online && (!op.locked || op.you);
   document.getElementById("btn-start").disabled = !canControl || mode !== "joystick";
   document.querySelectorAll("[data-fwd]").forEach((b) => {
@@ -702,23 +1105,27 @@ function applyModeUi(mode, notifyAgent = true) {
   renderSessionHint();
 }
 
-modeJoystick.onclick = () => applyModeUi("joystick");
-modeAuto.onclick = () => applyModeUi("auto");
+modeJoystick.onclick = () => {
+  enterManualMode();
+};
+
+modeAuto.onclick = async () => {
+  if (sessionStarted) {
+    queueDrive(0, 0);
+    smoothFwd = 0;
+    smoothTurn = 0;
+    await sendCommand("stop_drive");
+    await sendCommand("session_stop");
+    sessionStarted = false;
+    await releaseOperator();
+  }
+  applyModeUi("auto", true);
+  renderPanel();
+};
 
 roverSelect.onchange = () => selectRover(roverSelect.value);
 
-document.getElementById("btn-start").onclick = async () => {
-  wakeGamepads();
-  const claim = await claimOperator();
-  if (!claim.ok) {
-    if (claim.conflict) alert("Ровер уже управляется другим оператором");
-    return;
-  }
-  await sendCommand("session_start");
-  sessionStarted = true;
-  drivePad?.focus();
-  renderPanel();
-};
+document.getElementById("btn-start").onclick = () => enterManualMode();
 
 document.getElementById("btn-stop").onclick = async () => {
   sessionStarted = false;
@@ -752,20 +1159,20 @@ function renderGamepadStatus() {
     if (gamepadState.connected) {
       el.textContent = `Геймпад: ${gamepadState.name} — режим AUTO, езда заблокирована`;
     } else {
-      el.textContent = "Геймпад: режим AUTO — переключите на Joystick для ручного управления";
+      el.textContent = "Геймпад: режим AUTO — переключите на Manual";
     }
     return;
   }
   if (!sessionStarted) {
     if (gamepadState.connected) {
-      el.textContent = `Геймпад: ${gamepadState.name} — нажмите Start на сайте`;
+      el.textContent = `Геймпад: ${gamepadState.name} — нажмите Manual или Start`;
     } else {
-      el.textContent = "Геймпад: USB/BT к этому ПК → кнопка «Разбудить» или Start";
+      el.textContent = "Геймпад: USB/BT к этому ПК → Manual или Start";
     }
     return;
   }
   if (!gamepadState.connected) {
-    el.textContent = "Геймпад: не виден — подключите к ПК с браузером, нажмите «Разбудить»";
+    el.textContent = "Геймпад: не виден — подключите к ПК с браузером";
     return;
   }
   const guardHint = lidarGuardActive ? " · R2 = снять стоп" : "";
@@ -825,11 +1232,10 @@ drivePad?.addEventListener("click", () => drivePad.focus());
 const speedSlider = document.getElementById("speed-slider");
 const speedLabel = document.getElementById("speed-label");
 if (speedSlider) {
-  speedSlider.value = String(speedPct);
-  if (speedLabel) speedLabel.textContent = `${speedPct}%`;
+  applySpeedUi();
   speedSlider.oninput = () => {
     speedPct = Number(speedSlider.value);
-    localStorage.setItem("axm_speed_pct", String(speedPct));
+    saveSpeedPct();
     if (speedLabel) speedLabel.textContent = `${speedPct}%`;
   };
 }
@@ -847,11 +1253,21 @@ function renderFleet(data) {
 
 async function loadFleet() {
   const statusEl = document.getElementById("rover-status");
+  let timeoutId;
+  const signal =
+    typeof AbortSignal !== "undefined" && AbortSignal.timeout
+      ? AbortSignal.timeout(10000)
+      : (() => {
+          const ctrl = new AbortController();
+          timeoutId = setTimeout(() => ctrl.abort(), 10000);
+          return ctrl.signal;
+        })();
   try {
     const res = await fetch("/api/rovers", {
       credentials: "same-origin",
-      signal: AbortSignal.timeout(10000),
+      signal,
     });
+    if (timeoutId) clearTimeout(timeoutId);
     if (res.status === 401) {
       location.href = "/login";
       return;
@@ -862,8 +1278,9 @@ async function loadFleet() {
     }
     renderFleet(await res.json());
   } catch (err) {
-    if (statusEl) {
-      statusEl.textContent = "Нет связи с сервером — обновите страницу (Ctrl+F5)";
+    if (timeoutId) clearTimeout(timeoutId);
+    if (statusEl && (!lastFleet || lastFleet.length === 0)) {
+      statusEl.textContent = "Нет связи с сервером — Ctrl+F5 или /login";
     }
   }
 }
@@ -907,8 +1324,36 @@ document.getElementById("logout").onclick = () => {
     });
 };
 
-loadFleet();
-connectWs();
+async function initUser() {
+  if (window.__AXM_USER__) {
+    currentUser = window.__AXM_USER__;
+    localStorage.setItem("axm_saved_username", currentUser);
+  } else {
+    try {
+      const res = await fetch("/api/me", { credentials: "same-origin" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.username) {
+          currentUser = data.username;
+          localStorage.setItem("axm_saved_username", currentUser);
+        }
+      }
+    } catch (_) {}
+  }
+  const badge = document.getElementById("user-badge");
+  if (badge) badge.textContent = localUsername();
+  speedPct = loadSpeedPct();
+  applySpeedUi();
+}
+
+if (window.__AXM_BOOT_FLEET__) {
+  renderFleet(window.__AXM_BOOT_FLEET__);
+}
+
+initUser().then(() => {
+  loadFleet();
+  connectWs();
+});
 setInterval(loadFleet, 3000);
 setInterval(() => {
   if (!sessionStarted) wakeGamepads();

@@ -20,11 +20,18 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
+source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
+PYTHON_BIN="${AXM_PYTHON:-$REPO_ROOT/.venv_cuda/bin/python3}"
+if [ ! -x "$PYTHON_BIN" ]; then
+  PYTHON_BIN="$(command -v python3)"
+fi
+"$PYTHON_BIN" -m pip install -q pyserial 2>/dev/null || true
+
 : "${AXM_HUB_URL:?Set AXM_HUB_URL e.g. https://rover.axm.tech}"
 : "${AXM_ROVER_ID:?Set AXM_ROVER_ID e.g. rover-01}"
 : "${AXM_ROVER_TOKEN:?Set AXM_ROVER_TOKEN (same as in hub .env on VPS)}"
 
 export AXM_LOCAL_WEB="${AXM_LOCAL_WEB:-http://127.0.0.1:8080}"
-export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
+export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB1}"
 
-exec python3 "$AGENT_DIR/fleet_agent.py" "$@"
+exec "$PYTHON_BIN" "$AGENT_DIR/fleet_agent.py" "$@"

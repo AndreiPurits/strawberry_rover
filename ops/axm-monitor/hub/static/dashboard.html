@@ -4,136 +4,147 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AXM Rover</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/static/style.css?v=0.8.1" />
 </head>
 <body class="dashboard-page">
   <header class="topbar compact">
-    <div>
+    <div class="topbar-title">
       <h1>AXM Rover</h1>
-      <p class="muted">Мониторинг и управление</p>
+      <span class="topbar-sep">·</span>
+      <span id="topbar-rover" class="muted tiny">—</span>
     </div>
-    <button id="logout" class="ghost">Выйти</button>
+    <div class="topbar-actions">
+      <span id="user-badge" class="user-badge muted tiny">—</span>
+      <button id="logout" class="ghost btn-xs">Выйти</button>
+    </div>
   </header>
 
   <main class="layout cockpit-layout">
     <aside class="sidebar card compact">
       <label class="field-label" for="rover-select">Ровер</label>
       <select id="rover-select" class="rover-select">
-        <option value="">— выберите ровер —</option>
+        <option value="">— выберите —</option>
       </select>
-      <p id="rover-status" class="rover-status muted">Нет данных</p>
+      <p id="rover-status" class="rover-status muted">—</p>
       <ul id="rover-list" class="rover-list"></ul>
     </aside>
 
     <section class="workspace cockpit">
-      <div id="empty-state" class="card empty-panel">
-        Выберите ровер из списка слева. Orin с установленным agent появится как online.
-      </div>
+      <div id="empty-state" class="card empty-panel">Выберите ровер слева.</div>
 
       <div id="rover-panel" class="hidden cockpit-stack">
-        <div class="card panel-head compact">
-          <div>
-            <h2 id="panel-title">—</h2>
-            <p id="panel-sub" class="muted">—</p>
+        <div class="status-bar card">
+          <div class="status-left">
+            <strong id="panel-title">—</strong>
+            <span id="panel-sub" class="muted tiny">—</span>
           </div>
           <div class="panel-badges">
-            <span id="link-indicator" class="link-badge link-red" title="Связь">● OFF</span>
-            <span id="lidar-guard-badge" class="guard-badge hidden" title="LiDAR guard">LiDAR BLOCK</span>
-            <span id="operator-badge" class="operator-badge hidden" title="Оператор">—</span>
-            <span id="panel-badge" class="badge offline">OFFLINE</span>
+            <span id="link-indicator" class="link-badge link-red">—</span>
+            <span id="lidar-guard-badge" class="guard-badge hidden">LiDAR</span>
+            <span id="operator-badge" class="operator-badge hidden">—</span>
+            <span id="panel-badge" class="badge offline">OFF</span>
           </div>
         </div>
 
-        <div class="card vision-card">
-          <div class="vision-row">
-            <div class="camera-panel">
-              <div class="camera-frame">
-                <img id="front-camera" alt="Передняя камера" class="hidden" />
-                <div id="camera-placeholder" class="camera-placeholder muted">Камера — нет сигнала</div>
+        <div class="cockpit-main">
+          <div class="vision-center card">
+            <div class="cam-col">
+              <div class="camera-frame front-frame">
+                <video id="front-camera-webrtc" autoplay playsinline muted class="hidden"></video>
+                <img id="front-camera" alt="Камера" class="hidden" />
+                <div id="camera-placeholder" class="camera-placeholder muted">Камера…</div>
               </div>
-              <p id="cam-status" class="muted small">Передняя (Web Camera)</p>
-            </div>
-            <div class="camera-panel">
-              <div class="camera-frame">
-                <img id="stereo-camera" alt="Стерео камера" class="hidden" />
-                <div id="stereo-camera-placeholder" class="camera-placeholder muted">Стерео — нет сигнала</div>
-              </div>
-              <p id="stereo-cam-status" class="muted small">Стерео (RealSense)</p>
-            </div>
-            <div class="lidar-panel">
-              <svg id="lidar-arc" class="lidar-arc" viewBox="0 0 200 118" aria-label="Лидар — радар препятствий">
-                <g id="lidar-rings"></g>
-                <g id="lidar-sectors"></g>
-                <circle cx="100" cy="102" r="6" fill="#141b2d" stroke="#5b8cff" stroke-width="2"/>
-                <path d="M100 96 L100 86 M96 90 L100 86 L104 90" stroke="#8fa0c5" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="card sensors-compact">
-          <h3 class="section-title">Датчики Mega (Gecoma)</h3>
-          <div class="mega-sensors-grid" id="mega-sensors-grid">
-            <div class="mega-sensor"><span>Ток A0 (аналог)</span><strong id="s-current-a0">—</strong><em>датчик тока, A0</em></div>
-            <div class="mega-sensor"><span>Ток D22 (цифра)</span><strong id="s-current-d22">—</strong><em>линия D22</em></div>
-            <div class="mega-sensor"><span>Температура</span><strong id="s-temp">—</strong><em>DHT11, D23</em></div>
-            <div class="mega-sensor"><span>Влажность</span><strong id="s-humidity">—</strong><em>DHT11</em></div>
-            <div class="mega-sensor"><span>Вибрация / RFID</span><strong id="s-vibration">—</strong><em>модуль D24</em></div>
-            <div class="mega-sensor"><span>Левая гусеница</span><strong id="s-left">—</strong><em>PWM левый борт</em></div>
-            <div class="mega-sensor"><span>Правая гусеница</span><strong id="s-right">—</strong><em>PWM правый борт</em></div>
-            <div class="mega-sensor"><span>Скорость</span><strong id="s-speed">—</strong><em>оценка по PWM</em></div>
-            <div class="mega-sensor"><span>RTK / GNSS</span><strong id="s-rtk">—</strong><em>u-blox Type-C</em></div>
-          </div>
-          <div class="telemetry-grid compact slim-meta">
-            <div class="t-item"><span>Mega USB</span><strong id="t-mega">—</strong></div>
-            <div class="t-item"><span>ARM</span><strong id="t-arm">—</strong></div>
-            <div class="t-item"><span>Сигнал hub</span><strong id="t-ago">—</strong></div>
-          </div>
-        </div>
-
-        <div class="card controls-card slim">
-          <div class="controls-toolbar">
-            <div class="mode-toggle slim">
-              <button type="button" id="mode-joystick" class="mode-btn slim active" title="Джойстик">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-6 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                <span>Джойстик</span>
-              </button>
-              <button type="button" id="mode-auto" class="mode-btn slim" title="Авто">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 1 1 0 2h-1.07A7.001 7.001 0 0 1 13 22h-2a7.001 7.001 0 0 1-6.93-6H3a1 1 0 1 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Zm-1 9a1 1 0 0 0-1 1v3a1 1 0 1 0 2 0v-3a1 1 0 0 0-1-1Zm2 0a1 1 0 0 0-1 1v3a1 1 0 1 0 2 0v-3a1 1 0 0 0-1-1Z"/></svg>
-                <span>Авто</span>
-              </button>
+              <span id="cam-status" class="cam-tag muted tiny">WebRTC</span>
             </div>
 
-            <div id="joystick-panel" class="joystick-toolbar">
-              <button type="button" id="btn-start" class="btn-sm">Start</button>
-              <button type="button" id="btn-stop" class="btn-sm ghost">Stop</button>
-              <label class="speed-slider" title="Макс. скорость">
-                <span>Скорость</span>
-                <input type="range" id="speed-slider" min="10" max="100" value="35" />
-                <strong id="speed-label">35%</strong>
-              </label>
-              <div class="drive-pad slim" id="drive-pad" tabindex="0" title="Кликните сюда: W/Ц вперёд, S/Ы назад, A/Ф влево, D/В вправо">
-                <button type="button" data-fwd="1" data-turn="0" data-key-hint="w,arrowup">▲</button>
-                <div class="drive-row">
-                  <button type="button" data-fwd="0" data-turn="1" data-key-hint="a,arrowleft">◀</button>
-                  <button type="button" data-fwd="0" data-turn="0" data-key-hint="">■</button>
-                  <button type="button" data-fwd="0" data-turn="-1" data-key-hint="d,arrowright">▶</button>
+            <div class="sensor-row">
+              <div class="aux-block stereo-block">
+                <span class="aux-label">Стерео камера</span>
+                <div class="stereo-frame">
+                  <img id="stereo-camera" alt="Стерео камера" class="hidden" />
+                  <div id="stereo-camera-placeholder" class="aux-placeholder muted tiny">нет кадра</div>
                 </div>
-                <button type="button" data-fwd="-1" data-turn="0" data-key-hint="s,arrowdown">▼</button>
+                <span id="stereo-cam-status" class="aux-meta muted tiny">—</span>
               </div>
-              <p id="session-hint" class="session-hint muted">Нажмите Start — затем WASD / стрелки / геймпад</p>
-              <p id="gamepad-status" class="gamepad-hint muted">Геймпад: —</p>
-              <button type="button" id="btn-wake-gamepad" class="btn-secondary btn-small">Разбудить геймпад</button>
+              <div class="aux-block lidar-block" id="lidar-block">
+                <span class="aux-label">LiDAR</span>
+                <div id="lidar-guard-banner" class="lidar-guard-banner hidden" role="alert"></div>
+                <div class="lidar-body">
+                  <svg id="lidar-arc" class="lidar-arc" viewBox="0 0 200 118" aria-label="Лидар">
+                    <g id="lidar-rings"></g>
+                    <g id="lidar-guard-zone"></g>
+                    <g id="lidar-sectors"></g>
+                    <circle cx="100" cy="102" r="6" fill="#141b2d" stroke="#5b8cff" stroke-width="2"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-rail">
+            <div class="card controls-rail">
+              <div id="lidar-lock-overlay" class="lidar-lock-overlay hidden" aria-hidden="true">
+                <div class="lidar-lock-big">🔒</div>
+              </div>
+              <div class="mode-toggle slim">
+                <button type="button" id="mode-joystick" class="mode-btn slim active"><span>Manual</span></button>
+                <button type="button" id="mode-auto" class="mode-btn slim"><span>Auto</span></button>
+              </div>
+              <div id="joystick-panel" class="controls-rail-body">
+                <div class="ctrl-row">
+                  <button type="button" id="btn-start" class="btn-sm">Start</button>
+                  <button type="button" id="btn-stop" class="btn-sm ghost">Stop</button>
+                </div>
+                <label class="speed-slider compact" title="Скорость">
+                  <input type="range" id="speed-slider" min="10" max="100" value="35" />
+                  <strong id="speed-label">35%</strong>
+                </label>
+                <div class="drive-pad slim" id="drive-pad" tabindex="0">
+                  <button type="button" data-fwd="1" data-turn="0" data-key-hint="w,arrowup">▲</button>
+                  <div class="drive-row">
+                    <button type="button" data-fwd="0" data-turn="1" data-key-hint="a,arrowleft">◀</button>
+                    <button type="button" data-fwd="0" data-turn="0">■</button>
+                    <button type="button" data-fwd="0" data-turn="-1" data-key-hint="d,arrowright">▶</button>
+                  </div>
+                  <button type="button" data-fwd="-1" data-turn="0" data-key-hint="s,arrowdown">▼</button>
+                </div>
+                <p id="session-hint" class="session-hint muted tiny">Manual → WASD / стрелки / Xbox</p>
+                <p id="gamepad-status" class="gamepad-hint muted tiny">GP: —</p>
+                <button type="button" id="btn-wake-gamepad" class="btn-xs ghost">GP</button>
+              </div>
+              <div id="auto-panel" class="auto-inline hidden">
+                <p class="auto-stub tiny">Авто — скоро</p>
+              </div>
             </div>
 
-            <div id="auto-panel" class="auto-inline hidden">
-              <p class="auto-stub">Авто — в разработке.</p>
+            <div class="card rtk-panel">
+              <span class="aux-label">RTK / GNSS</span>
+              <div id="rtk-map" class="rtk-map" aria-label="Карта RTK"></div>
+              <span id="s-rtk" class="aux-meta muted tiny">—</span>
             </div>
+          </div>
+        </div>
+
+        <div class="card sensors-strip">
+          <div class="mega-sensors-grid">
+            <div class="mega-sensor"><span>A0</span><strong id="s-current-a0">—</strong></div>
+            <div class="mega-sensor"><span>D22</span><strong id="s-current-d22">—</strong></div>
+            <div class="mega-sensor"><span>T°</span><strong id="s-temp">—</strong></div>
+            <div class="mega-sensor"><span>RH</span><strong id="s-humidity">—</strong></div>
+            <div class="mega-sensor"><span>Vib</span><strong id="s-vibration">—</strong></div>
+            <div class="mega-sensor"><span>L</span><strong id="s-left">—</strong></div>
+            <div class="mega-sensor"><span>R</span><strong id="s-right">—</strong></div>
+            <div class="mega-sensor"><span>Spd</span><strong id="s-speed">—</strong></div>
+            <div class="mega-sensor meta"><span>Mega</span><strong id="t-mega">—</strong></div>
+            <div class="mega-sensor meta"><span>ARM</span><strong id="t-arm">—</strong></div>
+            <div class="mega-sensor meta"><span>Hub</span><strong id="t-ago">—</strong></div>
           </div>
         </div>
       </div>
     </section>
   </main>
-  <script src="/static/dashboard.js?v=0.5.6"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/static/dashboard.js?v=0.8.1"></script>
 </body>
 </html>

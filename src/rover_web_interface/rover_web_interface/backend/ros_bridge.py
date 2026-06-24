@@ -33,6 +33,9 @@ class RosWebBridge(Node):
         self.declare_parameter("scan_downsample", 8)
         self.declare_parameter("lidar_arc_sectors", 9)
         self.declare_parameter("lidar_arc_fov_deg", 160.0)
+        # UI forward direction offset (degrees in LaserScan frame).
+        # 180 means lidar is mounted backwards relative to rover forward.
+        self.declare_parameter("lidar_forward_angle_deg", 180.0)
         self.declare_parameter("real_front_camera_topic", "/camera/image_raw")
         self.declare_parameter("real_stereo_camera_topic", "/stereo_camera/image_raw")
         self.declare_parameter("control_publish_period_s", 0.05)
@@ -45,6 +48,9 @@ class RosWebBridge(Node):
         self._lidar_arc_sectors = max(5, int(self.get_parameter("lidar_arc_sectors").value))
         self._lidar_arc_fov_rad = math.radians(
             float(self.get_parameter("lidar_arc_fov_deg").value)
+        )
+        self._lidar_forward_rad = math.radians(
+            float(self.get_parameter("lidar_forward_angle_deg").value)
         )
         self._real_front_camera_topic = str(
             self.get_parameter("real_front_camera_topic").value
@@ -167,7 +173,7 @@ class RosWebBridge(Node):
         )
         self.create_subscription(String, "/rover/arduino/status", self._on_arduino_status, 10)
         self.create_timer(self._control_publish_period_s, self._control_publish_tick)
-        self.create_timer(2.0, self._publish_control_state)
+        self.create_timer(0.5, self._publish_control_state)
         self._publish_control_state()
 
         self.get_logger().info("rover_web_bridge started.")
@@ -250,8 +256,9 @@ class RosWebBridge(Node):
 
         for rng in msg.ranges:
             if math.isfinite(rng) and range_min <= float(rng) <= range_max:
-                if -fov_half <= angle <= fov_half:
-                    rel = angle + fov_half
+                rel_angle = self._normalize_angle(angle - self._lidar_forward_rad)
+                if -fov_half <= rel_angle <= fov_half:
+                    rel = rel_angle + fov_half
                     idx = int(rel / max(1e-6, self._lidar_arc_fov_rad) * sectors_n)
                     idx = max(0, min(sectors_n - 1, idx))
                     mins[idx] = min(mins[idx], float(rng))
@@ -300,18 +307,66 @@ class RosWebBridge(Node):
             }
             self._lidar_arc = arc
 
+    def _crop_center_aspect(self, arr: Any, aspect: float) -> Any:
+        import numpy as np
+
+        src_h, src_w = arr.shape[:2]
+        if src_w <= 0 or src_h <= 0 or aspect <= 0:
+            return arr
+        current = src_w / src_h
+        if current > aspect:
+            new_w = max(1, int(round(src_h * aspect)))
+            x0 = max(0, (src_w - new_w) // 2)
+            return arr[:, x0 : x0 + new_w]
+        if current < aspect:
+            new_h = max(1, int(round(src_w / aspect)))
+            y0 = max(0, (src_h - new_h) // 2)
+            return arr[y0 : y0 + new_h, :]
+        return arr
+
     def _encode_jpeg_bgr(self, arr: Any, width: int, height: int, quality: int) -> Dict[str, Any]:
         import cv2
 
-        small = cv2.resize(arr, (width, height), interpolation=cv2.INTER_AREA)
-        ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)])
+        return self._encode_jpeg_bgr_fit(arr, width, height, quality, letterbox=True)
+
+    def _encode_jpeg_bgr_fit(
+        self,
+        arr: Any,
+        max_width: int,
+        max_height: int,
+        quality: int,
+        *,
+        letterbox: bool = True,
+    ) -> Dict[str, Any]:
+        import cv2
+        import numpy as np
+
+        src_h, src_w = arr.shape[:2]
+        if src_w <= 0 or src_h <= 0:
+            return {"ok": False, "reason": "bad_geometry"}
+
+        scale = min(max_width / src_w, max_height / src_h)
+        new_w = max(1, int(round(src_w * scale)))
+        new_h = max(1, int(round(src_h * scale)))
+        resized = cv2.resize(arr, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        if letterbox and (new_w != max_width or new_h != max_height):
+            canvas = np.zeros((max_height, max_width, 3), dtype=np.uint8)
+            x0 = (max_width - new_w) // 2
+            y0 = (max_height - new_h) // 2
+            canvas[y0 : y0 + new_h, x0 : x0 + new_w] = resized
+            out_img = canvas
+        else:
+            out_img = resized
+
+        ok, jpg = cv2.imencode(".jpg", out_img, [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)])
         if not ok:
             return {"ok": False, "reason": "jpeg_encode_failed"}
         return {
             "ok": True,
             "jpeg_b64": base64.b64encode(jpg.tobytes()).decode("ascii"),
-            "width": width,
-            "height": height,
+            "width": int(out_img.shape[1]),
+            "height": int(out_img.shape[0]),
         }
 
     def _make_jpeg_from_image(self, msg: Image, *, hub: bool = False) -> Dict[str, Any]:
@@ -336,9 +391,10 @@ class RosWebBridge(Node):
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
             if hub:
-                out = self._encode_jpeg_bgr(arr, 320, 180, 28)
+                cropped = self._crop_center_aspect(arr, 4.0 / 3.0)
+                out = self._encode_jpeg_bgr_fit(cropped, 800, 600, 38, letterbox=False)
             else:
-                out = self._encode_jpeg_bgr(arr, 640, 360, 45)
+                out = self._encode_jpeg_bgr(arr, 640, 480, 45)
             if not out.get("ok"):
                 return out
             out["stamp"] = _ros_time_to_sec(msg.header.stamp)
@@ -462,7 +518,8 @@ class RosWebBridge(Node):
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
             small = cv2.resize(arr, (640, 360), interpolation=cv2.INTER_AREA)
-            ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 45])
+            small = cv2.convertScaleAbs(small, alpha=1.28, beta=18)
+            ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 62])
             if not ok:
                 return {"ok": False, "reason": "jpeg_encode_failed"}
             result = {
@@ -508,7 +565,12 @@ class RosWebBridge(Node):
                 arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
-            out = self._encode_jpeg_bgr(arr, 320, 180, 28) if hub else self._encode_jpeg_bgr(arr, 640, 360, 45)
+            cropped = self._crop_center_aspect(arr, 4.0 / 3.0) if hub else arr
+            out = (
+                self._encode_jpeg_bgr_fit(cropped, 800, 600, 36, letterbox=False)
+                if hub
+                else self._encode_jpeg_bgr_fit(arr, 640, 480, 45, letterbox=False)
+            )
             if not out.get("ok"):
                 return out
             result = {
