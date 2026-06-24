@@ -382,14 +382,15 @@ function driveTick() {
   const kb = readKeyboardTargets();
   if (gp?.pad) applyGamepadSpeedBumper(gp.pad);
 
+  const kbFwdAxis = keysLogical.has("fwd") || keysLogical.has("back");
+  const kbTurnAxis = keysLogical.has("left") || keysLogical.has("right");
+
   let fwd = kb.fwd;
   let turn = kb.turn;
   let override = kb.override || Boolean(gp?.override);
-  // Keyboard/arrow keys beat gamepad drift when operator uses WASD.
-  if (!kb.active && gp && (gp.active || Math.abs(gp.fwd) > 0.05 || Math.abs(gp.turn) > 0.05)) {
-    fwd = gp.fwd;
-    turn = gp.turn;
-  }
+  // Per-axis: WASD/arrow turn beats gamepad stick drift when a pad is plugged in.
+  if (gp && !kbFwdAxis && (gp.active || Math.abs(gp.fwd) > 0.05)) fwd = gp.fwd;
+  if (gp && !kbTurnAxis && (gp.active || Math.abs(gp.turn) > 0.05)) turn = gp.turn;
   pendingOverride = override;
   syncLidarGuardUi();
   targetFwd = fwd;
