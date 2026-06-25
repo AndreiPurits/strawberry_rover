@@ -483,6 +483,14 @@ function updateDriveKeyHighlight() {
   });
 }
 
+function isRoarmDevice(r) {
+  return r && (r.kind === "roarm" || r.id === "roarm-01");
+}
+
+function openRoarmGui() {
+  window.location.href = "/roarm";
+}
+
 function renderRoverList() {
   const rovers = [...lastFleet].sort((a, b) => {
     if (a.online !== b.online) return a.online ? -1 : 1;
@@ -490,7 +498,7 @@ function renderRoverList() {
   });
 
   roverSelect.innerHTML =
-    `<option value="">— выберите ровер —</option>` +
+    `<option value="">— выберите устройство —</option>` +
     rovers
       .map(
         (r) =>
@@ -501,8 +509,20 @@ function renderRoverList() {
   roverList.innerHTML = rovers
     .map((r) => {
       const t = r.telemetry || {};
-      const agent = t.agent === "orin" ? "Orin" : t.hostname || r.id;
-      return `<li class="${r.id === selectedId ? "active" : ""} ${r.online ? "online" : "offline"}" data-id="${escapeHtml(r.id)}">
+      const isArm = isRoarmDevice(r);
+      const agent = isArm
+        ? "RoArm · Orin proxy"
+        : t.agent === "orin"
+          ? "Orin"
+          : t.hostname || r.id;
+      const cls = [
+        r.id === selectedId && !isArm ? "active" : "",
+        r.online ? "online" : "offline",
+        isArm ? "device-roarm" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `<li class="${cls}" data-id="${escapeHtml(r.id)}" data-kind="${isArm ? "roarm" : "rover"}">
         <strong>${escapeHtml(r.name || r.id)}</strong>
         <span>${escapeHtml(agent)}</span>
         <em>${r.online ? "online" : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`}</em>
@@ -511,19 +531,31 @@ function renderRoverList() {
     .join("");
 
   roverList.querySelectorAll("li").forEach((li) => {
-    li.onclick = () => selectRover(li.getAttribute("data-id"));
+    li.onclick = () => {
+      const kind = li.getAttribute("data-kind");
+      const id = li.getAttribute("data-id");
+      if (kind === "roarm") openRoarmGui();
+      else selectRover(id);
+    };
   });
 
   const onlineN = rovers.filter((r) => r.online).length;
   roverStatus.textContent = `${onlineN} online / ${rovers.length} всего`;
 
   if (!selectedId && rovers.length) {
-    const pick = rovers.find((r) => r.online) || rovers[0];
-    selectRover(pick.id, false);
+    const pick =
+      rovers.find((r) => r.online && !isRoarmDevice(r)) ||
+      rovers.find((r) => !isRoarmDevice(r));
+    if (pick) selectRover(pick.id, false);
   }
 }
 
 function selectRover(id, persist = true) {
+  const r = getRover(id);
+  if (isRoarmDevice(r)) {
+    openRoarmGui();
+    return;
+  }
   if (id !== selectedId) {
     sessionStarted = false;
     operatorLocked = false;

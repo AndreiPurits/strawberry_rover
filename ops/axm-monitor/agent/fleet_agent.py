@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from gnss_reader import gnss_snapshot, start_gnss_reader
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
+from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_telemetry
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
@@ -652,6 +653,7 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
         "mega": mega,
         "perception": perception,
         "rtk": rtk,
+        "roarm": roarm_telemetry(),
         "link": {
             "rtt_ms": rtt,
             "camera_age_ms": cam_age,
@@ -869,6 +871,37 @@ def execute_command(
     return result
 
 
+def pull_roarm_commands(hub_url: str, rover_id: str, token: str) -> Dict[str, Any]:
+    body = {"rover_id": rover_id, "token": token}
+    return _post_json_retry(
+        f"{hub_url.rstrip('/')}/api/agents/roarm_pull",
+        body,
+        timeout=4.0,
+        attempts=3,
+        base_delay_s=0.05,
+    )
+
+
+def post_roarm_result(
+    hub_url: str,
+    rover_id: str,
+    token: str,
+    req_id: str,
+    result: Dict[str, Any],
+) -> None:
+    body = {"rover_id": rover_id, "token": token, "id": req_id, "result": result}
+    try:
+        _post_json_retry(
+            f"{hub_url.rstrip('/')}/api/agents/roarm_result",
+            body,
+            timeout=4.0,
+            attempts=3,
+            base_delay_s=0.05,
+        )
+    except Exception:
+        pass
+
+
 def pull_commands(hub_url: str, rover_id: str, token: str) -> Dict[str, Any]:
     body = {"rover_id": rover_id, "token": token}
     return _post_json_retry(
@@ -946,6 +979,8 @@ def main() -> int:
     rtk_port = _env("RTK_PORT", "/dev/ttyACM0")
     start_gnss_reader(port=rtk_port, baud=rtk_baud)
     print(f"[fleet-agent] rtk port={rtk_port} baud={rtk_baud}")
+    if roarm_enabled():
+        print(f"[fleet-agent] roarm enabled ip={_env('ROARM_IP', '192.168.1.87')}")
     cam_thread = threading.Thread(
         target=_camera_stream_loop,
         args=(args.hub_url, args.rover_id, args.token, args.local_web, cam_stop),
@@ -1001,6 +1036,38 @@ def main() -> int:
 
     poll_thread = threading.Thread(target=_command_poll_loop, daemon=True, name="command-poll")
     poll_thread.start()
+
+    def _roarm_poll_loop() -> None:
+        if not roarm_enabled():
+            return
+        poll_s = float(_env("AXM_ROARM_POLL_S", "0.15"))
+        while not poll_stop.is_set():
+            if not _hub_link_ok():
+                poll_stop.wait(max(0.5, poll_s))
+                continue
+            try:
+                resp = pull_roarm_commands(args.hub_url, args.rover_id, args.token)
+                for item in resp.get("commands") or []:
+                    req_id = str(item.get("id") or "")
+                    op = str(item.get("op") or "")
+                    params = item.get("params") or {}
+                    if not req_id or not op:
+                        continue
+                    result = execute_rpc(op, params)
+                    post_roarm_result(
+                        args.hub_url,
+                        args.rover_id,
+                        args.token,
+                        req_id,
+                        result,
+                    )
+            except Exception:
+                pass
+            poll_stop.wait(poll_s)
+
+    if roarm_enabled():
+        roarm_thread = threading.Thread(target=_roarm_poll_loop, daemon=True, name="roarm-poll")
+        roarm_thread.start()
 
     keepalive_stop = threading.Event()
     keepalive_interval = float(_env("AXM_KEEPALIVE_INTERVAL", str(KEEPALIVE_INTERVAL_S)))

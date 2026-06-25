@@ -10,6 +10,7 @@
   <main class="card auth-card">
     <h1>AXM Monitor</h1>
     <p class="muted">Мониторинг роверов axm.tech</p>
+    <p class="muted tiny">Введите своё имя — оно будет видно другим операторам</p>
     <form id="login-form" method="post" action="/api/login" autocomplete="on">
       <label>
         Логин
@@ -54,8 +55,11 @@
         err.classList.remove("hidden");
         return;
       }
-      localStorage.setItem(USER_KEY, username);
-      location.href = "/";
+      const data = await res.json().catch(() => ({}));
+      const name = data.username || username;
+      localStorage.setItem(USER_KEY, name);
+      const next = new URLSearchParams(location.search).get("next") || "/";
+      location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
     });
   </script>
 </body>

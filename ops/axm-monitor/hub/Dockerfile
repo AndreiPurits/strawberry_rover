@@ -5,6 +5,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY static ./static
+COPY private ./private
 
 ENV AXM_COOKIE_SECURE=true
 EXPOSE 8090

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoArm-01 — AXM</title>
+  <link rel="stylesheet" href="/roarm/app.css" />
+</head>
+<body class="roarm-page">
+  <header class="roarm-topbar">
+    <div>
+      <h1>RoArm-M3</h1>
+      <p class="muted tiny">через Orin · без прямого доступа к ESP</p>
+    </div>
+    <div class="roarm-topbar-actions">
+      <span id="roarm-status" class="roarm-badge offline">—</span>
+      <a href="/" class="btn ghost">← Ровер</a>
+      <button type="button" id="btn-logout" class="btn ghost">Выйти</button>
+    </div>
+  </header>
+
+  <main class="roarm-grid">
+    <section class="card roarm-panel">
+      <h2>Система</h2>
+      <div class="btn-row">
+        <button type="button" id="btn-refresh" class="btn">Обновить статус</button>
+        <button type="button" id="btn-home" class="btn">HOME</button>
+        <button type="button" id="btn-torque-on" class="btn">Torque ON</button>
+        <button type="button" id="btn-torque-off" class="btn ghost">Torque OFF</button>
+      </div>
+      <pre id="roarm-json" class="roarm-json muted">—</pre>
+    </section>
+
+    <section class="card roarm-panel">
+      <h2>Gripper</h2>
+      <div class="btn-row">
+        <button type="button" id="btn-grip-open" class="btn">Открыть</button>
+        <button type="button" id="btn-grip-close" class="btn">Закрыть</button>
+      </div>
+    </section>
+
+    <section class="card roarm-panel roarm-move">
+      <h2>Целевая точка (move_xyz)</h2>
+      <div class="field-grid">
+        <label>X <input type="number" id="mv-x" step="0.01" value="0.16" /></label>
+        <label>Y <input type="number" id="mv-y" step="0.01" value="0.00" /></label>
+        <label>Z <input type="number" id="mv-z" step="0.01" value="0.12" /></label>
+        <label>T <input type="number" id="mv-t" step="0.01" value="0.00" /></label>
+        <label>R <input type="number" id="mv-r" step="0.01" value="0.00" /></label>
+        <label>G <input type="number" id="mv-g" step="0.01" value="0.00" /></label>
+        <label>Speed <input type="number" id="mv-spd" step="0.05" value="0.25" /></label>
+      </div>
+      <button type="button" id="btn-move" class="btn primary">Переместить</button>
+      <p class="muted tiny">Рабочая зона: x 0.05–0.35 · y ±0.20 · z 0.02–0.30</p>
+    </section>
+
+    <section class="card roarm-panel">
+      <h2>Лог</h2>
+      <pre id="roarm-log" class="roarm-log"></pre>
+    </section>
+  </main>
+
+  <script src="/roarm/app.js"></script>
+</body>
+</html>

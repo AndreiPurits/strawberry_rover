@@ -31,13 +31,14 @@ except ImportError:
         raise RuntimeError("webrtc_not_available")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+PRIVATE_DIR = Path(__file__).resolve().parent / "private"
 SESSION_COOKIE = "axm_session"
 SESSION_TTL_S = 60 * 60 * 12
 SESSION_REMEMBER_TTL_S = 60 * 60 * 24 * 30
 OPERATOR_LOCK_TTL_S = 120
 MJPEG_BOUNDARY = b"frame"
 
-app = FastAPI(title="AXM Fleet Monitor", version="0.7.0")
+app = FastAPI(title="AXM Fleet Monitor", version="0.8.0")
 
 _sessions: Dict[str, float] = {}
 _dashboard_clients: Set[WebSocket] = set()
@@ -48,6 +49,10 @@ _command_log: List[Dict[str, Any]] = []
 _camera_frames: Dict[str, Dict[str, Any]] = {}
 _stereo_camera_frames: Dict[str, Dict[str, Any]] = {}
 _operator_locks: Dict[str, Dict[str, Any]] = {}
+_roarm_queue: List[Dict[str, Any]] = []
+_roarm_waiters: Dict[str, asyncio.Future] = {}
+
+ROARM_DEVICE_ID = "roarm-01"
 
 
 def _env(name: str, default: str = "") -> str:
@@ -267,11 +272,48 @@ def _merge_telemetry(prev: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any
             merged["mega"] = m
         elif key == "link" and isinstance(val, dict):
             merged["link"] = {**(merged.get("link") or {}), **val}
+        elif key == "roarm" and isinstance(val, dict):
+            merged["roarm"] = {**(merged.get("roarm") or {}), **val}
         elif key == "rtk" and isinstance(val, dict):
             merged["rtk"] = {**(merged.get("rtk") or {}), **val}
         else:
             merged[key] = val
     return merged
+
+
+def _roarm_agent_rover_id() -> str:
+    return _env("AXM_ROARM_AGENT_ROVER_ID", "rover-01")
+
+
+def _roarm_public(current_user: Optional[str] = None) -> Dict[str, Any]:
+    parent_id = _roarm_agent_rover_id()
+    parent = _rovers.get(parent_id) or {}
+    parent_last = float(parent.get("last_seen", 0))
+    parent_online = bool(parent_last and (time.time() - parent_last) <= AGENT_STALE_S)
+    roarm_t = dict((parent.get("telemetry") or {}).get("roarm") or {})
+    reachable = bool(roarm_t.get("reachable"))
+    return {
+        "id": ROARM_DEVICE_ID,
+        "name": _env("AXM_ROARM_NAME", "RoArm-01"),
+        "kind": "roarm",
+        "href": "/roarm",
+        "online": parent_online and reachable,
+        "parent_rover_id": parent_id,
+        "parent_online": parent_online,
+        "last_seen": parent_last,
+        "last_seen_ago_s": max(0.0, time.time() - parent_last) if parent_last else None,
+        "telemetry": {"roarm": roarm_t},
+        "meta": {"device": "roarm-m3"},
+        "operator": {"locked": False, "holder": None, "you": False},
+        "link": {"status": "green" if reachable else ("yellow" if parent_online else "red")},
+    }
+
+
+def _fleet_public(current_user: Optional[str] = None) -> List[Dict[str, Any]]:
+    rows = [_rover_public(r, current_user) for r in sorted(_rovers.values(), key=lambda r: r.get("name", r["id"]))]
+    if _env("AXM_ROARM_ENABLED", "true").lower() not in ("0", "false", "no"):
+        rows.append(_roarm_public(current_user))
+    return rows
 
 
 def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Dict[str, Any]:
@@ -289,6 +331,7 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
     return {
         "id": row["id"],
         "name": row.get("name", row["id"]),
+        "kind": "rover",
         "online": online,
         "last_seen": last,
         "last_seen_ago_s": max(0.0, now - last) if last else None,
@@ -305,7 +348,7 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
 async def _broadcast_dashboard() -> None:
     payload_generic = {
         "type": "fleet",
-        "rovers": [_rover_public(r, None) for r in _rovers.values()],
+        "rovers": _fleet_public(None),
     }
     stale: List[WebSocket] = []
     for ws in _dashboard_clients:
@@ -313,7 +356,7 @@ async def _broadcast_dashboard() -> None:
         payload = (
             {
                 "type": "fleet",
-                "rovers": [_rover_public(r, user) for r in _rovers.values()],
+                "rovers": _fleet_public(user),
             }
             if user
             else payload_generic
@@ -375,6 +418,23 @@ class WebRtcViewerOfferBody(BaseModel):
 class WebRtcIceBody(BaseModel):
     rover_id: str = Field(min_length=1, max_length=64)
     candidate: Dict[str, Any]
+
+
+class RoArmRpcBody(BaseModel):
+    op: str = Field(min_length=1, max_length=32)
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RoArmAgentPullBody(BaseModel):
+    rover_id: str = Field(min_length=1, max_length=64)
+    token: str
+
+
+class RoArmAgentResultBody(BaseModel):
+    rover_id: str = Field(min_length=1, max_length=64)
+    token: str
+    id: str = Field(min_length=8, max_length=64)
+    result: Dict[str, Any] = Field(default_factory=dict)
 
 
 class RoverCommandBody(BaseModel):
@@ -462,7 +522,7 @@ def root(request: Request):
         return RedirectResponse("/login", status_code=302)
     user, _ = parsed
     rows = sorted(_rovers.values(), key=lambda r: r.get("name", r["id"]))
-    fleet = {"ok": True, "rovers": [_rover_public(r, user) for r in rows]}
+    fleet = {"ok": True, "rovers": _fleet_public(user)}
     html = (STATIC_DIR / "dashboard.html").read_text(encoding="utf-8")
     boot = json.dumps(fleet, ensure_ascii=False)
     user_json = json.dumps(user, ensure_ascii=False)
@@ -489,12 +549,85 @@ def root(request: Request):
 
 @app.get("/api/rovers")
 def api_rovers(user: str = Depends(require_user)) -> Dict[str, Any]:
-    rows = sorted(_rovers.values(), key=lambda r: r.get("name", r["id"]))
-    return {"ok": True, "rovers": [_rover_public(r, user) for r in rows]}
+    return {"ok": True, "rovers": _fleet_public(user)}
+
+
+@app.get("/roarm")
+def roarm_page(request: Request) -> HTMLResponse:
+    parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
+    if not parsed:
+        return RedirectResponse("/login?next=/roarm", status_code=302)
+    html = (PRIVATE_DIR / "roarm.html").read_text(encoding="utf-8")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/roarm/{rest:path}")
+def roarm_page_catchall(request: Request, rest: str) -> Any:
+    if rest in ("app.js", "app.css"):
+        parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
+        if not parsed:
+            return RedirectResponse("/login?next=/roarm", status_code=302)
+        path = PRIVATE_DIR / rest
+        if rest == "app.js":
+            path = PRIVATE_DIR / "roarm.js"
+        elif rest == "app.css":
+            path = PRIVATE_DIR / "roarm.css"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="not_found")
+        media = "application/javascript" if rest.endswith(".js") else "text/css"
+        return FileResponse(path, media_type=media, headers={"Cache-Control": "no-store"})
+    return roarm_page(request)
+
+
+@app.post("/api/roarm/rpc")
+async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -> Dict[str, Any]:
+    parent_id = _roarm_agent_rover_id()
+    parent = _rovers.get(parent_id)
+    if not parent or (time.time() - float(parent.get("last_seen", 0))) > AGENT_STALE_S:
+        raise HTTPException(status_code=503, detail="roarm_gateway_offline")
+    req_id = uuid.uuid4().hex
+    _roarm_queue.append({"id": req_id, "op": body.op, "params": body.params, "user": user})
+    loop = asyncio.get_running_loop()
+    fut: asyncio.Future = loop.create_future()
+    _roarm_waiters[req_id] = fut
+    try:
+        result = await asyncio.wait_for(fut, timeout=float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12")))
+        return {"ok": True, "id": req_id, **(result if isinstance(result, dict) else {"result": result})}
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="roarm_timeout") from None
+    finally:
+        _roarm_waiters.pop(req_id, None)
+        _roarm_queue[:] = [c for c in _roarm_queue if c.get("id") != req_id]
+
+
+@app.post("/api/agents/roarm_pull")
+async def agent_roarm_pull(body: RoArmAgentPullBody) -> Dict[str, Any]:
+    if body.rover_id != _roarm_agent_rover_id():
+        raise HTTPException(status_code=403, detail="roarm_agent_mismatch")
+    if not _verify_agent(body.rover_id, body.token):
+        raise HTTPException(status_code=403, detail="invalid_agent_token")
+    batch: List[Dict[str, Any]] = []
+    while _roarm_queue and len(batch) < 8:
+        batch.append(_roarm_queue.pop(0))
+    return {"ok": True, "commands": batch}
+
+
+@app.post("/api/agents/roarm_result")
+async def agent_roarm_result(body: RoArmAgentResultBody) -> Dict[str, Any]:
+    if body.rover_id != _roarm_agent_rover_id():
+        raise HTTPException(status_code=403, detail="roarm_agent_mismatch")
+    if not _verify_agent(body.rover_id, body.token):
+        raise HTTPException(status_code=403, detail="invalid_agent_token")
+    fut = _roarm_waiters.get(body.id)
+    if fut and not fut.done():
+        fut.set_result(body.result)
+    return {"ok": True}
 
 
 @app.post("/api/rovers/{rover_id}/claim")
 async def claim_operator(rover_id: str, user: str = Depends(require_user)) -> Dict[str, Any]:
+    if rover_id == ROARM_DEVICE_ID:
+        raise HTTPException(status_code=400, detail="use_roarm_page")
     if rover_id not in _rovers and rover_id not in _agent_tokens():
         raise HTTPException(status_code=404, detail="rover_not_found")
     info = _operator_info(rover_id, user)
@@ -524,6 +657,8 @@ async def rover_command(
     body: RoverCommandBody,
     user: str = Depends(require_user),
 ) -> Dict[str, Any]:
+    if rover_id == ROARM_DEVICE_ID:
+        raise HTTPException(status_code=400, detail="use_roarm_page")
     if rover_id not in _rovers and rover_id not in _agent_tokens():
         raise HTTPException(status_code=404, detail="rover_not_found")
     _require_operator_lock(rover_id, user)
@@ -740,7 +875,7 @@ async def ws_dashboard(ws: WebSocket) -> None:
         await ws.send_json(
             {
                 "type": "fleet",
-                "rovers": [_rover_public(r, user) for r in _rovers.values()],
+                "rovers": _fleet_public(user),
             }
         )
         while True:
