@@ -3,6 +3,7 @@ const roverList = document.getElementById("rover-list");
 const roverStatus = document.getElementById("rover-status");
 const emptyState = document.getElementById("empty-state");
 const roverPanel = document.getElementById("rover-panel");
+const roarmPanel = document.getElementById("roarm-panel");
 const panelTitle = document.getElementById("panel-title");
 const panelSub = document.getElementById("panel-sub");
 const panelBadge = document.getElementById("panel-badge");
@@ -487,8 +488,8 @@ function isRoarmDevice(r) {
   return r && (r.kind === "roarm" || r.id === "roarm-01");
 }
 
-function openRoarmGui() {
-  window.location.href = "/roarm";
+function isRoarmSelected() {
+  return selectedId === "roarm-01";
 }
 
 function renderRoverList() {
@@ -516,27 +517,33 @@ function renderRoverList() {
           ? "Orin"
           : t.hostname || r.id;
       const cls = [
-        r.id === selectedId && !isArm ? "active" : "",
+        r.id === selectedId ? "active" : "",
         r.online ? "online" : "offline",
+        isArm && r.online && !((t.roarm || {}).reachable) ? "online-warn" : "",
         isArm ? "device-roarm" : "",
       ]
         .filter(Boolean)
         .join(" ");
+      const armReach = isArm ? Boolean((t.roarm || {}).reachable) : false;
+      const statusLine = isArm
+        ? r.online
+          ? armReach
+            ? "online"
+            : "proxy · arm offline"
+          : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`
+        : r.online
+          ? "online"
+          : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`;
       return `<li class="${cls}" data-id="${escapeHtml(r.id)}" data-kind="${isArm ? "roarm" : "rover"}">
         <strong>${escapeHtml(r.name || r.id)}</strong>
         <span>${escapeHtml(agent)}</span>
-        <em>${r.online ? "online" : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`}</em>
+        <em>${statusLine}</em>
       </li>`;
     })
     .join("");
 
   roverList.querySelectorAll("li").forEach((li) => {
-    li.onclick = () => {
-      const kind = li.getAttribute("data-kind");
-      const id = li.getAttribute("data-id");
-      if (kind === "roarm") openRoarmGui();
-      else selectRover(id);
-    };
+    li.onclick = () => selectRover(li.getAttribute("data-id"));
   });
 
   const onlineN = rovers.filter((r) => r.online).length;
@@ -552,10 +559,24 @@ function renderRoverList() {
 
 function selectRover(id, persist = true) {
   const r = getRover(id);
+  if (!r) return;
+
   if (isRoarmDevice(r)) {
-    openRoarmGui();
+    if (id !== selectedId) {
+      sessionStarted = false;
+      operatorLocked = false;
+      mjpegUrl = "";
+      stopWebRtcFront();
+    }
+    selectedId = id || "";
+    if (persist) localStorage.setItem("axm_rover_id", selectedId);
+    roverSelect.value = selectedId;
+    renderRoverList();
+    renderPanel();
+    window.RoArmPanel?.onSelect?.(r);
     return;
   }
+
   if (id !== selectedId) {
     sessionStarted = false;
     operatorLocked = false;
@@ -1075,10 +1096,21 @@ function renderPanel() {
   if (!r) {
     emptyState.classList.remove("hidden");
     roverPanel.classList.add("hidden");
+    roarmPanel?.classList.add("hidden");
     return;
   }
 
   emptyState.classList.add("hidden");
+
+  if (isRoarmDevice(r)) {
+    roverPanel.classList.add("hidden");
+    roarmPanel?.classList.remove("hidden");
+    window.RoArmPanel?.onFleetUpdate?.(r);
+    window.RoArmPanel?.onSelect?.(r);
+    return;
+  }
+
+  roarmPanel?.classList.add("hidden");
   roverPanel.classList.remove("hidden");
 
   const t = r.telemetry || {};
@@ -1324,6 +1356,9 @@ function renderFleet(data) {
   lastFleet = data.rovers || [];
   renderRoverList();
   renderPanel();
+  if (isRoarmSelected()) {
+    window.RoArmPanel?.onFleetUpdate?.(getRover("roarm-01"));
+  }
 }
 
 async function loadFleet() {
@@ -1428,6 +1463,8 @@ if (window.__AXM_BOOT_FLEET__) {
 initUser().then(() => {
   loadFleet();
   connectWs();
+  const urlDevice = new URLSearchParams(location.search).get("device");
+  if (urlDevice) selectRover(urlDevice);
 });
 setInterval(loadFleet, 3000);
 setInterval(() => {

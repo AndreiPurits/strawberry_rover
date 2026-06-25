@@ -296,10 +296,10 @@ def _roarm_public(current_user: Optional[str] = None) -> Dict[str, Any]:
         "id": ROARM_DEVICE_ID,
         "name": _env("AXM_ROARM_NAME", "RoArm-01"),
         "kind": "roarm",
-        "href": "/roarm",
-        "online": parent_online and reachable,
-        "parent_rover_id": parent_id,
+        "href": "/?device=roarm-01",
+        "online": parent_online,
         "parent_online": parent_online,
+        "parent_rover_id": parent_id,
         "last_seen": parent_last,
         "last_seen_ago_s": max(0.0, time.time() - parent_last) if parent_last else None,
         "telemetry": {"roarm": roarm_t},
@@ -553,30 +553,19 @@ def api_rovers(user: str = Depends(require_user)) -> Dict[str, Any]:
 
 
 @app.get("/roarm")
-def roarm_page(request: Request) -> HTMLResponse:
+def roarm_page(request: Request) -> RedirectResponse:
     parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
     if not parsed:
         return RedirectResponse("/login?next=/roarm", status_code=302)
-    html = (PRIVATE_DIR / "roarm.html").read_text(encoding="utf-8")
-    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+    return RedirectResponse("/?device=roarm-01", status_code=302)
 
 
 @app.get("/roarm/{rest:path}")
-def roarm_page_catchall(request: Request, rest: str) -> Any:
-    if rest in ("app.js", "app.css"):
-        parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
-        if not parsed:
-            return RedirectResponse("/login?next=/roarm", status_code=302)
-        path = PRIVATE_DIR / rest
-        if rest == "app.js":
-            path = PRIVATE_DIR / "roarm.js"
-        elif rest == "app.css":
-            path = PRIVATE_DIR / "roarm.css"
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail="not_found")
-        media = "application/javascript" if rest.endswith(".js") else "text/css"
-        return FileResponse(path, media_type=media, headers={"Cache-Control": "no-store"})
-    return roarm_page(request)
+def roarm_page_catchall(request: Request, rest: str) -> RedirectResponse:
+    parsed = _parse_session(request.cookies.get(SESSION_COOKIE))
+    if not parsed:
+        return RedirectResponse("/login?next=/roarm", status_code=302)
+    return RedirectResponse("/?device=roarm-01", status_code=302)
 
 
 @app.post("/api/roarm/rpc")
@@ -590,8 +579,11 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
     loop = asyncio.get_running_loop()
     fut: asyncio.Future = loop.create_future()
     _roarm_waiters[req_id] = fut
+    timeout_s = float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12"))
+    if body.op in ("move_xyz", "move_xyz_direct"):
+        timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
     try:
-        result = await asyncio.wait_for(fut, timeout=float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12")))
+        result = await asyncio.wait_for(fut, timeout=timeout_s)
         return {"ok": True, "id": req_id, **(result if isinstance(result, dict) else {"result": result})}
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="roarm_timeout") from None

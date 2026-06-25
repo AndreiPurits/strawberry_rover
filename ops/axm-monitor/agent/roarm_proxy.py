@@ -52,6 +52,7 @@ def probe_status(force: bool = False) -> Dict[str, Any]:
         }
         return dict(_last_status)
     interval = float(_env("ROARM_PROBE_INTERVAL_S", "10"))
+    connect_timeout = float(_env("ROARM_CONNECT_TIMEOUT_S", "3"))
     now = time.time()
     if not force and _last_status.get("updated_at") and (now - _last_probe) < interval:
         return dict(_last_status)
@@ -65,7 +66,7 @@ def probe_status(force: bool = False) -> Dict[str, Any]:
         "arm": None,
     }
     try:
-        _url, status = _get_client().get_status()
+        _url, status = _get_client().get_status(timeout_sec=connect_timeout)
         snap["reachable"] = True
         snap["arm"] = status
     except RoArmClientError as exc:
@@ -80,6 +81,10 @@ def telemetry_snapshot() -> Dict[str, Any]:
     return probe_status(force=False)
 
 
+def _move_timeout() -> float:
+    return float(_env("ROARM_MOVE_TIMEOUT_S", "30"))
+
+
 def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
     if not roarm_enabled():
         return {"ok": False, "error": "roarm_disabled"}
@@ -89,7 +94,7 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
             url, status = client.get_status()
             return {"ok": True, "url": url, "status": status}
         if op == "home":
-            url, resp = client.home()
+            url, resp = client.home(timeout_sec=10.0)
             return {"ok": True, "url": url, "response": resp}
         if op == "gripper_open":
             url, resp = client.gripper_open()
@@ -112,8 +117,35 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
                 float(params.get("r", 0)),
                 float(params.get("g", 0)),
                 float(params.get("spd", 0.25)),
+                timeout_sec=_move_timeout(),
             )
             return {"ok": True, "url": url, "response": resp}
+        if op == "move_xyz_direct":
+            url, resp = client.move_xyz_direct(
+                float(params.get("x", 0)),
+                float(params.get("y", 0)),
+                float(params.get("z", 0)),
+                float(params.get("t", 0)),
+                float(params.get("r", 0)),
+                float(params.get("g", 0)),
+                timeout_sec=_move_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp}
+        if op == "sequence_start":
+            from roarm_sequence_runner import sequence_start
+
+            steps = params.get("steps") or []
+            if not isinstance(steps, list):
+                return {"ok": False, "error": "steps_must_be_list"}
+            return sequence_start(client, steps)
+        if op == "sequence_stop":
+            from roarm_sequence_runner import sequence_stop
+
+            return sequence_stop()
+        if op == "sequence_status":
+            from roarm_sequence_runner import sequence_status
+
+            return {"ok": True, **sequence_status()}
         return {"ok": False, "error": f"unknown_op:{op}"}
     except RoArmClientError as exc:
         return {"ok": False, "error": str(exc)}

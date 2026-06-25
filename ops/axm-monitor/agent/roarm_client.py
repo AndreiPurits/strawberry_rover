@@ -1,9 +1,10 @@
-"""RoArm-M3 HTTP client for fleet agent (curl → ESP32 on local LAN)."""
+"""RoArm-M3 HTTP client for fleet agent (urllib → ESP32 on local LAN)."""
 
 from __future__ import annotations
 
 import json
-import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
@@ -24,24 +25,23 @@ class RoArmClient:
         payload = json.dumps(cmd, separators=(",", ":"))
         return f"http://{self.ip}/js?json={payload}"
 
-    def _run_curl(self, url: str, use_globoff: bool) -> str:
-        cmd = ["curl", "-sS", "--max-time", str(self.timeout_sec)]
-        if use_globoff:
-            cmd.append("-g")
-        cmd.append(url)
+    def _http_get(self, url: str, timeout_sec: float | None = None) -> str:
+        effective = self.timeout_sec if timeout_sec is None else float(timeout_sec)
+        req = urllib.request.Request(url, method="GET")
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout_sec + 1)
-        except subprocess.TimeoutExpired as exc:
-            raise RoArmClientError(f"curl timeout: {url}") from exc
-        if result.returncode != 0:
-            raise RoArmClientError(
-                f"curl failed ({result.returncode}): {result.stderr.strip() or result.stdout.strip()}"
-            )
-        return result.stdout
+            with urllib.request.urlopen(req, timeout=effective) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+            raise RoArmClientError(f"HTTP {exc.code} for {url}: {body[:200]}") from exc
+        except urllib.error.URLError as exc:
+            raise RoArmClientError(f"request failed for {url}: {exc.reason}") from exc
+        except TimeoutError as exc:
+            raise RoArmClientError(f"timeout for {url}") from exc
 
-    def get_status(self) -> Tuple[str, Dict[str, Any]]:
+    def get_status(self, timeout_sec: float | None = None) -> Tuple[str, Dict[str, Any]]:
         url = self._status_url()
-        raw = self._run_curl(url, use_globoff=False)
+        raw = self._http_get(url, timeout_sec=timeout_sec)
         try:
             parsed = json.loads(raw)
         except ValueError as exc:
@@ -50,18 +50,18 @@ class RoArmClient:
             raise RoArmClientError(f"unexpected status type from {url}")
         return url, parsed
 
-    def send_raw_json(self, cmd: Dict[str, Any]) -> Tuple[str, str]:
+    def send_raw_json(self, cmd: Dict[str, Any], timeout_sec: float | None = None) -> Tuple[str, str]:
         url = self._command_url(cmd)
-        return url, self._run_curl(url, use_globoff=True)
+        return url, self._http_get(url, timeout_sec=timeout_sec)
 
-    def home(self) -> Tuple[str, str]:
-        return self.send_raw_json({"T": 100})
+    def home(self, timeout_sec: float | None = None) -> Tuple[str, str]:
+        return self.send_raw_json({"T": 100}, timeout_sec=timeout_sec)
 
-    def gripper_open(self) -> Tuple[str, str]:
-        return self.send_raw_json({"T": 106, "cmd": 1.08, "spd": 0, "acc": 0})
+    def gripper_open(self, timeout_sec: float | None = None) -> Tuple[str, str]:
+        return self.send_raw_json({"T": 106, "cmd": 1.08, "spd": 0, "acc": 0}, timeout_sec=timeout_sec)
 
-    def gripper_close(self) -> Tuple[str, str]:
-        return self.send_raw_json({"T": 106, "cmd": 3.14, "spd": 0, "acc": 0})
+    def gripper_close(self, timeout_sec: float | None = None) -> Tuple[str, str]:
+        return self.send_raw_json({"T": 106, "cmd": 3.14, "spd": 0, "acc": 0}, timeout_sec=timeout_sec)
 
     def move_xyz(
         self,
@@ -72,6 +72,7 @@ class RoArmClient:
         r: float,
         g: float,
         spd: float,
+        timeout_sec: float | None = None,
     ) -> Tuple[str, str]:
         return self.send_raw_json(
             {
@@ -83,8 +84,32 @@ class RoArmClient:
                 "r": float(r),
                 "g": float(g),
                 "spd": float(spd),
-            }
+            },
+            timeout_sec=timeout_sec,
         )
 
-    def torque(self, enabled: bool) -> Tuple[str, str]:
-        return self.send_raw_json({"T": 210, "cmd": 1 if enabled else 0})
+    def move_xyz_direct(
+        self,
+        x: float,
+        y: float,
+        z: float,
+        t: float,
+        r: float,
+        g: float,
+        timeout_sec: float | None = None,
+    ) -> Tuple[str, str]:
+        return self.send_raw_json(
+            {
+                "T": 1041,
+                "x": float(x),
+                "y": float(y),
+                "z": float(z),
+                "t": float(t),
+                "r": float(r),
+                "g": float(g),
+            },
+            timeout_sec=timeout_sec,
+        )
+
+    def torque(self, enabled: bool, timeout_sec: float | None = None) -> Tuple[str, str]:
+        return self.send_raw_json({"T": 210, "cmd": 1 if enabled else 0}, timeout_sec=timeout_sec)

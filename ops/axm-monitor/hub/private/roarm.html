@@ -4,62 +4,129 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RoArm-01 — AXM</title>
-  <link rel="stylesheet" href="/roarm/app.css" />
+  <link rel="stylesheet" href="/roarm/app.css?v=2" />
 </head>
 <body class="roarm-page">
   <header class="roarm-topbar">
     <div>
       <h1>RoArm-M3</h1>
-      <p class="muted tiny">через Orin · без прямого доступа к ESP</p>
+      <p class="muted tiny">Orin proxy · координаты в мм (T:104)</p>
     </div>
     <div class="roarm-topbar-actions">
+      <span id="roarm-ip" class="muted tiny"></span>
       <span id="roarm-status" class="roarm-badge offline">—</span>
       <a href="/" class="btn ghost">← Ровер</a>
       <button type="button" id="btn-logout" class="btn ghost">Выйти</button>
     </div>
   </header>
 
-  <main class="roarm-grid">
-    <section class="card roarm-panel">
-      <h2>Система</h2>
+  <nav class="roarm-tabs">
+    <button type="button" class="tab active" data-tab="main">MAIN</button>
+    <button type="button" class="tab" data-tab="sequence">SEQUENCE</button>
+  </nav>
+
+  <main id="tab-main" class="roarm-tab-panel active">
+    <div class="roarm-grid">
+      <section class="card roarm-panel">
+        <h2>Система</h2>
+        <div class="btn-row">
+          <button type="button" id="btn-refresh" class="btn">Обновить статус</button>
+          <button type="button" id="btn-home" class="btn">HOME</button>
+          <button type="button" id="btn-torque-on" class="btn">Torque ON</button>
+          <button type="button" id="btn-torque-off" class="btn ghost">Torque OFF</button>
+        </div>
+      </section>
+
+      <section class="card roarm-panel">
+        <h2>Gripper</h2>
+        <div class="btn-row">
+          <button type="button" id="btn-grip-open" class="btn">Открыть</button>
+          <button type="button" id="btn-grip-close" class="btn">Закрыть</button>
+        </div>
+      </section>
+
+      <section class="card roarm-panel roarm-move">
+        <h2>Целевая точка (T:104)</h2>
+        <div class="field-grid">
+          <label>X (mm) <input type="number" id="mv-x" step="1" value="235" /></label>
+          <label>Y (mm) <input type="number" id="mv-y" step="1" value="0" /></label>
+          <label>Z (mm) <input type="number" id="mv-z" step="1" value="234" /></label>
+          <label>Speed <input type="number" id="mv-spd" step="0.01" value="0.25" /></label>
+        </div>
+        <label class="chk-row"><input type="checkbox" id="mv-show-trg" /> Показать T / R / G (rad)</label>
+        <div id="mv-trg-fields" class="field-grid hidden">
+          <label>T <input type="number" id="mv-t" step="0.01" value="0" /></label>
+          <label>R <input type="number" id="mv-r" step="0.01" value="0" /></label>
+          <label>G <input type="number" id="mv-g" step="0.01" value="3.14" /></label>
+        </div>
+        <p id="reachability" class="reachability">Reachability: —</p>
+        <div class="btn-row">
+          <button type="button" id="btn-check" class="btn ghost">Check</button>
+          <button type="button" id="btn-move" class="btn primary">Move</button>
+        </div>
+      </section>
+
+      <section class="card roarm-panel roarm-state">
+        <h2>Текущее состояние</h2>
+        <pre id="roarm-json" class="roarm-json muted">—</pre>
+      </section>
+
+      <section class="card roarm-panel">
+        <h2>Лог</h2>
+        <pre id="roarm-log" class="roarm-log"></pre>
+      </section>
+    </div>
+  </main>
+
+  <main id="tab-sequence" class="roarm-tab-panel">
+    <section class="card roarm-panel seq-panel">
+      <div class="seq-table-wrap">
+        <table id="seq-table" class="seq-table">
+          <thead>
+            <tr>
+              <th>type</th>
+              <th>x</th>
+              <th>y</th>
+              <th>z</th>
+              <th>t</th>
+              <th>r</th>
+              <th>g</th>
+              <th>mode</th>
+              <th>reachability</th>
+              <th>run_status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
       <div class="btn-row">
-        <button type="button" id="btn-refresh" class="btn">Обновить статус</button>
-        <button type="button" id="btn-home" class="btn">HOME</button>
-        <button type="button" id="btn-torque-on" class="btn">Torque ON</button>
-        <button type="button" id="btn-torque-off" class="btn ghost">Torque OFF</button>
+        <button type="button" id="seq-add-target" class="btn">+ Target</button>
+        <button type="button" id="seq-add-home" class="btn">+ Home</button>
+        <button type="button" id="seq-add-gripper" class="btn">+ Gripper</button>
+        <button type="button" id="seq-add-delay" class="btn">+ Delay</button>
+        <button type="button" id="seq-del" class="btn ghost">Удалить</button>
+        <button type="button" id="seq-up" class="btn ghost">↑</button>
+        <button type="button" id="seq-down" class="btn ghost">↓</button>
       </div>
-      <pre id="roarm-json" class="roarm-json muted">—</pre>
-    </section>
 
-    <section class="card roarm-panel">
-      <h2>Gripper</h2>
       <div class="btn-row">
-        <button type="button" id="btn-grip-open" class="btn">Открыть</button>
-        <button type="button" id="btn-grip-close" class="btn">Закрыть</button>
+        <button type="button" id="seq-save" class="btn">Сохранить</button>
+        <button type="button" id="seq-load" class="btn">Загрузить</button>
+        <button type="button" id="seq-load-test" class="btn ghost">Тест: Home→Target→Home</button>
+        <button type="button" id="seq-load-fps" class="btn ghost">Пример ФПС</button>
       </div>
-    </section>
 
-    <section class="card roarm-panel roarm-move">
-      <h2>Целевая точка (move_xyz)</h2>
-      <div class="field-grid">
-        <label>X <input type="number" id="mv-x" step="0.01" value="0.16" /></label>
-        <label>Y <input type="number" id="mv-y" step="0.01" value="0.00" /></label>
-        <label>Z <input type="number" id="mv-z" step="0.01" value="0.12" /></label>
-        <label>T <input type="number" id="mv-t" step="0.01" value="0.00" /></label>
-        <label>R <input type="number" id="mv-r" step="0.01" value="0.00" /></label>
-        <label>G <input type="number" id="mv-g" step="0.01" value="0.00" /></label>
-        <label>Speed <input type="number" id="mv-spd" step="0.05" value="0.25" /></label>
+      <div class="btn-row">
+        <button type="button" id="seq-run" class="btn primary">Run sequence</button>
+        <button type="button" id="seq-stop" class="btn danger">Stop</button>
+        <span id="seq-progress" class="muted tiny"></span>
       </div>
-      <button type="button" id="btn-move" class="btn primary">Переместить</button>
-      <p class="muted tiny">Рабочая зона: x 0.05–0.35 · y ±0.20 · z 0.02–0.30</p>
-    </section>
 
-    <section class="card roarm-panel">
-      <h2>Лог</h2>
-      <pre id="roarm-log" class="roarm-log"></pre>
+      <pre id="seq-log" class="roarm-log"></pre>
     </section>
   </main>
 
-  <script src="/roarm/app.js"></script>
+  <script src="/roarm/app.js?v=2"></script>
 </body>
 </html>
