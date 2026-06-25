@@ -940,10 +940,12 @@ def main() -> int:
 
     cam_stop = threading.Event()
     try:
-        rtk_baud = int(_env("RTK_BAUD", "115200"))
+        rtk_baud = int(_env("RTK_BAUD", "38400"))
     except ValueError:
-        rtk_baud = 115200
-    start_gnss_reader(port=_env("RTK_PORT", "/dev/ttyACM0"), baud=rtk_baud)
+        rtk_baud = 38400
+    rtk_port = _env("RTK_PORT", "/dev/ttyACM0")
+    start_gnss_reader(port=rtk_port, baud=rtk_baud)
+    print(f"[fleet-agent] rtk port={rtk_port} baud={rtk_baud}")
     cam_thread = threading.Thread(
         target=_camera_stream_loop,
         args=(args.hub_url, args.rover_id, args.token, args.local_web, cam_stop),

@@ -909,14 +909,21 @@ function renderRtkMap(rtk) {
   const lon = hasFix ? rtk.lon : null;
   const fix = rtk.fix_label || (rtk.fix != null ? `fix${rtk.fix}` : "—");
   const sats = rtk.satellites != null ? `${rtk.satellites} sat` : "";
+  const hdop = rtk.hdop != null ? `hdop ${rtk.hdop}` : "";
+  const age = rtk.age_s != null ? `${rtk.age_s}s` : "";
   if (label) {
     if (lat != null && lon != null) {
       label.textContent = `${fix} · ${lat.toFixed(5)}, ${lon.toFixed(5)} ${sats}`.trim();
       label.title = label.textContent;
+    } else if (rtk.connected && !rtk.stale) {
+      const parts = ["ожидание fix…", fix !== "—" ? fix : "", sats, hdop, age].filter(Boolean);
+      label.textContent = parts.join(" · ");
+      label.title = rtk.last_sentence ? String(rtk.last_sentence) : label.textContent;
     } else if (rtk.connected) {
-      label.textContent = "ожидание fix…";
+      label.textContent = `NMEA устарели · ${sats} ${hdop}`.trim();
     } else {
-      label.textContent = rtk.error ? String(rtk.error) : "нет fix";
+      const err = rtk.error ? String(rtk.error) : "нет связи";
+      label.textContent = `${err}${rtk.port ? ` · ${rtk.port}` : ""}`;
     }
   }
   if (!rtkMap || lat == null || lon == null) {

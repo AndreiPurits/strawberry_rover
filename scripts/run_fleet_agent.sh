@@ -21,6 +21,13 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
+AXM_DEVICES_ENV="${AXM_DEVICES_ENV:-$HOME/.config/axm/devices.env}"
+if [ -f "$AXM_DEVICES_ENV" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$AXM_DEVICES_ENV"
+  set +a
+fi
 PYTHON_BIN="${AXM_PYTHON:-$REPO_ROOT/.venv_cuda/bin/python3}"
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN="$(command -v python3)"
