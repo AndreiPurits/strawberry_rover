@@ -67,7 +67,11 @@ def resolve_rtk_port(port: Optional[str] = None) -> str:
     return port or env_port or "/dev/ttyACM0"
 
 
-def probe_rtk_baud(port: str, candidates: Optional[List[int]] = None) -> Optional[int]:
+def probe_rtk_baud(
+    port: str,
+    candidates: Optional[List[int]] = None,
+    min_score: int = 5,
+) -> Optional[int]:
     """Return baud rate with the most valid NMEA lines (read-only probe)."""
     if serial is None or not os.path.exists(port):
         return None
@@ -83,14 +87,14 @@ def probe_rtk_baud(port: str, candidates: Optional[List[int]] = None) -> Optiona
                     if not raw:
                         continue
                     line = raw.decode("ascii", errors="ignore").strip()
-                    if line.startswith("$") and "," in line and _nmea_type(line):
+                    if line.startswith("$") and "," in line and _nmea_type(line) in ("GGA", "RMC"):
                         score += 1
         except Exception:
             continue
         if score > best_score:
             best_score = score
             best_baud = baud
-    return best_baud if best_score > 0 else None
+    return best_baud if best_score >= min_score else None
 
 
 def _nmea_type(line: str) -> str:
@@ -179,9 +183,16 @@ def _parse_rmc(parts: list[str]) -> Dict[str, Any]:
     return out
 
 
+def _normalize_nmea_line(line: str) -> str:
+    line = line.strip()
+    while line.startswith("$$"):
+        line = "$" + line.lstrip("$")
+    return line
+
+
 def _handle_line(line: str) -> None:
     global _fix_logged
-    line = line.strip()
+    line = _normalize_nmea_line(line)
     if not line.startswith("$") or "," not in line:
         return
     body = line.split("*", 1)[0]
@@ -200,6 +211,8 @@ def _handle_line(line: str) -> None:
         _state["connected"] = True
         _state["error"] = None
         _state["nmea_count"] = int(_state.get("nmea_count") or 0) + 1
+        if _state["nmea_count"] == 1:
+            print(f"[gnss] first NMEA {line[:100]}")
         _state.update(parsed)
         fix_q = int(_state.get("fix_quality") or 0)
         if fix_q > 0 and _state.get("lat") is not None and not _fix_logged:
@@ -312,6 +325,8 @@ def start_gnss_reader(
         probed = probe_rtk_baud(resolved)
         if probed:
             baud = probed
+        else:
+            print(f"[gnss] autobaud skipped — using RTK_BAUD={baud}")
     _initial_baud = baud
     _fix_logged = False
     _stop.clear()
