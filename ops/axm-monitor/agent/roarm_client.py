@@ -1,10 +1,9 @@
-"""RoArm-M3 HTTP client for fleet agent (urllib → ESP32 on local LAN)."""
+"""RoArm-M3 HTTP client for fleet agent (socket HTTP → ESP32 on LAN)."""
 
 from __future__ import annotations
 
 import json
-import urllib.error
-import urllib.request
+import socket
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
@@ -25,19 +24,68 @@ class RoArmClient:
         payload = json.dumps(cmd, separators=(",", ":"))
         return f"http://{self.ip}/js?json={payload}"
 
+    def tcp_open(self, timeout_sec: float | None = None) -> bool:
+        effective = self.timeout_sec if timeout_sec is None else float(timeout_sec)
+        try:
+            with socket.create_connection((self.ip, 80), timeout=effective):
+                return True
+        except OSError:
+            return False
+
     def _http_get(self, url: str, timeout_sec: float | None = None) -> str:
         effective = self.timeout_sec if timeout_sec is None else float(timeout_sec)
-        req = urllib.request.Request(url, method="GET")
+        if url.startswith("http://"):
+            rest = url[7:]
+        else:
+            rest = url
+        host, _, path = rest.partition("/")
+        if not path:
+            path = "/"
+        else:
+            path = "/" + path
+
+        connect_timeout = min(3.0, effective)
+        read_timeout = max(1.0, effective - connect_timeout)
         try:
-            with urllib.request.urlopen(req, timeout=effective) as resp:
-                return resp.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-            raise RoArmClientError(f"HTTP {exc.code} for {url}: {body[:200]}") from exc
-        except urllib.error.URLError as exc:
-            raise RoArmClientError(f"request failed for {url}: {exc.reason}") from exc
-        except TimeoutError as exc:
+            with socket.create_connection((host, 80), timeout=connect_timeout) as sock:
+                sock.settimeout(read_timeout)
+                req = (
+                    f"GET {path} HTTP/1.1\r\n"
+                    f"Host: {host}\r\n"
+                    "Connection: close\r\n"
+                    "User-Agent: axm-roarm/1\r\n"
+                    "Accept: application/json,*/*\r\n"
+                    "\r\n"
+                )
+                sock.sendall(req.encode("ascii"))
+                chunks: list[bytes] = []
+                while True:
+                    try:
+                        block = sock.recv(4096)
+                    except socket.timeout:
+                        break
+                    if not block:
+                        break
+                    chunks.append(block)
+        except socket.timeout as exc:
+            if self.tcp_open(timeout_sec=connect_timeout):
+                raise RoArmClientError(
+                    f"HTTP read timeout for {url} — порт 80 открыт, но ESP не отвечает. "
+                    "Закройте заводской UI http://{self.ip}/ в браузере (одно подключение)."
+                ) from exc
             raise RoArmClientError(f"timeout for {url}") from exc
+        except OSError as exc:
+            raise RoArmClientError(f"request failed for {url}: {exc}") from exc
+
+        raw = b"".join(chunks).decode("utf-8", errors="replace")
+        if not raw.strip():
+            raise RoArmClientError(
+                f"empty HTTP response from {url} — закройте заводской UI http://{self.ip}/ в браузере"
+            )
+        _, _, body = raw.partition("\r\n\r\n")
+        if not body and "\n\n" in raw:
+            _, _, body = raw.partition("\n\n")
+        return body.strip() or raw.strip()
 
     def get_status(self, timeout_sec: float | None = None) -> Tuple[str, Dict[str, Any]]:
         url = self._status_url()

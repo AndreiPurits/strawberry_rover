@@ -525,11 +525,14 @@ function renderRoverList() {
         .filter(Boolean)
         .join(" ");
       const armReach = isArm ? Boolean((t.roarm || {}).reachable) : false;
+      const tcpOpen = isArm ? Boolean((t.roarm || {}).tcp_open) : false;
       const statusLine = isArm
         ? r.online
           ? armReach
             ? "online"
-            : "proxy · arm offline"
+            : tcpOpen
+              ? "HTTP busy — закройте UI лапы"
+              : "proxy · arm offline"
           : `offline${r.last_seen_ago_s != null ? ` · ${Math.round(r.last_seen_ago_s)}s` : ""}`
         : r.online
           ? "online"

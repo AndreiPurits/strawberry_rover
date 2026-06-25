@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AXM Rover</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/static/style.css?v=1.2.0" />
+  <link rel="stylesheet" href="/static/style.css?v=1.3.0" />
 </head>
 <body class="dashboard-page">
   <header class="topbar compact">
@@ -154,66 +154,53 @@
           </div>
         </div>
 
-        <nav class="roarm-tabs">
-          <button type="button" class="tab active" data-tab="main">MAIN</button>
-          <button type="button" class="tab" data-tab="sequence">SEQUENCE</button>
-        </nav>
-
-        <div id="roarm-tab-main" class="roarm-tab-panel active">
-          <div class="roarm-grid">
-            <section class="card roarm-panel">
-              <h2>Система</h2>
-              <div class="btn-row">
-                <button type="button" id="btn-refresh" class="btn">Обновить статус</button>
+        <div class="roarm-workspace card">
+          <aside class="roarm-col-left">
+            <section class="roarm-block">
+              <h2>Система · Gripper</h2>
+              <div class="btn-row tight">
+                <button type="button" id="btn-refresh" class="btn">Статус</button>
                 <button type="button" id="btn-home" class="btn">HOME</button>
                 <button type="button" id="btn-torque-on" class="btn">Torque ON</button>
-                <button type="button" id="btn-torque-off" class="btn ghost">Torque OFF</button>
+                <button type="button" id="btn-torque-off" class="btn ghost">OFF</button>
+                <button type="button" id="btn-grip-open" class="btn">Grip O</button>
+                <button type="button" id="btn-grip-close" class="btn">Grip C</button>
               </div>
             </section>
 
-            <section class="card roarm-panel">
-              <h2>Gripper</h2>
-              <div class="btn-row">
-                <button type="button" id="btn-grip-open" class="btn">Открыть</button>
-                <button type="button" id="btn-grip-close" class="btn">Закрыть</button>
+            <section class="roarm-block">
+              <h2>Целевая точка (T:104) · мм</h2>
+              <div class="field-grid roarm-xyz">
+                <label>X <input type="number" id="mv-x" step="1" value="235" /></label>
+                <label>Y <input type="number" id="mv-y" step="1" value="0" /></label>
+                <label>Z <input type="number" id="mv-z" step="1" value="234" /></label>
+                <label>Spd <input type="number" id="mv-spd" step="0.01" value="0.25" /></label>
               </div>
-            </section>
-
-            <section class="card roarm-panel roarm-move">
-              <h2>Целевая точка (T:104)</h2>
-              <div class="field-grid">
-                <label>X (mm) <input type="number" id="mv-x" step="1" value="235" /></label>
-                <label>Y (mm) <input type="number" id="mv-y" step="1" value="0" /></label>
-                <label>Z (mm) <input type="number" id="mv-z" step="1" value="234" /></label>
-                <label>Speed <input type="number" id="mv-spd" step="0.01" value="0.25" /></label>
-              </div>
-              <label class="chk-row"><input type="checkbox" id="mv-show-trg" /> Показать T / R / G (rad)</label>
-              <div id="mv-trg-fields" class="field-grid hidden">
+              <label class="chk-row"><input type="checkbox" id="mv-show-trg" /> T / R / G (rad)</label>
+              <div id="mv-trg-fields" class="field-grid roarm-xyz hidden">
                 <label>T <input type="number" id="mv-t" step="0.01" value="0" /></label>
                 <label>R <input type="number" id="mv-r" step="0.01" value="0" /></label>
                 <label>G <input type="number" id="mv-g" step="0.01" value="3.14" /></label>
               </div>
               <p id="reachability" class="reachability">Reachability: —</p>
-              <div class="btn-row">
+              <div class="btn-row tight">
                 <button type="button" id="btn-check" class="btn ghost">Check</button>
                 <button type="button" id="btn-move" class="btn primary">Move</button>
+                <button type="button" id="seq-add-target" class="btn ghost">+ в sequence</button>
               </div>
             </section>
 
-            <section class="card roarm-panel roarm-state">
-              <h2>Текущее состояние</h2>
+            <section class="roarm-block roarm-state-block">
+              <h2>Состояние</h2>
               <pre id="roarm-json" class="roarm-json muted">—</pre>
             </section>
+          </aside>
 
-            <section class="card roarm-panel">
-              <h2>Лог</h2>
-              <pre id="roarm-log" class="roarm-log"></pre>
-            </section>
-          </div>
-        </div>
-
-        <div id="roarm-tab-sequence" class="roarm-tab-panel">
-          <section class="card roarm-panel seq-panel">
+          <section class="roarm-col-seq">
+            <div class="roarm-seq-head">
+              <h2>Sequence</h2>
+              <span id="seq-progress" class="muted tiny"></span>
+            </div>
             <div class="seq-table-wrap">
               <table id="seq-table" class="seq-table">
                 <thead>
@@ -226,45 +213,35 @@
                     <th>r</th>
                     <th>g</th>
                     <th>mode</th>
-                    <th>reachability</th>
-                    <th>run_status</th>
+                    <th>reach</th>
+                    <th>status</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
               </table>
             </div>
-
-            <div class="btn-row">
-              <button type="button" id="seq-add-target" class="btn">+ Target</button>
+            <div class="btn-row tight">
               <button type="button" id="seq-add-home" class="btn">+ Home</button>
               <button type="button" id="seq-add-gripper" class="btn">+ Gripper</button>
               <button type="button" id="seq-add-delay" class="btn">+ Delay</button>
-              <button type="button" id="seq-del" class="btn ghost">Удалить</button>
+              <button type="button" id="seq-del" class="btn ghost">Del</button>
               <button type="button" id="seq-up" class="btn ghost">↑</button>
               <button type="button" id="seq-down" class="btn ghost">↓</button>
-            </div>
-
-            <div class="btn-row">
-              <button type="button" id="seq-save" class="btn">Сохранить</button>
-              <button type="button" id="seq-load" class="btn">Загрузить</button>
-              <button type="button" id="seq-load-test" class="btn ghost">Тест: Home→Target→Home</button>
-              <button type="button" id="seq-load-fps" class="btn ghost">Пример ФПС</button>
-            </div>
-
-            <div class="btn-row">
-              <button type="button" id="seq-run" class="btn primary">Run sequence</button>
+              <button type="button" id="seq-save" class="btn ghost">Save</button>
+              <button type="button" id="seq-load" class="btn ghost">Load</button>
+              <button type="button" id="seq-load-test" class="btn ghost">Test</button>
+              <button type="button" id="seq-load-fps" class="btn ghost">ФПС</button>
+              <button type="button" id="seq-run" class="btn primary">Run</button>
               <button type="button" id="seq-stop" class="btn danger">Stop</button>
-              <span id="seq-progress" class="muted tiny"></span>
             </div>
-
-            <pre id="seq-log" class="roarm-log"></pre>
+            <pre id="roarm-log" class="roarm-log"></pre>
           </section>
         </div>
       </div>
     </section>
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/dashboard.js?v=1.2.0"></script>
-  <script src="/static/roarm_panel.js?v=1.2.0"></script>
+  <script src="/static/dashboard.js?v=1.3.0"></script>
+  <script src="/static/roarm_panel.js?v=1.3.0"></script>
 </body>
 </html>

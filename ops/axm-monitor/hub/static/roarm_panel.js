@@ -4,7 +4,6 @@
   const LS_KEY = "axm_roarm_sequence_v1";
 
   const logEl = document.getElementById("roarm-log");
-  const seqLogEl = document.getElementById("seq-log");
   const jsonEl = document.getElementById("roarm-json");
   const reachEl = document.getElementById("reachability");
   const seqTable = document.querySelector("#seq-table tbody");
@@ -35,7 +34,7 @@
   }
 
   function seqLog(msg) {
-    log(msg, seqLogEl);
+    log(msg);
   }
 
   async function rpc(op, params = {}, opts = {}) {
@@ -47,7 +46,7 @@
     if (blocking) {
       motionBusy = true;
       panelButtons().forEach((b) => {
-        if (!b.classList.contains("tab")) b.disabled = true;
+        b.disabled = true;
       });
     }
     try {
@@ -79,7 +78,7 @@
       if (blocking) {
         motionBusy = false;
         panelButtons().forEach((b) => {
-          if (!b.classList.contains("tab")) b.disabled = false;
+          b.disabled = false;
         });
       }
     }
@@ -117,13 +116,6 @@
     }
     const st = data.status || data.result?.status || data;
     if (jsonEl) jsonEl.textContent = JSON.stringify(st, null, 2);
-  }
-
-  function switchTab(name) {
-    document.querySelectorAll("#roarm-panel .roarm-tab-panel").forEach((p) => p.classList.remove("active"));
-    document.querySelectorAll("#roarm-panel .roarm-tabs .tab").forEach((t) => t.classList.remove("active"));
-    document.getElementById(`roarm-tab-${name}`)?.classList.add("active");
-    document.querySelector(`#roarm-panel .roarm-tabs .tab[data-tab="${name}"]`)?.classList.add("active");
   }
 
   function emptyRow(type = "target") {
@@ -319,7 +311,7 @@
       else if (st.result && i <= idx) cell.textContent = st.step_status === "error" && i === idx ? "error" : "done";
     });
     (st.log || []).slice(-5).forEach((line) => {
-      if (!seqLogEl?.textContent.includes(line)) seqLog(line);
+      if (!logEl?.textContent.includes(line)) seqLog(line);
     });
   }
 
@@ -332,7 +324,7 @@
       sequencePoll = null;
       motionBusy = false;
       panelButtons().forEach((b) => {
-        if (!b.classList.contains("tab")) b.disabled = false;
+        b.disabled = false;
       });
       seqLog(`sequence end: ${data.result || "done"}${data.error ? ` (${data.error})` : ""}`);
     }
@@ -341,6 +333,7 @@
   function renderFleetStatus(device) {
     if (!device) return;
     const rt = (device.telemetry || {}).roarm || {};
+    const tcpOk = Boolean(rt.tcp_open);
     const proxyOk = Boolean(device.parent_online ?? device.online);
     const armOk = Boolean(rt.reachable);
     const ip = rt.ip || "";
@@ -363,10 +356,17 @@
       if (armOk) {
         armBadge.textContent = "ARM HTTP OK";
         armBadge.className = "badge online";
-      } else if (proxyOk) {
-        armBadge.textContent = "ARM HTTP нет";
+        armBadge.title = "";
+      } else if (tcpOk) {
+        armBadge.textContent = "HTTP busy";
         armBadge.className = "badge warn";
-        armBadge.title = rt.error || "С Orin порт 80 на RoArm недоступен (client isolation?)";
+        armBadge.title =
+          rt.error ||
+          "Порт 80 открыт, но ESP не отвечает — закройте заводской UI http://192.168.3.22/ в браузере";
+      } else if (proxyOk) {
+        armBadge.textContent = "ARM offline";
+        armBadge.className = "badge warn";
+        armBadge.title = rt.error || "Нет TCP :80 до RoArm";
       } else {
         armBadge.textContent = "ARM HTTP";
         armBadge.className = "badge offline";
@@ -386,10 +386,6 @@
   function bindOnce() {
     if (initialized) return;
     initialized = true;
-
-    document.querySelectorAll("#roarm-panel .roarm-tabs .tab").forEach((btn) => {
-      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-    });
 
     document.getElementById("mv-show-trg")?.addEventListener("change", (e) => {
       document.getElementById("mv-trg-fields")?.classList.toggle("hidden", !e.target.checked);
@@ -504,14 +500,14 @@
       seqLog(`starting ${sequence.length} steps on Orin…`);
       motionBusy = true;
       panelButtons().forEach((b) => {
-        if (!b.classList.contains("tab")) b.disabled = true;
+        b.disabled = true;
       });
       const data = await rpc("sequence_start", { steps: sequence });
       if (!data || data.ok === false) {
         seqLog(`start failed: ${data?.error || "unknown"}`);
         motionBusy = false;
         panelButtons().forEach((b) => {
-          if (!b.classList.contains("tab")) b.disabled = false;
+          b.disabled = false;
         });
         return;
       }

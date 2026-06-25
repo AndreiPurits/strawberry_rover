@@ -708,6 +708,7 @@ input {
 .error { color: var(--bad); }
 
 /* RoArm panel (embedded in dashboard workspace) */
+/* RoArm panel — single-screen layout */
 #roarm-panel {
   flex: 1;
   min-height: 0;
@@ -716,68 +717,87 @@ input {
   gap: var(--gap);
   overflow: hidden;
 }
-#roarm-panel .roarm-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 0 4px;
-}
-#roarm-panel .roarm-tabs .tab {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  padding: 6px 12px;
-  border-radius: 6px 6px 0 0;
-  cursor: pointer;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-}
-#roarm-panel .roarm-tabs .tab.active {
-  background: var(--panel);
-  color: var(--text);
-  border-bottom-color: var(--panel);
-}
-#roarm-panel .roarm-tab-panel {
-  display: none;
+.roarm-workspace {
   flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) 1fr;
+  gap: 8px;
+  padding: 6px;
+  overflow: hidden;
+}
+.roarm-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-height: 0;
   overflow: auto;
 }
-#roarm-panel .roarm-tab-panel.active { display: block; }
-.roarm-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--gap);
-  padding: 4px;
+.roarm-col-seq {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
 }
-.roarm-panel h2 {
-  margin: 0 0 8px;
-  font-size: 0.72rem;
+.roarm-block h2,
+.roarm-seq-head h2 {
+  margin: 0 0 6px;
+  font-size: 0.68rem;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.roarm-panel .field-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 8px;
+.roarm-seq-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
 }
-.roarm-panel .field-grid label,
-.roarm-panel .chk-row {
+.roarm-block .field-grid.roarm-xyz {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.roarm-block .field-grid label,
+.roarm-block .chk-row {
   display: flex;
   flex-direction: column;
   gap: 3px;
   font-size: 0.62rem;
   color: var(--muted);
 }
-.roarm-panel .chk-row { flex-direction: row; align-items: center; }
-.roarm-panel .field-grid input {
+.roarm-block .chk-row { flex-direction: row; align-items: center; }
+.roarm-block .field-grid input {
   background: #0d1324;
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
   padding: 5px 6px;
   font-size: 0.72rem;
+}
+.btn-row.tight {
+  gap: 4px;
+  margin-top: 4px;
+}
+.btn-row.tight .btn {
+  padding: 6px 8px;
+  font-size: 0.68rem;
+}
+.roarm-state-block {
+  flex: 1;
+  min-height: 80px;
+}
+.roarm-state-block .roarm-json {
+  max-height: 140px;
+}
+#roarm-panel .seq-table-wrap {
+  flex: 1;
+  min-height: 120px;
+  max-height: none;
+}
+#roarm-panel .roarm-log {
+  flex: 0 0 100px;
+  max-height: 100px;
+  margin: 0;
 }
 .reachability { font-size: 0.68rem; margin: 6px 0; }
 .reachability.ok { color: var(--ok); }

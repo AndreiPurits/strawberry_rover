@@ -305,7 +305,9 @@ def _roarm_public(current_user: Optional[str] = None) -> Dict[str, Any]:
         "telemetry": {"roarm": roarm_t},
         "meta": {"device": "roarm-m3"},
         "operator": {"locked": False, "holder": None, "you": False},
-        "link": {"status": "green" if reachable else ("yellow" if parent_online else "red")},
+        "link": {
+            "status": "green" if reachable else ("yellow" if parent_online and roarm_t.get("tcp_open") else ("yellow" if parent_online else "red"))
+        },
     }
 
 

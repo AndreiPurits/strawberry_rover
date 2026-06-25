@@ -60,13 +60,16 @@ def probe_status(force: bool = False) -> Dict[str, Any]:
     snap: Dict[str, Any] = {
         "enabled": True,
         "reachable": False,
+        "tcp_open": False,
         "ip": _client_ip(),
         "error": None,
         "updated_at": now,
         "arm": None,
     }
+    client = _get_client()
+    snap["tcp_open"] = client.tcp_open(timeout_sec=float(_env("ROARM_CONNECT_TIMEOUT_S", "3")))
     try:
-        _url, status = _get_client().get_status(timeout_sec=connect_timeout)
+        _url, status = client.get_status(timeout_sec=connect_timeout)
         snap["reachable"] = True
         snap["arm"] = status
     except RoArmClientError as exc:
