@@ -600,6 +600,11 @@ button.btn-sm { padding: 4px 10px; font-size: 0.72rem; border-radius: 6px; }
   border-radius: 6px;
 }
 .drive-row { display: flex; gap: 4px; }
+.controls-rail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .drive-pad.slim:focus { outline: 1px solid var(--accent); border-radius: 4px; }
 .drive-pad.slim button.key-active { background: #2a4a9a; }
 

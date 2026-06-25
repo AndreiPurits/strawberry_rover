@@ -320,20 +320,25 @@ def _apply_lidar_guard(fwd: float, override: bool) -> Tuple[float, Dict[str, Any
     return fwd, guard, False
 
 
-def _collect_perception(local_web: str) -> Dict[str, Any]:
+def _refresh_lidar_arc(local_web: str) -> bool:
+    """Pull latest /scan sectors from local ros_bridge (fast path for guard)."""
     global _last_lidar_stamp, _last_lidar_arc
     base = local_web.rstrip("/")
+    arc = _fetch_json(f"{base}/api/perception/lidar_arc", 0.15) or {}
+    if not arc.get("ok"):
+        return False
+    arc_data = {k: v for k, v in arc.items() if k != "ok"}
+    _last_lidar_arc = arc_data
+    stamp = arc_data.get("stamp")
+    if stamp != _last_lidar_stamp:
+        _last_lidar_stamp = stamp
+    return True
+
+
+def _collect_perception(local_web: str) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
-
-    arc = _fetch_json(f"{base}/api/perception/lidar_arc", 0.5) or {}
-    if arc.get("ok"):
-        arc_data = {k: v for k, v in arc.items() if k != "ok"}
-        _last_lidar_arc = arc_data
-        stamp = arc_data.get("stamp")
-        if stamp != _last_lidar_stamp:
-            _last_lidar_stamp = stamp
-        out["lidar_arc"] = arc_data
-
+    if _refresh_lidar_arc(local_web):
+        out["lidar_arc"] = dict(_last_lidar_arc)
     out["lidar_guard"] = _current_lidar_guard()
     return out
 
@@ -796,6 +801,7 @@ def execute_command(
             if not _session_active:
                 result["error"] = "session_not_active"
                 return result
+            _refresh_lidar_arc(local_web)
             scale = max(0.08, min(1.0, float(params.get("speed_scale", 1.0))))
             fwd = float(params.get("forward", params.get("linear_x", 0.0))) * scale
             turn = float(params.get("turn", params.get("angular_z", 0.0))) * scale
@@ -947,6 +953,22 @@ def main() -> int:
     cam_thread.start()
 
     poll_stop = threading.Event()
+
+    def _lidar_poll_loop() -> None:
+        try:
+            poll_s = float(_env("AXM_LIDAR_POLL_S", "0.05"))
+        except ValueError:
+            poll_s = 0.05
+        poll_s = max(0.02, min(poll_s, 0.25))
+        while not poll_stop.is_set():
+            try:
+                _refresh_lidar_arc(args.local_web)
+            except Exception:
+                pass
+            poll_stop.wait(poll_s)
+
+    lidar_thread = threading.Thread(target=_lidar_poll_loop, daemon=True, name="lidar-poll")
+    lidar_thread.start()
 
     def _command_poll_loop() -> None:
         poll_s = float(_env("AXM_COMMAND_POLL_S", str(COMMAND_POLL_S)))

@@ -1220,37 +1220,7 @@ function keyboardDrive() {
 }
 
 function renderGamepadStatus() {
-  const el = document.getElementById("gamepad-status");
-  if (!el) return;
-  if (!navigator.getGamepads) {
-    el.textContent = "Геймпад: браузер не поддерживает Gamepad API";
-    return;
-  }
-  if (uiDriveMode !== "joystick") {
-    if (gamepadState.connected) {
-      el.textContent = `Геймпад: ${gamepadState.name} — режим AUTO, езда заблокирована`;
-    } else {
-      el.textContent = "Геймпад: режим AUTO — переключите на Manual";
-    }
-    return;
-  }
-  if (!sessionStarted) {
-    if (gamepadState.connected) {
-      el.textContent = `Геймпад: ${gamepadState.name} — нажмите Manual`;
-    } else {
-      el.textContent = "Геймпад: USB/BT к этому ПК → Manual";
-    }
-    return;
-  }
-  if (!gamepadState.connected) {
-    el.textContent = "Геймпад: не виден — подключите к ПК с браузером";
-    return;
-  }
-  const guardHint = lidarLockEngaged() ? " · LiDAR STOP" : lidarOverrideActive ? " · OVERRIDE" : "";
-  const speedHint = " · LB/RB = скорость";
-  el.textContent = gamepadState.active
-    ? `Геймпад: ${gamepadState.name} — стик / D-pad / RT${guardHint}${speedHint}`
-    : `Геймпад: ${gamepadState.name} — двигайте стик${guardHint}${speedHint}`;
+  // UI status line removed; gamepad wakes on Manual / driveTick.
 }
 
 function gamepadR2Pressed(pad) {
@@ -1260,11 +1230,6 @@ function gamepadR2Pressed(pad) {
   if (pad.axes.length > 5 && pad.axes[5] > 0.5) return true;
   return false;
 }
-
-document.getElementById("btn-wake-gamepad")?.addEventListener("click", () => {
-  wakeGamepads();
-  drivePad?.focus();
-});
 
 function onKeyDown(e) {
   if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target?.tagName || "").toUpperCase())) return;
