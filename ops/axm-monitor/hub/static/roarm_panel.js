@@ -3,6 +3,326 @@
   const ROARM_ID = "roarm-01";
   const LS_KEY = "axm_roarm_sequence_v1";
 
+  let savedPoints = [];
+  let selectedPointId = null;
+  let lastFeedback = null;
+
+  const ptListEl = () => document.getElementById("pt-list");
+  const ptStatusEl = () => document.getElementById("pt-status");
+
+  function setPtStatus(msg) {
+    const el = ptStatusEl();
+    if (el) el.textContent = msg;
+  }
+
+  function feedbackToPose(fb) {
+    if (!fb || typeof fb !== "object") return null;
+    const pick = (...keys) => {
+      for (const k of keys) {
+        if (fb[k] !== undefined && fb[k] !== null && Number.isFinite(Number(fb[k]))) return Number(fb[k]);
+      }
+      return undefined;
+    };
+    const joints = {
+      base: pick("b", "base"),
+      shoulder: pick("s", "shoulder"),
+      elbow: pick("e", "elbow"),
+      wrist: pick("t", "wrist"),
+      roll: pick("r", "roll"),
+      hand: pick("g", "hand"),
+    };
+    const xyz = {
+      x: pick("x"),
+      y: pick("y"),
+      z: pick("z"),
+      t: pick("tit", "t"),
+      r: pick("r"),
+      g: pick("g"),
+    };
+    if (Object.values(joints).every((v) => v === undefined) && Object.values(xyz).every((v) => v === undefined)) {
+      return null;
+    }
+    return { joints, xyz };
+  }
+
+  function pointSummary(pt) {
+    if (pt.mode === "xyz" && pt.xyz) {
+      const x = pt.xyz.x ?? "—";
+      const y = pt.xyz.y ?? "—";
+      const z = pt.xyz.z ?? "—";
+      return `XYZ ${x}/${y}/${z}`;
+    }
+    if (pt.joints) {
+      const j = pt.joints;
+      return `J S=${Number(j.shoulder ?? 0).toFixed(2)} E=${Number(j.elbow ?? 0).toFixed(2)}`;
+    }
+    return pt.mode || "—";
+  }
+
+  function renderPointsList() {
+    const list = ptListEl();
+    const countEl = document.getElementById("pt-count");
+    if (!list) return;
+    list.innerHTML = "";
+    if (countEl) countEl.textContent = savedPoints.length ? `${savedPoints.length} шт.` : "";
+    savedPoints.forEach((pt) => {
+      const li = document.createElement("li");
+      li.dataset.id = pt.id;
+      if (pt.id === selectedPointId) li.classList.add("selected");
+      const name = document.createElement("span");
+      name.textContent = pt.name || pt.id;
+      li.appendChild(name);
+      if (pt.role === "home") {
+        const badge = document.createElement("span");
+        badge.className = "pt-badge";
+        badge.textContent = "HOME";
+        li.appendChild(badge);
+      }
+      const meta = document.createElement("span");
+      meta.className = "pt-meta";
+      meta.textContent = pointSummary(pt);
+      li.appendChild(meta);
+      li.addEventListener("click", () => {
+        selectedPointId = pt.id;
+        renderPointsList();
+        const nameInput = document.getElementById("pt-name");
+        if (nameInput) nameInput.value = pt.name || "";
+        const modeSel = document.getElementById("pt-mode");
+        if (modeSel) modeSel.value = pt.mode || "joints";
+      });
+      list.appendChild(li);
+    });
+  }
+
+  async function loadPoints() {
+    try {
+      const res = await fetch("/api/roarm/points", { credentials: "same-origin" });
+      if (res.status === 401) {
+        location.href = "/login";
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      savedPoints = Array.isArray(data.points) ? data.points : [];
+      if (!selectedPointId && savedPoints.length) {
+        const homePt = savedPoints.find((p) => p.role === "home");
+        selectedPointId = (homePt || savedPoints[0]).id;
+      }
+      renderPointsList();
+    } catch (err) {
+      setPtStatus(`Ошибка загрузки точек: ${err}`);
+    }
+  }
+
+  async function postPoint(body) {
+    const res = await fetch("/api/roarm/points", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) {
+      location.href = "/login";
+      return null;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPtStatus(`Ошибка: ${data.detail || res.status}`);
+      return null;
+    }
+    savedPoints = data.points || savedPoints;
+    if (data.point) selectedPointId = data.point.id;
+    renderPointsList();
+    return data.point;
+  }
+
+  async function captureFromArm() {
+    setPtStatus("Читаю позицию T:105…");
+    const data = await rpc("feedback", {}, { blocking: true });
+    if (!data || data.ok === false) {
+      setPtStatus("Не удалось считать позицию");
+      return null;
+    }
+    const fb = data.feedback || data.status || data.result?.feedback;
+    lastFeedback = fb;
+    if (jsonEl) jsonEl.textContent = JSON.stringify(fb, null, 2);
+    return feedbackToPose(fb);
+  }
+
+  async function savePointFromArm() {
+    const name = String(document.getElementById("pt-name")?.value || "").trim();
+    if (!name) {
+      setPtStatus("Введите название точки");
+      return;
+    }
+    const pose = await captureFromArm();
+    if (!pose) return;
+    const mode = String(document.getElementById("pt-mode")?.value || "joints");
+    const pt = await postPoint({
+      name,
+      mode,
+      joints: pose.joints,
+      xyz: pose.xyz,
+      role: name.toLowerCase() === "home" ? "home" : null,
+    });
+    if (pt) {
+      setPtStatus(`Сохранено: ${pt.name}`);
+      log(`point saved: ${pt.name}`);
+    }
+  }
+
+  async function savePointFromForm() {
+    const name = String(document.getElementById("pt-name")?.value || "").trim();
+    if (!name) {
+      setPtStatus("Введите название точки");
+      return;
+    }
+    const pt = await postPoint({
+      name,
+      mode: "xyz",
+      xyz: {
+        x: num("mv-x"),
+        y: num("mv-y"),
+        z: num("mv-z"),
+        t: num("mv-t"),
+        r: num("mv-r"),
+        g: num("mv-g"),
+      },
+      xyz_spd: num("mv-spd"),
+      role: name.toLowerCase() === "home" ? "home" : null,
+    });
+    if (pt) {
+      setPtStatus(`Сохранено из формы: ${pt.name}`);
+      log(`point saved from form: ${pt.name}`);
+    }
+  }
+
+  function selectedPoint() {
+    return savedPoints.find((p) => p.id === selectedPointId) || null;
+  }
+
+  async function goToPoint(pt) {
+    if (!pt) {
+      setPtStatus("Выберите точку в списке");
+      return null;
+    }
+    if (pt.mode === "xyz" && pt.xyz) {
+      setPtStatus(`→ ${pt.name} (T:104)`);
+      return rpc("move_xyz", {
+        x: pt.xyz.x ?? 0,
+        y: pt.xyz.y ?? 0,
+        z: pt.xyz.z ?? 0,
+        t: pt.xyz.t ?? 0,
+        r: pt.xyz.r ?? 0,
+        g: pt.xyz.g ?? 3.14,
+        spd: pt.xyz_spd ?? 0.25,
+      });
+    }
+    if (pt.joints) {
+      setPtStatus(`→ ${pt.name} (T:102)`);
+      const j = pt.joints;
+      return rpc("home_joints", {
+        base: j.base ?? 0,
+        shoulder: j.shoulder ?? 0,
+        elbow: j.elbow ?? 1.57,
+        wrist: j.wrist ?? 0,
+        roll: j.roll ?? 0,
+        hand: j.hand ?? 3.14,
+        spd: pt.joint_spd ?? 0,
+        acc: pt.joint_acc ?? 10,
+      });
+    }
+    setPtStatus("У точки нет координат");
+    return null;
+  }
+
+  async function goHome() {
+    const homePt = savedPoints.find((p) => p.role === "home");
+    if (homePt) {
+      setPtStatus("HOME → сохранённая точка");
+      return goToPoint(homePt);
+    }
+    setPtStatus("HOME → T:100 (нет точки ★ HOME)");
+    return rpc("home");
+  }
+
+  async function setSelectedAsHome() {
+    const pt = selectedPoint();
+    if (!pt) {
+      setPtStatus("Выберите точку");
+      return;
+    }
+    const res = await fetch(`/api/roarm/points/${encodeURIComponent(pt.id)}/set-home`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    if (res.status === 401) {
+      location.href = "/login";
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPtStatus(`Ошибка: ${data.detail || res.status}`);
+      return;
+    }
+    savedPoints = data.points || savedPoints;
+    renderPointsList();
+    setPtStatus(`★ HOME = ${pt.name}`);
+    log(`home point set: ${pt.name}`);
+  }
+
+  async function commitSelectedToServo() {
+    const pt = selectedPoint();
+    if (!pt) {
+      setPtStatus("Выберите точку");
+      return;
+    }
+    const ok = window.confirm(
+      `Записать «${pt.name}» в сервоприводы (T:502)?\n\n` +
+        "Рука перейдёт в позицию → T:502 запомнит её для включения питания."
+    );
+    if (!ok) return;
+    if (pt.role !== "home") {
+      await setSelectedAsHome();
+    }
+    const moved = await goToPoint(pt);
+    if (!moved || moved.ok === false) {
+      setPtStatus("Не удалось перейти — T:502 отменён");
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 4000));
+    setPtStatus("T:502…");
+    const data = await rpc("set_servo_middle", {});
+    if (data && data.ok !== false) {
+      setPtStatus(`HOME записан в серво: ${pt.name}`);
+      log(`servo middle: ${pt.name}`);
+    } else {
+      setPtStatus("Ошибка T:502");
+    }
+  }
+
+  async function deleteSelectedPoint() {
+    const pt = selectedPoint();
+    if (!pt) {
+      setPtStatus("Выберите точку");
+      return;
+    }
+    if (!window.confirm(`Удалить точку «${pt.name}»?`)) return;
+    const res = await fetch(`/api/roarm/points/${encodeURIComponent(pt.id)}`, {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPtStatus(`Ошибка: ${data.detail || res.status}`);
+      return;
+    }
+    savedPoints = data.points || [];
+    selectedPointId = savedPoints[0]?.id || null;
+    renderPointsList();
+    setPtStatus("Точка удалена");
+  }
+
+
   const logEl = document.getElementById("roarm-log");
   const jsonEl = document.getElementById("roarm-json");
   const reachEl = document.getElementById("reachability");
@@ -45,9 +365,7 @@
     }
     if (blocking) {
       motionBusy = true;
-      panelButtons().forEach((b) => {
-        b.disabled = true;
-      });
+      panelButtons().forEach((b) => { b.disabled = true; });
     }
     try {
       const res = await fetch("/api/roarm/rpc", {
@@ -56,17 +374,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ op, params }),
       });
-      if (res.status === 401) {
-        location.href = "/login";
-        return null;
-      }
+      if (res.status === 401) { location.href = "/login"; return null; }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const detail = data.detail || res.status;
+        const detail = data.detail || data.error || res.status;
         log(`${op} ERROR ${detail}`);
-        if (detail === "roarm_gateway_offline") {
-          log("Orin offline на hub — проверьте fleet-agent");
-        }
+        if (detail === "roarm_gateway_offline") log("Orin offline — проверьте fleet-agent");
         return data;
       }
       if (blocking && op !== "sequence_status") log(`${op} OK`);
@@ -77,9 +390,7 @@
     } finally {
       if (blocking) {
         motionBusy = false;
-        panelButtons().forEach((b) => {
-          b.disabled = false;
-        });
+        panelButtons().forEach((b) => { b.disabled = false; });
       }
     }
   }
@@ -114,8 +425,9 @@
       if (jsonEl) jsonEl.textContent = JSON.stringify(data, null, 2);
       return;
     }
-    const st = data.status || data.result?.status || data;
-    if (jsonEl) jsonEl.textContent = JSON.stringify(st, null, 2);
+    const st = data.status || data.feedback || data.result?.status || data.result?.feedback;
+    if (st && typeof st === "object") lastFeedback = st;
+    if (jsonEl) jsonEl.textContent = JSON.stringify(st || data, null, 2);
   }
 
   function emptyRow(type = "target") {
@@ -362,7 +674,7 @@
         armBadge.className = "badge warn";
         armBadge.title =
           rt.error ||
-          "Порт 80 открыт, но ESP не отвечает — закройте заводской UI http://192.168.3.22/ в браузере";
+          "Порт 80 открыт, но JSON не пришёл — перезагрузите RoArm или проверьте Wi‑Fi";
       } else if (proxyOk) {
         armBadge.textContent = "ARM offline";
         armBadge.className = "badge warn";
@@ -395,7 +707,13 @@
     });
 
     document.getElementById("btn-refresh")?.addEventListener("click", refreshStatus);
-    document.getElementById("btn-home")?.addEventListener("click", () => rpc("home"));
+    document.getElementById("btn-home")?.addEventListener("click", () => goHome());
+    document.getElementById("pt-save-arm")?.addEventListener("click", () => savePointFromArm());
+    document.getElementById("pt-save-form")?.addEventListener("click", () => savePointFromForm());
+    document.getElementById("pt-go")?.addEventListener("click", () => goToPoint(selectedPoint()));
+    document.getElementById("pt-set-home")?.addEventListener("click", () => setSelectedAsHome());
+    document.getElementById("pt-servo")?.addEventListener("click", () => commitSelectedToServo());
+    document.getElementById("pt-del")?.addEventListener("click", () => deleteSelectedPoint());
     document.getElementById("btn-torque-on")?.addEventListener("click", () => rpc("torque_on"));
     document.getElementById("btn-torque-off")?.addEventListener("click", () => rpc("torque_off"));
     document.getElementById("btn-grip-open")?.addEventListener("click", () => rpc("gripper_open"));
@@ -534,6 +852,7 @@
       bindOnce();
       renderFleetStatus(device);
       refreshStatus();
+      loadPoints();
     },
     onFleetUpdate(device) {
       if (!device) return;

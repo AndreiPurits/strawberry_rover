@@ -59,6 +59,157 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
+ROARM_HOME_FILE = Path(_env("AXM_ROARM_HOME_FILE", str(Path(__file__).resolve().parent / "data" / "roarm_home.json")))
+
+_DEFAULT_ROARM_HOME: Dict[str, Any] = {
+    "base": 0.0,
+    "shoulder": -0.35,
+    "elbow": 1.85,
+    "wrist": 0.0,
+    "roll": 0.0,
+    "hand": 3.14,
+    "spd": 0.0,
+    "acc": 10.0,
+    "use_preset_for_home": True,
+    "note": "Поднятая позиция для ровера — подстройте под стенд и запишите T:502",
+}
+
+
+def _load_roarm_home() -> Dict[str, Any]:
+    try:
+        if ROARM_HOME_FILE.is_file():
+            data = json.loads(ROARM_HOME_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                out = dict(_DEFAULT_ROARM_HOME)
+                out.update(data)
+                return out
+    except (OSError, json.JSONDecodeError):
+        pass
+    return dict(_DEFAULT_ROARM_HOME)
+
+
+def _save_roarm_home(data: Dict[str, Any]) -> Dict[str, Any]:
+    ROARM_HOME_FILE.parent.mkdir(parents=True, exist_ok=True)
+    merged = dict(_DEFAULT_ROARM_HOME)
+    for key in ("base", "shoulder", "elbow", "wrist", "roll", "hand", "spd", "acc"):
+        if key in data:
+            merged[key] = float(data[key])
+    if "use_preset_for_home" in data:
+        merged["use_preset_for_home"] = bool(data["use_preset_for_home"])
+    if isinstance(data.get("note"), str):
+        merged["note"] = str(data["note"])[:500]
+    merged["updated_at"] = time.time()
+    ROARM_HOME_FILE.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return merged
+
+
+ROARM_POINTS_FILE = Path(
+    _env("AXM_ROARM_POINTS_FILE", str(Path(__file__).resolve().parent / "data" / "roarm_points.json"))
+)
+
+_DEFAULT_ROARM_POINTS: List[Dict[str, Any]] = [
+    {
+        "id": "home",
+        "name": "Home",
+        "role": "home",
+        "mode": "joints",
+        "joints": {
+            "base": 0.0,
+            "shoulder": -0.35,
+            "elbow": 1.85,
+            "wrist": 0.0,
+            "roll": 0.0,
+            "hand": 3.14,
+        },
+        "xyz": {"x": 235.0, "y": 0.0, "z": 234.0, "t": 0.0, "r": 0.0, "g": 3.14},
+        "joint_spd": 0.0,
+        "joint_acc": 10.0,
+        "xyz_spd": 0.25,
+    },
+    {
+        "id": "berry_store",
+        "name": "Хранилище ягод",
+        "role": None,
+        "mode": "xyz",
+        "joints": None,
+        "xyz": {"x": 235.0, "y": 0.0, "z": 234.0, "t": 0.0, "r": 0.0, "g": 3.14},
+        "joint_spd": 0.0,
+        "joint_acc": 10.0,
+        "xyz_spd": 0.25,
+    },
+]
+
+
+def _load_roarm_points() -> List[Dict[str, Any]]:
+    try:
+        if ROARM_POINTS_FILE.is_file():
+            data = json.loads(ROARM_POINTS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("points"), list):
+                return list(data["points"])
+            if isinstance(data, list):
+                return list(data)
+    except (OSError, json.JSONDecodeError):
+        pass
+    return [dict(p) for p in _DEFAULT_ROARM_POINTS]
+
+
+def _save_roarm_points(points: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    ROARM_POINTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    cleaned: List[Dict[str, Any]] = []
+    for raw in points:
+        if not isinstance(raw, dict):
+            continue
+        pid = str(raw.get("id") or uuid.uuid4().hex[:12])
+        name = str(raw.get("name") or "Point")[:64]
+        mode = str(raw.get("mode") or "joints")
+        if mode not in ("joints", "xyz"):
+            mode = "joints"
+        role = raw.get("role")
+        if role is not None:
+            role = str(role)[:32]
+        joints = raw.get("joints") if isinstance(raw.get("joints"), dict) else None
+        xyz = raw.get("xyz") if isinstance(raw.get("xyz"), dict) else None
+        cleaned.append(
+            {
+                "id": pid,
+                "name": name,
+                "role": role,
+                "mode": mode,
+                "joints": joints,
+                "xyz": xyz,
+                "joint_spd": float(raw.get("joint_spd", 0)),
+                "joint_acc": float(raw.get("joint_acc", 10)),
+                "xyz_spd": float(raw.get("xyz_spd", 0.25)),
+                "updated_at": float(raw.get("updated_at") or time.time()),
+            }
+        )
+    ROARM_POINTS_FILE.write_text(
+        json.dumps({"points": cleaned}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return cleaned
+
+
+def _sync_home_from_point(point: Dict[str, Any]) -> None:
+    joints = point.get("joints") if isinstance(point.get("joints"), dict) else {}
+    if not joints:
+        return
+    _save_roarm_home(
+        {
+            "base": joints.get("base", 0),
+            "shoulder": joints.get("shoulder", 0),
+            "elbow": joints.get("elbow", 1.57),
+            "wrist": joints.get("wrist", 0),
+            "roll": joints.get("roll", 0),
+            "hand": joints.get("hand", 3.14),
+            "spd": point.get("joint_spd", 0),
+            "acc": point.get("joint_acc", 10),
+            "use_preset_for_home": True,
+            "note": f"HOME from point: {point.get('name')}",
+        }
+    )
+
+
 AGENT_STALE_S = int(_env("AXM_AGENT_STALE_S", "600"))
 
 
@@ -427,6 +578,30 @@ class RoArmRpcBody(BaseModel):
     params: Dict[str, Any] = Field(default_factory=dict)
 
 
+class RoArmHomeBody(BaseModel):
+    base: float = 0.0
+    shoulder: float = 0.0
+    elbow: float = 1.57
+    wrist: float = 0.0
+    roll: float = 0.0
+    hand: float = 3.14
+    spd: float = 0.0
+    acc: float = 10.0
+    use_preset_for_home: bool = True
+    note: str = ""
+
+
+class RoArmPointBody(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    mode: str = Field(default="joints", pattern="^(joints|xyz)$")
+    joints: Optional[Dict[str, float]] = None
+    xyz: Optional[Dict[str, float]] = None
+    joint_spd: float = 0.0
+    joint_acc: float = 10.0
+    xyz_spd: float = 0.25
+    role: Optional[str] = None
+
+
 class RoArmAgentPullBody(BaseModel):
     rover_id: str = Field(min_length=1, max_length=64)
     token: str
@@ -570,6 +745,72 @@ def roarm_page_catchall(request: Request, rest: str) -> RedirectResponse:
     return RedirectResponse("/?device=roarm-01", status_code=302)
 
 
+@app.get("/api/roarm/home")
+async def api_roarm_home_get(user: str = Depends(require_user)) -> Dict[str, Any]:
+    return {"ok": True, "home": _load_roarm_home()}
+
+
+@app.put("/api/roarm/home")
+async def api_roarm_home_put(body: RoArmHomeBody, user: str = Depends(require_user)) -> Dict[str, Any]:
+    saved = _save_roarm_home(body.model_dump())
+    return {"ok": True, "home": saved}
+
+
+@app.get("/api/roarm/points")
+async def api_roarm_points_get(user: str = Depends(require_user)) -> Dict[str, Any]:
+    return {"ok": True, "points": _load_roarm_points()}
+
+
+@app.post("/api/roarm/points")
+async def api_roarm_points_post(body: RoArmPointBody, user: str = Depends(require_user)) -> Dict[str, Any]:
+    points = _load_roarm_points()
+    point = {
+        "id": uuid.uuid4().hex[:12],
+        "name": body.name.strip(),
+        "role": body.role,
+        "mode": body.mode,
+        "joints": body.joints,
+        "xyz": body.xyz,
+        "joint_spd": body.joint_spd,
+        "joint_acc": body.joint_acc,
+        "xyz_spd": body.xyz_spd,
+        "updated_at": time.time(),
+    }
+    if point["role"] == "home":
+        for p in points:
+            p["role"] = None
+    points.append(point)
+    saved = _save_roarm_points(points)
+    created = next((p for p in saved if p["id"] == point["id"]), point)
+    if created.get("role") == "home":
+        _sync_home_from_point(created)
+    return {"ok": True, "point": created, "points": saved}
+
+
+@app.delete("/api/roarm/points/{point_id}")
+async def api_roarm_points_delete(point_id: str, user: str = Depends(require_user)) -> Dict[str, Any]:
+    points = [p for p in _load_roarm_points() if str(p.get("id")) != str(point_id)]
+    saved = _save_roarm_points(points)
+    return {"ok": True, "points": saved}
+
+
+@app.post("/api/roarm/points/{point_id}/set-home")
+async def api_roarm_points_set_home(point_id: str, user: str = Depends(require_user)) -> Dict[str, Any]:
+    points = _load_roarm_points()
+    found = None
+    for p in points:
+        if str(p.get("id")) == str(point_id):
+            p["role"] = "home"
+            found = p
+        else:
+            p["role"] = None
+    if found is None:
+        raise HTTPException(status_code=404, detail="point_not_found")
+    saved = _save_roarm_points(points)
+    _sync_home_from_point(found)
+    return {"ok": True, "point": found, "points": saved}
+
+
 @app.post("/api/roarm/rpc")
 async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -> Dict[str, Any]:
     parent_id = _roarm_agent_rover_id()
@@ -582,7 +823,7 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
     fut: asyncio.Future = loop.create_future()
     _roarm_waiters[req_id] = fut
     timeout_s = float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12"))
-    if body.op in ("move_xyz", "move_xyz_direct"):
+    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "joint_move"):
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
     try:
         result = await asyncio.wait_for(fut, timeout=timeout_s)

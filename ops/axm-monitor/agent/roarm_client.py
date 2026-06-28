@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import json
 import socket
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
+from urllib.parse import quote
+
+_HTTP_LOCK = threading.Lock()
 
 
 class RoArmClientError(RuntimeError):
@@ -16,13 +20,11 @@ class RoArmClientError(RuntimeError):
 class RoArmClient:
     ip: str = "192.168.1.87"
     timeout_sec: float = 5.0
-
-    def _status_url(self) -> str:
-        return f"http://{self.ip}/js"
+    _lock: threading.Lock = field(default_factory=lambda: _HTTP_LOCK, repr=False)
 
     def _command_url(self, cmd: Dict[str, Any]) -> str:
         payload = json.dumps(cmd, separators=(",", ":"))
-        return f"http://{self.ip}/js?json={payload}"
+        return f"http://{self.ip}/js?json={quote(payload, safe='')}"
 
     def tcp_open(self, timeout_sec: float | None = None) -> bool:
         effective = self.timeout_sec if timeout_sec is None else float(timeout_sec)
@@ -47,40 +49,38 @@ class RoArmClient:
         connect_timeout = min(3.0, effective)
         read_timeout = max(1.0, effective - connect_timeout)
         try:
-            with socket.create_connection((host, 80), timeout=connect_timeout) as sock:
-                sock.settimeout(read_timeout)
-                req = (
-                    f"GET {path} HTTP/1.1\r\n"
-                    f"Host: {host}\r\n"
-                    "Connection: close\r\n"
-                    "User-Agent: axm-roarm/1\r\n"
-                    "Accept: application/json,*/*\r\n"
-                    "\r\n"
-                )
-                sock.sendall(req.encode("ascii"))
-                chunks: list[bytes] = []
-                while True:
-                    try:
-                        block = sock.recv(4096)
-                    except socket.timeout:
-                        break
-                    if not block:
-                        break
-                    chunks.append(block)
+            with self._lock:
+                with socket.create_connection((host, 80), timeout=connect_timeout) as sock:
+                    sock.settimeout(read_timeout)
+                    req = (
+                        f"GET {path} HTTP/1.1\r\n"
+                        f"Host: {host}\r\n"
+                        "Connection: close\r\n"
+                        "User-Agent: axm-roarm/1\r\n"
+                        "Accept: application/json,*/*\r\n"
+                        "\r\n"
+                    )
+                    sock.sendall(req.encode("ascii"))
+                    chunks: list[bytes] = []
+                    while True:
+                        try:
+                            block = sock.recv(4096)
+                        except socket.timeout:
+                            break
+                        if not block:
+                            break
+                        chunks.append(block)
         except socket.timeout as exc:
-            if self.tcp_open(timeout_sec=connect_timeout):
-                raise RoArmClientError(
-                    f"HTTP read timeout for {url} — порт 80 открыт, но ESP не отвечает. "
-                    "Закройте заводской UI http://{self.ip}/ в браузере (одно подключение)."
-                ) from exc
-            raise RoArmClientError(f"timeout for {url}") from exc
+            raise RoArmClientError(
+                f"HTTP read timeout for {url} — RoArm не ответил за {read_timeout:.0f}s"
+            ) from exc
         except OSError as exc:
             raise RoArmClientError(f"request failed for {url}: {exc}") from exc
 
         raw = b"".join(chunks).decode("utf-8", errors="replace")
         if not raw.strip():
             raise RoArmClientError(
-                f"empty HTTP response from {url} — закройте заводской UI http://{self.ip}/ в браузере"
+                f"empty HTTP response from {url} — перезагрузите RoArm или проверьте Wi‑Fi {self.ip}"
             )
         _, _, body = raw.partition("\r\n\r\n")
         if not body and "\n\n" in raw:
@@ -88,15 +88,8 @@ class RoArmClient:
         return body.strip() or raw.strip()
 
     def get_status(self, timeout_sec: float | None = None) -> Tuple[str, Dict[str, Any]]:
-        url = self._status_url()
-        raw = self._http_get(url, timeout_sec=timeout_sec)
-        try:
-            parsed = json.loads(raw)
-        except ValueError as exc:
-            raise RoArmClientError(f"invalid JSON from {url}: {raw[:120]!r}") from exc
-        if not isinstance(parsed, dict):
-            raise RoArmClientError(f"unexpected status type from {url}")
-        return url, parsed
+        """RoArm firmware does not answer bare GET /js — use T:105 feedback."""
+        return self.servo_feedback(timeout_sec=timeout_sec)
 
     def send_raw_json(self, cmd: Dict[str, Any], timeout_sec: float | None = None) -> Tuple[str, str]:
         url = self._command_url(cmd)
@@ -104,6 +97,61 @@ class RoArmClient:
 
     def home(self, timeout_sec: float | None = None) -> Tuple[str, str]:
         return self.send_raw_json({"T": 100}, timeout_sec=timeout_sec)
+
+    def joint_control(
+        self,
+        joint: int,
+        rad: float,
+        spd: float = 0.0,
+        acc: float = 10.0,
+        timeout_sec: float | None = None,
+    ) -> Tuple[str, str]:
+        return self.send_raw_json(
+            {"T": 101, "joint": int(joint), "rad": float(rad), "spd": float(spd), "acc": float(acc)},
+            timeout_sec=timeout_sec,
+        )
+
+    def joints_rad_ctrl(
+        self,
+        *,
+        base: float,
+        shoulder: float,
+        elbow: float,
+        wrist: float,
+        roll: float,
+        hand: float,
+        spd: float = 0.0,
+        acc: float = 10.0,
+        timeout_sec: float | None = None,
+    ) -> Tuple[str, str]:
+        return self.send_raw_json(
+            {
+                "T": 102,
+                "base": float(base),
+                "shoulder": float(shoulder),
+                "elbow": float(elbow),
+                "wrist": float(wrist),
+                "roll": float(roll),
+                "hand": float(hand),
+                "spd": float(spd),
+                "acc": float(acc),
+            },
+            timeout_sec=timeout_sec,
+        )
+
+    def servo_feedback(self, timeout_sec: float | None = None) -> Tuple[str, Dict[str, Any]]:
+        url, raw = self.send_raw_json({"T": 105}, timeout_sec=timeout_sec)
+        try:
+            parsed = json.loads(raw)
+        except ValueError as exc:
+            raise RoArmClientError(f"invalid feedback JSON: {raw[:120]!r}") from exc
+        if not isinstance(parsed, dict):
+            raise RoArmClientError(f"unexpected feedback type from {url}")
+        return url, parsed
+
+    def set_servo_middle(self, timeout_sec: float | None = None) -> Tuple[str, str]:
+        """Save current physical pose as servo middle (affects T:100 / power-on init)."""
+        return self.send_raw_json({"T": 502}, timeout_sec=timeout_sec)
 
     def gripper_open(self, timeout_sec: float | None = None) -> Tuple[str, str]:
         return self.send_raw_json({"T": 106, "cmd": 1.08, "spd": 0, "acc": 0}, timeout_sec=timeout_sec)

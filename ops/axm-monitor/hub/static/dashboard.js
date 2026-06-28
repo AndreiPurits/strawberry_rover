@@ -967,12 +967,22 @@ function renderRtkMap(rtk) {
   const sats = rtk.satellites != null ? `${rtk.satellites} sat` : "";
   const hdop = rtk.hdop != null ? `hdop ${rtk.hdop}` : "";
   const age = rtk.age_s != null ? `${rtk.age_s}s` : "";
+  const ntrip = rtk.ntrip || {};
+  let ntripMeta = "";
+  if (ntrip.enabled) {
+    if (ntrip.connected) {
+      const rate = ntrip.rtcm_rate_bps != null ? `${ntrip.rtcm_rate_bps} B/s` : "RTCM";
+      ntripMeta = `NTRIP ✓ ${rate}`;
+    } else {
+      ntripMeta = `NTRIP ✗ ${ntrip.error || "offline"}`;
+    }
+  }
   if (label) {
     if (lat != null && lon != null) {
-      label.textContent = `${fix} · ${lat.toFixed(5)}, ${lon.toFixed(5)} ${sats}`.trim();
+      label.textContent = `${fix} · ${lat.toFixed(5)}, ${lon.toFixed(5)} ${sats} ${ntripMeta}`.trim();
       label.title = label.textContent;
     } else if (rtk.connected && !rtk.stale) {
-      const parts = ["ожидание fix…", fix !== "—" ? fix : "", sats, hdop, age].filter(Boolean);
+      const parts = ["ожидание fix…", fix !== "—" ? fix : "", sats, hdop, ntripMeta, age].filter(Boolean);
       label.textContent = parts.join(" · ");
       label.title = rtk.last_sentence ? String(rtk.last_sentence) : label.textContent;
     } else if (rtk.connected) {

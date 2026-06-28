@@ -67,15 +67,17 @@ def probe_status(force: bool = False) -> Dict[str, Any]:
         "arm": None,
     }
     client = _get_client()
-    snap["tcp_open"] = client.tcp_open(timeout_sec=float(_env("ROARM_CONNECT_TIMEOUT_S", "3")))
     try:
-        _url, status = client.get_status(timeout_sec=connect_timeout)
+        _url, status = client.servo_feedback(timeout_sec=connect_timeout)
         snap["reachable"] = True
+        snap["tcp_open"] = True
         snap["arm"] = status
     except RoArmClientError as exc:
         snap["error"] = str(exc)
+        snap["tcp_open"] = client.tcp_open(timeout_sec=connect_timeout)
     except Exception as exc:
         snap["error"] = str(exc)
+        snap["tcp_open"] = client.tcp_open(timeout_sec=connect_timeout)
     _last_status = snap
     return dict(_last_status)
 
@@ -94,10 +96,38 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
     client = _get_client()
     try:
         if op == "status":
-            url, status = client.get_status()
-            return {"ok": True, "url": url, "status": status}
+            url, status = client.servo_feedback(timeout_sec=8.0)
+            return {"ok": True, "url": url, "status": status, "feedback": status}
         if op == "home":
             url, resp = client.home(timeout_sec=10.0)
+            return {"ok": True, "url": url, "response": resp}
+        if op == "home_joints":
+            url, resp = client.joints_rad_ctrl(
+                base=float(params.get("base", 0)),
+                shoulder=float(params.get("shoulder", 0)),
+                elbow=float(params.get("elbow", 1.57)),
+                wrist=float(params.get("wrist", 0)),
+                roll=float(params.get("roll", 0)),
+                hand=float(params.get("hand", 3.14)),
+                spd=float(params.get("spd", 0)),
+                acc=float(params.get("acc", 10)),
+                timeout_sec=_move_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp}
+        if op == "joint_move":
+            url, resp = client.joint_control(
+                int(params.get("joint", 1)),
+                float(params.get("rad", 0)),
+                spd=float(params.get("spd", 0)),
+                acc=float(params.get("acc", 10)),
+                timeout_sec=_move_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp}
+        if op == "feedback":
+            url, fb = client.servo_feedback(timeout_sec=8.0)
+            return {"ok": True, "url": url, "feedback": fb}
+        if op == "set_servo_middle":
+            url, resp = client.set_servo_middle(timeout_sec=10.0)
             return {"ok": True, "url": url, "response": resp}
         if op == "gripper_open":
             url, resp = client.gripper_open()

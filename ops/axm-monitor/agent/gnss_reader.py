@@ -1,8 +1,9 @@
-"""u-blox RTK / GNSS NMEA reader for fleet telemetry."""
+"""u-blox RTK / GNSS NMEA reader + RTCM injection for fleet telemetry."""
 from __future__ import annotations
 
 import glob
 import os
+import queue
 import threading
 import time
 from typing import Any, Dict, List, Optional
@@ -13,6 +14,8 @@ try:
 except ImportError:
     serial = None  # type: ignore
     SerialException = Exception  # type: ignore
+
+from ntrip_client import ntrip_configured, ntrip_snapshot, start_ntrip_client
 
 _lock = threading.Lock()
 _state: Dict[str, Any] = {
@@ -28,14 +31,18 @@ _state: Dict[str, Any] = {
     "alt_m": None,
     "speed_mps": None,
     "last_sentence": "",
+    "last_gga": "",
     "updated_at": None,
     "nmea_count": 0,
+    "rtcm_injected_bytes": 0,
     "error": None,
 }
 _thread: Optional[threading.Thread] = None
 _stop = threading.Event()
 _initial_baud = 38400
 _fix_logged = False
+_rtk_fix_logged = False
+_rtcm_queue: "queue.Queue[bytes]" = queue.Queue(maxsize=256)
 
 _BAUD_CANDIDATES = (38400, 57600, 115200, 9600, 230400)
 
@@ -104,6 +111,75 @@ def _nmea_type(line: str) -> str:
     return head[-3:].upper()
 
 
+def _nmea_checksum(body: str) -> str:
+    cs = 0
+    for ch in body:
+        cs ^= ord(ch)
+    return f"*{cs:02X}"
+
+
+def _deg_to_nmea(value: float, is_lat: bool) -> tuple[str, str]:
+    hemi = ("N", "S") if is_lat else ("E", "W")
+    sign = 1.0 if value >= 0 else -1.0
+    av = abs(value)
+    deg = int(av)
+    minutes = (av - deg) * 60.0
+    if is_lat:
+        return f"{deg:02d}{minutes:07.4f}", hemi[0 if sign >= 0 else 1]
+    return f"{deg:03d}{minutes:07.4f}", hemi[0 if sign >= 0 else 1]
+
+
+def build_gga_sentence(
+    lat: float,
+    lon: float,
+    alt_m: float = 0.0,
+    quality: int = 1,
+    satellites: int = 8,
+    hdop: float = 1.0,
+) -> str:
+    """Build GNGGA for NTRIP VRS casters."""
+    tm = time.gmtime()
+    tstr = f"{tm.tm_hour:02d}{tm.tm_min:02d}{tm.tm_sec:02d}.00"
+    lat_s, ns = _deg_to_nmea(lat, True)
+    lon_s, ew = _deg_to_nmea(lon, False)
+    body = (
+        f"GNGGA,{tstr},{lat_s},{ns},{lon_s},{ew},"
+        f"{quality},{satellites},{hdop:.1f},{alt_m:.1f},M,0.0,M,,"
+    )
+    return f"${body}{_nmea_checksum(body)}"
+
+
+def _gga_for_ntrip() -> Optional[str]:
+    with _lock:
+        last_gga = str(_state.get("last_gga") or "").strip()
+        lat = _state.get("lat")
+        lon = _state.get("lon")
+        alt = _state.get("alt_m")
+        quality = int(_state.get("fix_quality") or 0)
+        sats = _state.get("satellites")
+        hdop = _state.get("hdop")
+    if last_gga.startswith("$") and "," in last_gga:
+        parts = last_gga.split(",")
+        if len(parts) > 5 and parts[2] and parts[4]:
+            return last_gga
+    if lat is None or lon is None:
+        try:
+            lat = float(os.environ.get("NTRIP_APPROX_LAT", ""))
+            lon = float(os.environ.get("NTRIP_APPROX_LON", ""))
+        except ValueError:
+            return None
+        quality = 1
+        alt = alt or 0.0
+    return build_gga_sentence(
+        float(lat),
+        float(lon),
+        float(alt or 0.0),
+        quality if quality > 0 else 1,
+        int(sats or 8),
+        float(hdop or 1.0),
+    )
+
+
 def _nmea_coord(raw: str, hemi: str) -> Optional[float]:
     raw = (raw or "").strip()
     if not raw or not hemi:
@@ -142,16 +218,16 @@ def _parse_gga(parts: list[str]) -> Dict[str, Any]:
         out["alt_m"] = float(parts[9]) if parts[9] else None
     except ValueError:
         out["alt_m"] = None
-    if quality <= 0:
-        out["lat"] = None
-        out["lon"] = None
-    else:
-        lat = _nmea_coord(parts[2], parts[3])
-        lon = _nmea_coord(parts[4], parts[5])
+    lat = _nmea_coord(parts[2], parts[3])
+    lon = _nmea_coord(parts[4], parts[5])
+    if quality > 0:
         if lat is not None:
             out["lat"] = lat
         if lon is not None:
             out["lon"] = lon
+    else:
+        out["lat"] = None
+        out["lon"] = None
     return out
 
 
@@ -191,7 +267,7 @@ def _normalize_nmea_line(line: str) -> str:
 
 
 def _handle_line(line: str) -> None:
-    global _fix_logged
+    global _fix_logged, _rtk_fix_logged
     line = _normalize_nmea_line(line)
     if not line.startswith("$") or "," not in line:
         return
@@ -207,6 +283,8 @@ def _handle_line(line: str) -> None:
         return
     with _lock:
         _state["last_sentence"] = line[:160]
+        if tag == "GGA":
+            _state["last_gga"] = line[:160]
         _state["updated_at"] = time.time()
         _state["connected"] = True
         _state["error"] = None
@@ -223,16 +301,36 @@ def _handle_line(line: str) -> None:
                 f"lat={_state.get('lat')} lon={_state.get('lon')} "
                 f"sats={_state.get('satellites')}"
             )
+        elif fix_q in (4, 5) and _state.get("lat") is not None and not _rtk_fix_logged:
+            _rtk_fix_logged = True
+            label = _state.get("fix_label")
+            print(
+                f"[gnss] RTK active q={fix_q} {label} "
+                f"lat={_state.get('lat')} lon={_state.get('lon')}"
+            )
 
 
-def _drain_lines(ser: "serial.Serial", buf: bytearray) -> None:
-    chunk = ser.read(ser.in_waiting or 256)
-    if not chunk:
-        chunk = ser.read(1)
-    if not chunk:
-        return
-    buf.extend(chunk)
-    while True:
+def _rtcm_frame_len(buf: bytearray) -> Optional[int]:
+    if len(buf) < 3 or buf[0] != 0xD3:
+        return None
+    length = ((buf[1] & 0x03) << 8) | buf[2]
+    return 3 + length + 3
+
+
+def _consume_buffer(buf: bytearray) -> None:
+    while buf:
+        if buf[0] == 0xD3:
+            frame_len = _rtcm_frame_len(buf)
+            if frame_len is None or len(buf) < frame_len:
+                return
+            del buf[:frame_len]
+            continue
+        if buf[0] in (0x0A, 0x0D):
+            del buf[:1]
+            continue
+        if buf[0] != ord("$"):
+            del buf[:1]
+            continue
         nl = buf.find(b"\n")
         cr = buf.find(b"\r")
         if nl < 0 and cr < 0:
@@ -255,6 +353,32 @@ def _drain_lines(ser: "serial.Serial", buf: bytearray) -> None:
             pass
 
 
+def _drain_serial(ser: "serial.Serial", buf: bytearray) -> None:
+    chunk = ser.read(ser.in_waiting or 256)
+    if not chunk:
+        chunk = ser.read(1)
+    if not chunk:
+        return
+    buf.extend(chunk)
+    _consume_buffer(buf)
+
+
+def _inject_rtcm(ser: "serial.Serial") -> None:
+    injected = 0
+    while True:
+        try:
+            chunk = _rtcm_queue.get_nowait()
+        except queue.Empty:
+            break
+        if not chunk:
+            continue
+        ser.write(chunk)
+        injected += len(chunk)
+    if injected:
+        with _lock:
+            _state["rtcm_injected_bytes"] = int(_state.get("rtcm_injected_bytes") or 0) + injected
+
+
 def _reader_loop(port: str, baud: int) -> None:
     global _state
     if serial is None:
@@ -265,7 +389,7 @@ def _reader_loop(port: str, baud: int) -> None:
     baud_idx = 0
     bauds = [baud] + [b for b in _BAUD_CANDIDATES if b != baud]
     current_baud = bauds[0]
-    last_nmea_at = 0.0
+    last_nmea_at = time.time()
 
     while not _stop.is_set():
         try:
@@ -276,10 +400,20 @@ def _reader_loop(port: str, baud: int) -> None:
                     _state["baud"] = current_baud
                     _state["connected"] = True
                     _state["error"] = None
-                print(f"[gnss] reader open port={port} baud={current_baud}")
+                ntrip_on = (
+                    os.environ.get("AXM_GNSS_MODE", "gps").strip().lower() == "rtk"
+                    and ntrip_configured()
+                )
+                print(
+                    f"[gnss] reader open port={port} baud={current_baud}"
+                    f"{' ntrip=on' if ntrip_on else ''}"
+                )
                 opened_at = time.time()
+                last_nmea_at = opened_at
                 while not _stop.is_set():
-                    _drain_lines(ser, buf)
+                    _drain_serial(ser, buf)
+                    if ntrip_on:
+                        _inject_rtcm(ser)
                     with _lock:
                         nmea_count = int(_state.get("nmea_count") or 0)
                     if nmea_count > 0:
@@ -306,7 +440,7 @@ def start_gnss_reader(
     port: Optional[str] = None,
     baud: int = 38400,
 ) -> None:
-    global _thread, _initial_baud, _fix_logged
+    global _thread, _initial_baud, _fix_logged, _rtk_fix_logged
     if _thread and _thread.is_alive():
         return
     resolved = resolve_rtk_port(port)
@@ -329,7 +463,10 @@ def start_gnss_reader(
             print(f"[gnss] autobaud skipped — using RTK_BAUD={baud}")
     _initial_baud = baud
     _fix_logged = False
+    _rtk_fix_logged = False
     _stop.clear()
+    if os.environ.get("AXM_GNSS_MODE", "gps").strip().lower() == "rtk" and ntrip_configured():
+        start_ntrip_client(_rtcm_queue, _gga_for_ntrip)
     _thread = threading.Thread(
         target=_reader_loop,
         args=(resolved, baud),
@@ -352,4 +489,5 @@ def gnss_snapshot(max_age_s: float = 15.0) -> Dict[str, Any]:
     if int(snap.get("fix_quality") or 0) <= 0:
         snap["lat"] = None
         snap["lon"] = None
+    snap["ntrip"] = ntrip_snapshot()
     return snap
