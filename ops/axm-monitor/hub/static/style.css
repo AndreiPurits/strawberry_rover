@@ -722,6 +722,8 @@ input {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(280px, 340px) 1fr;
+  grid-template-rows: 1fr;
+  align-items: stretch;
   gap: 8px;
   padding: 6px;
   overflow: hidden;
@@ -748,12 +750,13 @@ input {
   gap: 6px;
   min-height: 0;
   overflow: hidden;
+  height: 100%;
 }
 .roarm-col-seq {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1 1 55%;
+  flex: 1 1 42%;
   min-height: 0;
   overflow: hidden;
 }
@@ -761,8 +764,16 @@ input {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1 1 45%;
+  flex: 1 1 38%;
   min-height: 0;
+  overflow: hidden;
+}
+.roarm-col-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 20%;
+  min-height: 110px;
   overflow: hidden;
 }
 .roarm-save-row {
@@ -828,7 +839,18 @@ input {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.roarm-col-left-controls {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 58%;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
 }
 .roarm-block h2,
 .roarm-seq-head h2 {
@@ -921,32 +943,39 @@ input {
   font-size: 0.68rem;
 }
 .roarm-state-block {
-  flex: 1;
-  min-height: 80px;
+  flex: 1 1 0;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .roarm-state-block .roarm-json {
-  max-height: 140px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  overflow: auto;
+}
+.roarm-col-log .roarm-log {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  overflow: auto;
 }
 #roarm-panel .seq-table-wrap {
   flex: 1;
   min-height: 60px;
   max-height: none;
 }
-#roarm-panel .roarm-log {
-  flex: 0 0 72px;
-  max-height: 72px;
-  margin: 0;
-}
 .reachability { font-size: 0.68rem; margin: 6px 0; }
 .reachability.ok { color: var(--ok); }
 .reachability.risky { color: #ffb07d; }
 .roarm-json, .roarm-log {
-  margin: 6px 0 0;
   padding: 6px;
   background: #0a0e1a;
   border-radius: 6px;
   font-size: 0.65rem;
-  max-height: 200px;
   overflow: auto;
   white-space: pre-wrap;
 }
