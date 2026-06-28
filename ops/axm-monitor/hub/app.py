@@ -825,8 +825,10 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
     fut: asyncio.Future = loop.create_future()
     _roarm_waiters[req_id] = fut
     timeout_s = float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12"))
-    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "joint_move"):
+    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "home_joints_staged", "joint_move"):
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
+        if body.op == "home_joints_staged":
+            timeout_s = float(_env("AXM_ROARM_STAGED_RPC_TIMEOUT_S", "90"))
     try:
         result = await asyncio.wait_for(fut, timeout=timeout_s)
         return {"ok": True, "id": req_id, **(result if isinstance(result, dict) else {"result": result})}

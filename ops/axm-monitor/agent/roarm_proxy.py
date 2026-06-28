@@ -114,6 +114,11 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
                 timeout_sec=_move_timeout(),
             )
             return {"ok": True, "url": url, "response": resp}
+        if op == "home_joints_staged":
+            from roarm_staged_move import move_joints_staged
+
+            url, resp = move_joints_staged(client, params)
+            return {"ok": True, "url": url, "response": resp, "staged": True}
         if op == "joint_move":
             url, resp = client.joint_control(
                 int(params.get("joint", 1)),

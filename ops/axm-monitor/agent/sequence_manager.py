@@ -69,6 +69,13 @@ class SequenceManager:
                         acc=cmd["acc"],
                         timeout_sec=timeout_sec,
                     )
+                elif step_type == "home_joints_staged":
+                    from roarm_staged_move import move_joints_staged
+
+                    timeout_sec = float(step.get("timeout_sec", 60.0))
+                    step_meta["json"] = {"type": "home_joints_staged", **step}
+                    step_meta["timeout_sec"] = timeout_sec
+                    url, response = move_joints_staged(self._client, step)
                 elif step_type == "target":
                     timeout_sec = float(step.get("timeout_sec", 30.0))
                     cmd = {
@@ -124,7 +131,7 @@ class SequenceManager:
                 on_step_error(idx, step, str(exc), step_meta)
                 return "error"
 
-            if step_type in ("home", "home_joints"):
+            if step_type in ("home", "home_joints", "home_joints_staged"):
                 post_sleep = 1.5
             elif step_type == "target":
                 post_sleep = 1.5

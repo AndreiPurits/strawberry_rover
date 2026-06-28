@@ -70,7 +70,7 @@
     return sequence.map((step) => {
       if (step.type !== "home" || !hj) return step;
       return {
-        type: "home_joints",
+        type: "home_joints_staged",
         base: hj.base,
         shoulder: hj.shoulder,
         elbow: hj.elbow,
@@ -354,22 +354,32 @@
     return savedPoints.find((p) => p.id === selectedPointId) || null;
   }
 
-  async function goToPoint(pt) {
+  async function goToPoint(pt, opts = {}) {
     if (!pt) {
       setPtStatus("Выберите точку в списке");
       return null;
     }
     const j = normalizeJoints(pt.joints);
-    if (j) {
-      setPtStatus(`→ ${pt.name} (T:102)`);
-      return rpc("home_joints", {
-        ...j,
-        spd: pt.joint_spd ?? 0,
-        acc: pt.joint_acc ?? 10,
-      });
+    if (!j) {
+      setPtStatus("У точки нет шарниров — сохраните заново");
+      return null;
     }
-    setPtStatus("У точки нет шарниров — сохраните заново");
-    return null;
+    const staged = opts.staged !== false;
+    const op = staged ? "home_joints_staged" : "home_joints";
+    setPtStatus(
+      staged
+        ? `→ ${pt.name} (основание → плечо → локоть…)`
+        : `→ ${pt.name} (T:102)`
+    );
+    const data = await rpc(op, {
+      ...j,
+      spd: pt.joint_spd ?? 0,
+      acc: pt.joint_acc ?? 10,
+    });
+    if (data && data.ok !== false) {
+      syncJointSlidersFromFeedback({ b: j.base, s: j.shoulder, e: j.elbow, t: j.wrist, r: j.roll, g: j.hand });
+    }
+    return data;
   }
 
   async function goHome() {
