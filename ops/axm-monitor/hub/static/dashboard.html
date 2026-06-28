@@ -156,8 +156,8 @@
 
         <div class="roarm-workspace card">
           <aside class="roarm-col-left">
-            <section class="roarm-block">
-              <h2>Система · Gripper</h2>
+            <section class="roarm-block roarm-block-card">
+              <h2>Система · захват</h2>
               <div class="btn-row tight">
                 <button type="button" id="btn-refresh" class="btn">Статус</button>
                 <button type="button" id="btn-home" class="btn primary">HOME</button>
@@ -168,39 +168,45 @@
               </div>
             </section>
 
-
-            <section class="roarm-block">
-              <h2>Целевая точка (T:104) · мм</h2>
+            <section class="roarm-block roarm-block-card">
+              <h2>Целевая точка</h2>
+              <p class="roarm-block-sub muted tiny">T:104 · координаты в мм</p>
               <div class="field-grid roarm-xyz">
                 <label>X <input type="number" id="mv-x" step="1" value="235" /></label>
                 <label>Y <input type="number" id="mv-y" step="1" value="0" /></label>
                 <label>Z <input type="number" id="mv-z" step="1" value="234" /></label>
-                <label>Spd <input type="number" id="mv-spd" step="0.01" value="0.25" /></label>
+                <label>Скорость <input type="number" id="mv-spd" step="0.01" value="0.25" /></label>
               </div>
-              <label class="chk-row"><input type="checkbox" id="mv-show-trg" /> T / R / G (rad)</label>
+              <label class="chk-row"><input type="checkbox" id="mv-show-trg" /> Углы T / R / G (rad)</label>
               <div id="mv-trg-fields" class="field-grid roarm-xyz hidden">
                 <label>T <input type="number" id="mv-t" step="0.01" value="0" /></label>
                 <label>R <input type="number" id="mv-r" step="0.01" value="0" /></label>
                 <label>G <input type="number" id="mv-g" step="0.01" value="3.14" /></label>
               </div>
-              <p id="reachability" class="reachability">Reachability: —</p>
+              <p id="reachability" class="reachability">Достижимость: —</p>
               <div class="btn-row tight">
-                <button type="button" id="btn-check" class="btn ghost">Check</button>
-                <button type="button" id="btn-move" class="btn primary">Move</button>
-                <button type="button" id="seq-add-target" class="btn ghost">+ в sequence</button>
+                <button type="button" id="btn-check" class="btn ghost">Проверить</button>
+                <button type="button" id="btn-move" class="btn primary">Отправиться</button>
+                <button type="button" id="seq-add-target" class="btn ghost">В очередь</button>
               </div>
             </section>
 
-            <section class="roarm-block roarm-state-block">
+            <section class="roarm-block roarm-block-card roarm-block-move">
+              <h2>Перемещение</h2>
+              <p class="roarm-block-sub muted tiny">T:101 · шарниры, команда при отпускании слайдера</p>
+              <div id="joint-sliders" class="joint-sliders"></div>
+            </section>
+
+            <section class="roarm-block roarm-block-card roarm-state-block">
               <h2>Состояние</h2>
               <pre id="roarm-json" class="roarm-json muted">—</pre>
             </section>
           </aside>
 
           <div class="roarm-col-right">
-            <section class="roarm-col-seq">
+            <section class="roarm-block roarm-block-card roarm-col-seq">
               <div class="roarm-seq-head">
-                <h2>Sequence</h2>
+                <h2>Очередь</h2>
                 <span id="seq-progress" class="muted tiny"></span>
               </div>
               <div class="seq-table-wrap">
@@ -238,7 +244,7 @@
               </div>
             </section>
 
-            <section class="roarm-col-points">
+            <section class="roarm-block roarm-block-card roarm-col-points">
               <div class="roarm-seq-head">
                 <h2>Сохранённые точки</h2>
                 <span id="pt-count" class="muted tiny"></span>
@@ -275,6 +281,6 @@
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="/static/dashboard.js?v=1.3.1"></script>
-  <script src="/static/roarm_panel.js?v=1.5.0"></script>
+  <script src="/static/roarm_panel.js?v=1.6.0"></script>
 </body>
 </html>

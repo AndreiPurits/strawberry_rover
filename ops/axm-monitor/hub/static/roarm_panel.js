@@ -6,6 +6,17 @@
   let savedPoints = [];
   let selectedPointId = null;
   let lastFeedback = null;
+  let syncingJointSliders = false;
+  const jointSendTimers = {};
+
+  const JOINT_DEFS = [
+    { id: 1, key: "b", label: "Основание", min: -3.14, max: 3.14 },
+    { id: 2, key: "s", label: "Плечо", min: -1.57, max: 1.57 },
+    { id: 3, key: "e", label: "Локоть", min: -0.5, max: 3.5 },
+    { id: 4, key: "t", label: "Запястье", min: -3.14, max: 3.14 },
+    { id: 5, key: "r", label: "Кисть", min: -3.14, max: 3.14 },
+    { id: 6, key: "g", label: "Захват", min: 0, max: 3.14 },
+  ];
 
   const ptListEl = () => document.getElementById("pt-list");
   const ptStatusEl = () => document.getElementById("pt-status");
@@ -15,14 +26,126 @@
     if (el) el.textContent = msg;
   }
 
+  function pickFeedback(fb, ...keys) {
+    if (!fb || typeof fb !== "object") return undefined;
+    for (const k of keys) {
+      if (fb[k] !== undefined && fb[k] !== null && Number.isFinite(Number(fb[k]))) {
+        return Number(fb[k]);
+      }
+    }
+    return undefined;
+  }
+
+  function trgFieldsVisible() {
+    return Boolean(document.getElementById("mv-show-trg")?.checked);
+  }
+
+  /** T/R/G for T:104 — when hidden, use live arm orientation (not form fields). */
+  function getOrientationParams() {
+    if (trgFieldsVisible()) {
+      return { t: num("mv-t"), r: num("mv-r"), g: num("mv-g") };
+    }
+    const fb = lastFeedback;
+    return {
+      t: pickFeedback(fb, "tit", "t") ?? 0,
+      r: pickFeedback(fb, "r") ?? 0,
+      g: pickFeedback(fb, "g") ?? 3.14,
+    };
+  }
+
+  function getMoveXyzParams() {
+    const ori = getOrientationParams();
+    return {
+      x: num("mv-x"),
+      y: num("mv-y"),
+      z: num("mv-z"),
+      t: ori.t,
+      r: ori.r,
+      g: ori.g,
+      spd: num("mv-spd"),
+    };
+  }
+
+  function formatRad(v) {
+    return Number(v).toFixed(2);
+  }
+
+  function buildJointSliders() {
+    const root = document.getElementById("joint-sliders");
+    if (!root || root.childElementCount) return;
+    JOINT_DEFS.forEach((joint) => {
+      const row = document.createElement("div");
+      row.className = "joint-slider-row";
+
+      const label = document.createElement("label");
+      label.textContent = joint.label;
+      label.setAttribute("for", `j-slider-${joint.id}`);
+
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.id = `j-slider-${joint.id}`;
+      slider.min = String(joint.min);
+      slider.max = String(joint.max);
+      slider.step = "0.01";
+      slider.value = "0";
+
+      const val = document.createElement("span");
+      val.className = "joint-val";
+      val.id = `j-val-${joint.id}`;
+      val.textContent = "0.00";
+
+      const updateVal = () => {
+        val.textContent = formatRad(slider.value);
+      };
+
+      slider.addEventListener("input", () => {
+        updateVal();
+        if (syncingJointSliders) return;
+        clearTimeout(jointSendTimers[joint.id]);
+        jointSendTimers[joint.id] = setTimeout(() => {
+          rpc(
+            "joint_move",
+            { joint: joint.id, rad: Number(slider.value), spd: 0, acc: 10 },
+            { blocking: false }
+          );
+        }, 80);
+      });
+
+      slider.addEventListener("change", () => {
+        updateVal();
+        if (syncingJointSliders) return;
+        clearTimeout(jointSendTimers[joint.id]);
+        rpc(
+          "joint_move",
+          { joint: joint.id, rad: Number(slider.value), spd: 0, acc: 10 },
+          { blocking: false }
+        );
+      });
+
+      row.appendChild(label);
+      row.appendChild(slider);
+      row.appendChild(val);
+      root.appendChild(row);
+    });
+  }
+
+  function syncJointSlidersFromFeedback(fb) {
+    if (!fb || typeof fb !== "object") return;
+    syncingJointSliders = true;
+    JOINT_DEFS.forEach((joint) => {
+      const rad = pickFeedback(fb, joint.key);
+      if (rad === undefined) return;
+      const slider = document.getElementById(`j-slider-${joint.id}`);
+      const val = document.getElementById(`j-val-${joint.id}`);
+      if (slider) slider.value = String(Math.min(joint.max, Math.max(joint.min, rad)));
+      if (val) val.textContent = formatRad(slider?.value ?? rad);
+    });
+    syncingJointSliders = false;
+  }
+
   function feedbackToPose(fb) {
     if (!fb || typeof fb !== "object") return null;
-    const pick = (...keys) => {
-      for (const k of keys) {
-        if (fb[k] !== undefined && fb[k] !== null && Number.isFinite(Number(fb[k]))) return Number(fb[k]);
-      }
-      return undefined;
-    };
+    const pick = (...keys) => pickFeedback(fb, ...keys);
     const joints = {
       base: pick("b", "base"),
       shoulder: pick("s", "shoulder"),
@@ -145,6 +268,7 @@
     const fb = data.feedback || data.status || data.result?.feedback;
     lastFeedback = fb;
     if (jsonEl) jsonEl.textContent = JSON.stringify(fb, null, 2);
+    syncJointSlidersFromFeedback(fb);
     return feedbackToPose(fb);
   }
 
@@ -179,14 +303,10 @@
     const pt = await postPoint({
       name,
       mode: "xyz",
-      xyz: {
-        x: num("mv-x"),
-        y: num("mv-y"),
-        z: num("mv-z"),
-        t: num("mv-t"),
-        r: num("mv-r"),
-        g: num("mv-g"),
-      },
+      xyz: (() => {
+        const mv = getMoveXyzParams();
+        return { x: mv.x, y: mv.y, z: mv.z, t: mv.t, r: mv.r, g: mv.g };
+      })(),
       xyz_spd: num("mv-spd"),
       role: name.toLowerCase() === "home" ? "home" : null,
     });
@@ -413,7 +533,7 @@
   function updateReachability() {
     const info = reachabilityText(num("mv-x"), num("mv-y"), num("mv-z"));
     if (reachEl) {
-      reachEl.textContent = `Reachability: ${info.text}`;
+      reachEl.textContent = `Достижимость: ${info.text}`;
       reachEl.className = `reachability ${info.cls}`;
     }
   }
@@ -426,7 +546,10 @@
       return;
     }
     const st = data.status || data.feedback || data.result?.status || data.result?.feedback;
-    if (st && typeof st === "object") lastFeedback = st;
+    if (st && typeof st === "object") {
+      lastFeedback = st;
+      syncJointSlidersFromFeedback(st);
+    }
     if (jsonEl) jsonEl.textContent = JSON.stringify(st || data, null, 2);
   }
 
@@ -440,14 +563,15 @@
     if (type === "delay") {
       return { type: "delay", x: "1", y: "", z: "", t: "", r: "", g: "", mode: "delay", reach: "delay step", status: "" };
     }
+    const ori = getOrientationParams();
     return {
       type: "target",
       x: String(num("mv-x")),
       y: String(num("mv-y")),
       z: String(num("mv-z")),
-      t: String(num("mv-t")),
-      r: String(num("mv-r")),
-      g: String(num("mv-g")),
+      t: String(ori.t),
+      r: String(ori.r),
+      g: String(ori.g),
       mode: "104",
       reach: "",
       status: "",
@@ -719,17 +843,7 @@
     document.getElementById("btn-grip-open")?.addEventListener("click", () => rpc("gripper_open"));
     document.getElementById("btn-grip-close")?.addEventListener("click", () => rpc("gripper_close"));
     document.getElementById("btn-check")?.addEventListener("click", updateReachability);
-    document.getElementById("btn-move")?.addEventListener("click", () =>
-      rpc("move_xyz", {
-        x: num("mv-x"),
-        y: num("mv-y"),
-        z: num("mv-z"),
-        t: num("mv-t"),
-        r: num("mv-r"),
-        g: num("mv-g"),
-        spd: num("mv-spd"),
-      })
-    );
+    document.getElementById("btn-move")?.addEventListener("click", () => rpc("move_xyz", getMoveXyzParams()));
 
     document.getElementById("seq-add-target")?.addEventListener("click", () => {
       renderSeqTable([...readTableRows(), emptyRow("target")]);
@@ -790,9 +904,10 @@
       }
     });
     document.getElementById("seq-load-test")?.addEventListener("click", () => {
+      const mv = getMoveXyzParams();
       loadSequenceJson([
         { type: "home" },
-        { type: "target", x: num("mv-x"), y: num("mv-y"), z: num("mv-z"), t: num("mv-t"), r: num("mv-r"), g: num("mv-g") },
+        { type: "target", x: mv.x, y: mv.y, z: mv.z, t: mv.t, r: mv.r, g: mv.g },
         { type: "home" },
       ]);
       seqLog("test: Home → Target → Home");
@@ -839,6 +954,7 @@
       seqLog("stop sent");
     });
 
+    buildJointSliders();
     updateReachability();
     renderSeqTable([]);
   }
