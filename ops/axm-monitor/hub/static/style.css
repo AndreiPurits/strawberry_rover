@@ -723,7 +723,7 @@ input {
   display: grid;
   grid-template-columns: minmax(280px, 340px) 1fr;
   grid-template-rows: 1fr;
-  align-items: start;
+  align-items: stretch;
   gap: 8px;
   padding: 6px;
   overflow: hidden;
@@ -839,9 +839,10 @@ input {
   flex-direction: column;
   gap: 6px;
   min-height: 0;
-  overflow: visible;
+  height: 100%;
+  overflow: hidden;
 }
-.roarm-block-sys {
+.roarm-col-left > .roarm-block-card:not(.roarm-state-block) {
   flex-shrink: 0;
 }
 .roarm-sys-btns {
@@ -949,11 +950,17 @@ input {
   font-size: 0.68rem;
 }
 .roarm-state-block {
-  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0;
+  min-height: 110px;
+  overflow: hidden;
 }
 .roarm-state-block .roarm-json {
-  height: auto;
-  max-height: 240px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   margin: 0;
   overflow: auto;
 }
