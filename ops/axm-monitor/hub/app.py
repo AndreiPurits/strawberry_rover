@@ -776,6 +776,8 @@ async def api_roarm_points_post(body: RoArmPointBody, user: str = Depends(requir
         "xyz_spd": body.xyz_spd,
         "updated_at": time.time(),
     }
+    if point["role"] is None and point["name"].strip().lower() in ("home", "дом"):
+        point["role"] = "home"
     if point["role"] == "home":
         for p in points:
             p["role"] = None

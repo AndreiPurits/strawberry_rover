@@ -43,6 +43,32 @@ class SequenceManager:
                     step_meta["json"] = cmd
                     step_meta["timeout_sec"] = timeout_sec
                     url, response = self._client.home(timeout_sec=timeout_sec)
+                elif step_type == "home_joints":
+                    timeout_sec = float(step.get("timeout_sec", 30.0))
+                    cmd = {
+                        "T": 102,
+                        "base": float(step["base"]),
+                        "shoulder": float(step["shoulder"]),
+                        "elbow": float(step["elbow"]),
+                        "wrist": float(step["wrist"]),
+                        "roll": float(step["roll"]),
+                        "hand": float(step["hand"]),
+                        "spd": float(step.get("spd", 0.0)),
+                        "acc": float(step.get("acc", 10.0)),
+                    }
+                    step_meta["json"] = cmd
+                    step_meta["timeout_sec"] = timeout_sec
+                    url, response = self._client.joints_rad_ctrl(
+                        base=cmd["base"],
+                        shoulder=cmd["shoulder"],
+                        elbow=cmd["elbow"],
+                        wrist=cmd["wrist"],
+                        roll=cmd["roll"],
+                        hand=cmd["hand"],
+                        spd=cmd["spd"],
+                        acc=cmd["acc"],
+                        timeout_sec=timeout_sec,
+                    )
                 elif step_type == "target":
                     timeout_sec = float(step.get("timeout_sec", 30.0))
                     cmd = {
@@ -98,7 +124,7 @@ class SequenceManager:
                 on_step_error(idx, step, str(exc), step_meta)
                 return "error"
 
-            if step_type == "home":
+            if step_type in ("home", "home_joints"):
                 post_sleep = 1.5
             elif step_type == "target":
                 post_sleep = 1.5

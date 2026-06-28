@@ -18,6 +18,71 @@
     { id: 6, key: "g", label: "Захват", min: 0, max: 3.14 },
   ];
 
+  const JOINT_KEYS = ["base", "shoulder", "elbow", "wrist", "roll", "hand"];
+
+  function isHomePointName(name) {
+    const n = String(name || "").trim().toLowerCase();
+    return n === "home" || n === "дом";
+  }
+
+  function getHomePoint() {
+    return (
+      savedPoints.find((p) => p.role === "home") ||
+      savedPoints.find((p) => isHomePointName(p.name))
+    );
+  }
+
+  function normalizeJoints(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const j = {
+      base: raw.base ?? raw.b,
+      shoulder: raw.shoulder ?? raw.s,
+      elbow: raw.elbow ?? raw.e,
+      wrist: raw.wrist ?? raw.t,
+      roll: raw.roll ?? raw.r,
+      hand: raw.hand ?? raw.g,
+    };
+    const vals = Object.values(j);
+    if (vals.every((v) => v === undefined || v === null)) return null;
+    return {
+      base: Number(j.base ?? 0),
+      shoulder: Number(j.shoulder ?? 0),
+      elbow: Number(j.elbow ?? 1.57),
+      wrist: Number(j.wrist ?? 0),
+      roll: Number(j.roll ?? 0),
+      hand: Number(j.hand ?? 3.14),
+    };
+  }
+
+  function getJointsFromSliders() {
+    const joints = {};
+    JOINT_DEFS.forEach((joint, idx) => {
+      const key = JOINT_KEYS[idx];
+      const slider = document.getElementById(`j-slider-${joint.id}`);
+      joints[key] = Number(slider?.value ?? 0);
+    });
+    return joints;
+  }
+
+  function resolveSequenceSteps(sequence) {
+    const homePt = getHomePoint();
+    const hj = homePt ? normalizeJoints(homePt.joints) : null;
+    return sequence.map((step) => {
+      if (step.type !== "home" || !hj) return step;
+      return {
+        type: "home_joints",
+        base: hj.base,
+        shoulder: hj.shoulder,
+        elbow: hj.elbow,
+        wrist: hj.wrist,
+        roll: hj.roll,
+        hand: hj.hand,
+        spd: homePt.joint_spd ?? 0,
+        acc: homePt.joint_acc ?? 10,
+      };
+    });
+  }
+
   const ptListEl = () => document.getElementById("pt-list");
   const ptStatusEl = () => document.getElementById("pt-status");
 
@@ -169,17 +234,11 @@
   }
 
   function pointSummary(pt) {
-    if (pt.mode === "xyz" && pt.xyz) {
-      const x = pt.xyz.x ?? "—";
-      const y = pt.xyz.y ?? "—";
-      const z = pt.xyz.z ?? "—";
-      return `XYZ ${x}/${y}/${z}`;
+    const j = normalizeJoints(pt.joints);
+    if (j) {
+      return `J B=${j.base.toFixed(2)} S=${j.shoulder.toFixed(2)} E=${j.elbow.toFixed(2)}`;
     }
-    if (pt.joints) {
-      const j = pt.joints;
-      return `J S=${Number(j.shoulder ?? 0).toFixed(2)} E=${Number(j.elbow ?? 0).toFixed(2)}`;
-    }
-    return pt.mode || "—";
+    return "—";
   }
 
   function renderPointsList() {
@@ -210,8 +269,6 @@
         renderPointsList();
         const nameInput = document.getElementById("pt-name");
         if (nameInput) nameInput.value = pt.name || "";
-        const modeSel = document.getElementById("pt-mode");
-        if (modeSel) modeSel.value = pt.mode || "joints";
       });
       list.appendChild(li);
     });
@@ -227,7 +284,7 @@
       const data = await res.json().catch(() => ({}));
       savedPoints = Array.isArray(data.points) ? data.points : [];
       if (!selectedPointId && savedPoints.length) {
-        const homePt = savedPoints.find((p) => p.role === "home");
+        const homePt = getHomePoint();
         selectedPointId = (homePt || savedPoints[0]).id;
       }
       renderPointsList();
@@ -272,47 +329,24 @@
     return feedbackToPose(fb);
   }
 
-  async function savePointFromArm() {
+  async function savePoint() {
     const name = String(document.getElementById("pt-name")?.value || "").trim();
     if (!name) {
       setPtStatus("Введите название точки");
       return;
     }
-    const pose = await captureFromArm();
-    if (!pose) return;
-    const mode = String(document.getElementById("pt-mode")?.value || "joints");
+    const joints = getJointsFromSliders();
+    const role = isHomePointName(name) ? "home" : null;
     const pt = await postPoint({
       name,
-      mode,
-      joints: pose.joints,
-      xyz: pose.xyz,
-      role: name.toLowerCase() === "home" ? "home" : null,
+      mode: "joints",
+      joints,
+      xyz: null,
+      role,
     });
     if (pt) {
-      setPtStatus(`Сохранено: ${pt.name}`);
-      log(`point saved: ${pt.name}`);
-    }
-  }
-
-  async function savePointFromForm() {
-    const name = String(document.getElementById("pt-name")?.value || "").trim();
-    if (!name) {
-      setPtStatus("Введите название точки");
-      return;
-    }
-    const pt = await postPoint({
-      name,
-      mode: "xyz",
-      xyz: (() => {
-        const mv = getMoveXyzParams();
-        return { x: mv.x, y: mv.y, z: mv.z, t: mv.t, r: mv.r, g: mv.g };
-      })(),
-      xyz_spd: num("mv-spd"),
-      role: name.toLowerCase() === "home" ? "home" : null,
-    });
-    if (pt) {
-      setPtStatus(`Сохранено из формы: ${pt.name}`);
-      log(`point saved from form: ${pt.name}`);
+      setPtStatus(`Сохранено: ${pt.name}${role ? " (HOME)" : ""}`);
+      log(`point saved: ${pt.name} joints=${JSON.stringify(joints)}`);
     }
   }
 
@@ -325,43 +359,26 @@
       setPtStatus("Выберите точку в списке");
       return null;
     }
-    if (pt.mode === "xyz" && pt.xyz) {
-      setPtStatus(`→ ${pt.name} (T:104)`);
-      return rpc("move_xyz", {
-        x: pt.xyz.x ?? 0,
-        y: pt.xyz.y ?? 0,
-        z: pt.xyz.z ?? 0,
-        t: pt.xyz.t ?? 0,
-        r: pt.xyz.r ?? 0,
-        g: pt.xyz.g ?? 3.14,
-        spd: pt.xyz_spd ?? 0.25,
-      });
-    }
-    if (pt.joints) {
+    const j = normalizeJoints(pt.joints);
+    if (j) {
       setPtStatus(`→ ${pt.name} (T:102)`);
-      const j = pt.joints;
       return rpc("home_joints", {
-        base: j.base ?? 0,
-        shoulder: j.shoulder ?? 0,
-        elbow: j.elbow ?? 1.57,
-        wrist: j.wrist ?? 0,
-        roll: j.roll ?? 0,
-        hand: j.hand ?? 3.14,
+        ...j,
         spd: pt.joint_spd ?? 0,
         acc: pt.joint_acc ?? 10,
       });
     }
-    setPtStatus("У точки нет координат");
+    setPtStatus("У точки нет шарниров — сохраните заново");
     return null;
   }
 
   async function goHome() {
-    const homePt = savedPoints.find((p) => p.role === "home");
+    const homePt = getHomePoint();
     if (homePt) {
-      setPtStatus("HOME → сохранённая точка");
+      setPtStatus(`HOME → ${homePt.name}`);
       return goToPoint(homePt);
     }
-    setPtStatus("HOME → T:100 (нет точки ★ HOME)");
+    setPtStatus("HOME → T:100 (нет сохранённой точки Home/Дом)");
     return rpc("home");
   }
 
@@ -832,8 +849,7 @@
 
     document.getElementById("btn-refresh")?.addEventListener("click", refreshStatus);
     document.getElementById("btn-home")?.addEventListener("click", () => goHome());
-    document.getElementById("pt-save-arm")?.addEventListener("click", () => savePointFromArm());
-    document.getElementById("pt-save-form")?.addEventListener("click", () => savePointFromForm());
+    document.getElementById("pt-save")?.addEventListener("click", () => savePoint());
     document.getElementById("pt-go")?.addEventListener("click", () => goToPoint(selectedPoint()));
     document.getElementById("pt-set-home")?.addEventListener("click", () => setSelectedAsHome());
     document.getElementById("pt-servo")?.addEventListener("click", () => commitSelectedToServo());
@@ -920,7 +936,7 @@
     document.getElementById("seq-run")?.addEventListener("click", async () => {
       let sequence;
       try {
-        sequence = rowsToSequence(readTableRows());
+        sequence = resolveSequenceSteps(rowsToSequence(readTableRows()));
       } catch (e) {
         seqLog(`parse error: ${e}`);
         return;
