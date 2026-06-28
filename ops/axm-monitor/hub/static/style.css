@@ -723,7 +723,7 @@ input {
   display: grid;
   grid-template-columns: minmax(280px, 340px) 1fr;
   grid-template-rows: 1fr;
-  align-items: stretch;
+  align-items: start;
   gap: 8px;
   padding: 6px;
   overflow: hidden;
@@ -837,20 +837,23 @@ input {
 .roarm-col-left {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
-.roarm-col-left-controls {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 58%;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-right: 2px;
+.roarm-block-sys {
+  flex-shrink: 0;
+}
+.roarm-sys-btns {
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+.roarm-sys-btns .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 5px 3px;
+  font-size: 0.58rem;
+  white-space: nowrap;
 }
 .roarm-block h2,
 .roarm-seq-head h2 {
@@ -906,12 +909,12 @@ input {
 .joint-sliders {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .joint-slider-row {
   display: grid;
-  grid-template-columns: minmax(72px, 88px) 1fr minmax(44px, 52px);
-  gap: 6px;
+  grid-template-columns: minmax(68px, 80px) 1fr minmax(40px, 48px);
+  gap: 4px;
   align-items: center;
 }
 .joint-slider-row label {
@@ -934,6 +937,9 @@ input {
 .roarm-block-move {
   flex-shrink: 0;
 }
+.roarm-block-move .roarm-block-sub {
+  margin-bottom: 4px;
+}
 .btn-row.tight {
   gap: 4px;
   margin-top: 4px;
@@ -943,16 +949,11 @@ input {
   font-size: 0.68rem;
 }
 .roarm-state-block {
-  flex: 1 1 0;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex: 0 0 auto;
 }
 .roarm-state-block .roarm-json {
-  flex: 1;
-  min-height: 0;
-  max-height: none;
+  height: auto;
+  max-height: 240px;
   margin: 0;
   overflow: auto;
 }

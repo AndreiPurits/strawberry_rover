@@ -8,6 +8,10 @@ services:
       - .env
     environment:
       AXM_COOKIE_SECURE: "true"
+      AXM_ROARM_POINTS_FILE: /app/data/roarm_points.json
+      AXM_ROARM_HOME_FILE: /app/data/roarm_home.json
+    volumes:
+      - ./hub/data:/app/data
     ports:
       - "127.0.0.1:8090:8090"
     healthcheck:

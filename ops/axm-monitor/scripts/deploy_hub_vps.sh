@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+mkdir -p "${ROOT}/hub/data"
 echo "[deploy] dir=$ROOT"
 git pull origin main
 docker compose build hub
