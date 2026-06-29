@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 import time
 from typing import Any, Dict, Optional
@@ -7,6 +8,12 @@ import cv2
 import rclpy
 from rclpy.node import Node
 from rover_perception.stereo_auto_brightness import StereoAutoBrightness
+from rover_perception.stereo_brightness_mask import (
+    default_mask_path,
+    detect_claw_exclude_regions,
+    load_brightness_mask,
+    save_brightness_mask,
+)
 from rover_perception.v4l2_controls import apply_v4l2_controls
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo
@@ -44,6 +51,12 @@ class RgbCameraNode(Node):
         self.declare_parameter("auto_brightness_min", 110.0)
         self.declare_parameter("auto_brightness_max", 180.0)
         self.declare_parameter("auto_brightness_trial_interval_sec", 2.0)
+        self.declare_parameter("auto_brightness_exclude_claws", True)
+        self.declare_parameter("auto_brightness_exclude_dark_threshold", 55)
+        self.declare_parameter("auto_brightness_exclude_bottom_frac", 0.58)
+        self.declare_parameter("auto_brightness_exclude_min_claw_area", 1200.0)
+        self.declare_parameter("auto_brightness_mask_file", default_mask_path())
+        self.declare_parameter("auto_brightness_relearn_mask", False)
         self.declare_parameter("tuning_topic", "")
 
         self._device_index = int(self.get_parameter("device_index").value)
@@ -70,6 +83,21 @@ class RgbCameraNode(Node):
             self.get_parameter("auto_brightness_trial_interval_sec").value
         )
         self._tuning_topic = str(self.get_parameter("tuning_topic").value).strip()
+        self._auto_brightness_exclude_claws = bool(
+            self.get_parameter("auto_brightness_exclude_claws").value
+        )
+        self._mask_dark_threshold = int(
+            self.get_parameter("auto_brightness_exclude_dark_threshold").value
+        )
+        self._mask_bottom_frac = float(
+            self.get_parameter("auto_brightness_exclude_bottom_frac").value
+        )
+        self._mask_min_claw_area = float(
+            self.get_parameter("auto_brightness_exclude_min_claw_area").value
+        )
+        self._mask_file = str(self.get_parameter("auto_brightness_mask_file").value).strip()
+        self._relearn_mask = bool(self.get_parameter("auto_brightness_relearn_mask").value)
+        self._mask_initialized = False
 
         image_topic = str(self.get_parameter("image_topic").value)
         camera_info_topic = str(self.get_parameter("camera_info_topic").value)
@@ -179,6 +207,7 @@ class RgbCameraNode(Node):
         self._image_width = actual_width
         self._image_height = actual_height
         self._capture = capture
+        self._mask_initialized = False
         self.get_logger().info(
             "Connected RGB camera: "
             f"backend={backend_name}, device_index={self._device_index}, "
@@ -230,6 +259,47 @@ class RgbCameraNode(Node):
             f"gain={self._gain} bright={brightness} gamma={gamma})"
         )
 
+    def _init_brightness_mask(self, frame) -> None:
+        if self._auto_tuner is None or self._mask_initialized:
+            return
+        self._mask_initialized = True
+        if not self._auto_brightness_exclude_claws:
+            return
+
+        path = os.path.expanduser(self._mask_file or default_mask_path())
+        regions = []
+        if not self._relearn_mask and os.path.isfile(path):
+            regions = load_brightness_mask(path)
+            self.get_logger().info(
+                f"Brightness mask: loaded {len(regions)} exclude regions from {path}"
+            )
+        else:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            regions = detect_claw_exclude_regions(
+                gray,
+                dark_threshold=self._mask_dark_threshold,
+                bottom_frac=self._mask_bottom_frac,
+                min_area=self._mask_min_claw_area,
+            )
+            if regions:
+                save_brightness_mask(
+                    path,
+                    regions,
+                    width=int(frame.shape[1]),
+                    height=int(frame.shape[0]),
+                )
+                self.get_logger().info(
+                    f"Brightness mask: learned {len(regions)} exclude regions -> {path}"
+                )
+            else:
+                self.get_logger().warn(
+                    "Brightness mask: no claw regions found; using full frame mean"
+                )
+
+        if regions:
+            self._auto_tuner.set_exclude_regions(regions)
+        self._publish_tuning_stats()
+
     def _run_brightness_trial(self) -> None:
         if self._auto_tuner is None:
             return
@@ -250,7 +320,7 @@ class RgbCameraNode(Node):
             for _ in range(3):
                 ok, frame = capture.read()
                 if ok and frame is not None:
-                    means.append(StereoAutoBrightness.frame_mean(frame))
+                    means.append(self._auto_tuner.frame_mean(frame))
             trial_mean = sum(means) / len(means) if means else None
         self._auto_tuner.finish_trial(trial_mean)
         self._publish_tuning_stats()
@@ -307,6 +377,7 @@ class RgbCameraNode(Node):
             frame = cv2.flip(frame, 1)
 
         if self._auto_tuner is not None:
+            self._init_brightness_mask(frame)
             self._auto_tuner.update_from_frame(frame)
             self._publish_tuning_stats()
 

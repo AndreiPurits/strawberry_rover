@@ -2,11 +2,16 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
+from rover_perception.stereo_brightness_mask import (
+    RectNorm,
+    include_mask_from_regions,
+    masked_gray_mean,
+)
 from rover_perception.v4l2_controls import apply_v4l2_controls
 
 
@@ -37,6 +42,10 @@ class StereoAutoBrightness:
         self.trial_interval_sec = max(0.5, float(trial_interval_sec))
         self.logger = logger
 
+        self._exclude_regions: List[RectNorm] = []
+        self._mask_ready = False
+        self.last_excluded_pct: Optional[float] = None
+
         self.last_mean: Optional[float] = None
         self.tuning = False
         self._last_trial_at = 0.0
@@ -48,10 +57,19 @@ class StereoAutoBrightness:
         self._trials_total = 0
         self._tuning_visible_until = 0.0
 
-    @staticmethod
-    def frame_mean(frame: np.ndarray) -> float:
+    def set_exclude_regions(self, regions: List[RectNorm]) -> None:
+        self._exclude_regions = list(regions)
+        self._mask_ready = True
+
+    def frame_mean(self, frame: np.ndarray) -> float:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        return float(gray.mean())
+        if not self._exclude_regions:
+            self.last_excluded_pct = 0.0
+            return float(gray.mean())
+
+        include = include_mask_from_regions(gray, self._exclude_regions)
+        self.last_excluded_pct = round((1.0 - include.mean()) * 100.0, 1)
+        return masked_gray_mean(gray, include)
 
     def in_range(self, mean: float) -> bool:
         return self.target_min <= mean <= self.target_max
@@ -141,7 +159,6 @@ class StereoAutoBrightness:
 
         self._axis = 1 - self._axis
         if trial_b == self.active_brightness and trial_g == self.active_gamma:
-            # Stuck on a bound — force a bigger jump on gamma when too bright.
             if too_bright and self.active_gamma > self.GAMMA_MIN + 20:
                 trial_g = max(self.GAMMA_MIN, self.active_gamma - 80)
             elif too_dark and self.active_gamma < self.GAMMA_MAX - 20:
@@ -181,7 +198,7 @@ class StereoAutoBrightness:
         self.tuning = False
         self._trial_brightness = None
         self._trial_gamma = None
-        self._tuning_visible_until = time.monotonic() + 1.5
+        self._tuning_visible_until = time.monotonic() + 2.0
         self.apply_active()
 
     def stats(self) -> Dict[str, Any]:
@@ -196,6 +213,8 @@ class StereoAutoBrightness:
             "target_min": self.target_min,
             "target_max": self.target_max,
             "trials_total": self._trials_total,
+            "brightness_mask_ready": self._mask_ready,
+            "brightness_mask_regions": len(self._exclude_regions),
         }
         if self._trial_brightness is not None:
             out["trial_brightness"] = self._trial_brightness
@@ -208,4 +227,6 @@ class StereoAutoBrightness:
                 "brightness": self._last_candidate[0],
                 "gamma": self._last_candidate[1],
             }
+        if self.last_excluded_pct is not None:
+            out["brightness_excluded_pct"] = self.last_excluded_pct
         return out

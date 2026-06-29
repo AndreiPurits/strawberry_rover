@@ -22,6 +22,12 @@
     gamma: 280
     auto_brightness_enable: true
     auto_brightness_min: 110.0
-    auto_brightness_max: 180.0
+    auto_brightness_max: 150.0
     auto_brightness_trial_interval_sec: 3.0
+    auto_brightness_exclude_claws: true
+    auto_brightness_exclude_dark_threshold: 55
+    auto_brightness_exclude_bottom_frac: 0.58
+    auto_brightness_exclude_min_claw_area: 1200.0
+    auto_brightness_mask_file: "~/.config/axm/stereo_brightness_exclude.json"
+    auto_brightness_relearn_mask: false
     tuning_topic: "/stereo_camera/tuning"

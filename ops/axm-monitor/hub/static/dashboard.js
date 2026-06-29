@@ -1051,9 +1051,18 @@ function renderStereoCamera(r) {
       if (b != null && g != null) {
         label += ` · b${b} g${g}`;
       }
-      if (tuning && tb != null && tg != null) {
-        label += ` ⟳→b${tb} g${tg}`;
-      } else if (tuning) {
+      if (tuning) {
+        label += " · подстройка";
+        if (b != null && tb != null && tb !== b) {
+          label += ` b${b}→${tb}`;
+        } else if (tb != null) {
+          label += ` b→${tb}`;
+        }
+        if (g != null && tg != null && tg !== g) {
+          label += ` g${g}→${tg}`;
+        } else if (tg != null) {
+          label += ` g→${tg}`;
+        }
         label += " ⟳";
       }
       status.textContent = label;
