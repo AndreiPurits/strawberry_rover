@@ -1,12 +1,17 @@
+import json
+import threading
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import cv2
 import rclpy
 from rclpy.node import Node
+from rover_perception.stereo_auto_brightness import StereoAutoBrightness
+from rover_perception.v4l2_controls import apply_v4l2_controls
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 
 class RgbCameraNode(Node):
@@ -29,6 +34,17 @@ class RgbCameraNode(Node):
         self.declare_parameter("camera_name", "rover_rgb_camera")
         self.declare_parameter("auto_reconnect", True)
         self.declare_parameter("flip_horizontal", False)
+        self.declare_parameter("prefer_max_fov", False)
+        self.declare_parameter("auto_exposure", True)
+        self.declare_parameter("exposure", -1)
+        self.declare_parameter("gain", -1)
+        self.declare_parameter("brightness", -1)
+        self.declare_parameter("gamma", -1)
+        self.declare_parameter("auto_brightness_enable", False)
+        self.declare_parameter("auto_brightness_min", 110.0)
+        self.declare_parameter("auto_brightness_max", 180.0)
+        self.declare_parameter("auto_brightness_trial_interval_sec", 2.0)
+        self.declare_parameter("tuning_topic", "")
 
         self._device_index = int(self.get_parameter("device_index").value)
         self._frame_id = str(self.get_parameter("frame_id").value)
@@ -41,6 +57,19 @@ class RgbCameraNode(Node):
         self._camera_name = str(self.get_parameter("camera_name").value)
         self._auto_reconnect = bool(self.get_parameter("auto_reconnect").value)
         self._flip_horizontal = bool(self.get_parameter("flip_horizontal").value)
+        self._prefer_max_fov = bool(self.get_parameter("prefer_max_fov").value)
+        self._auto_exposure = bool(self.get_parameter("auto_exposure").value)
+        self._exposure = int(self.get_parameter("exposure").value)
+        self._gain = int(self.get_parameter("gain").value)
+        self._brightness = int(self.get_parameter("brightness").value)
+        self._gamma = int(self.get_parameter("gamma").value)
+        self._auto_brightness_enable = bool(self.get_parameter("auto_brightness_enable").value)
+        self._auto_brightness_min = float(self.get_parameter("auto_brightness_min").value)
+        self._auto_brightness_max = float(self.get_parameter("auto_brightness_max").value)
+        self._auto_brightness_trial_interval_sec = float(
+            self.get_parameter("auto_brightness_trial_interval_sec").value
+        )
+        self._tuning_topic = str(self.get_parameter("tuning_topic").value).strip()
 
         image_topic = str(self.get_parameter("image_topic").value)
         camera_info_topic = str(self.get_parameter("camera_info_topic").value)
@@ -59,7 +88,25 @@ class RgbCameraNode(Node):
         )
 
         self._capture: Optional[cv2.VideoCapture] = None
+        self._capture_lock = threading.Lock()
+        self._trial_thread: Optional[threading.Thread] = None
         self._last_reconnect_try = 0.0
+        self._auto_tuner: Optional[StereoAutoBrightness] = None
+        self._tuning_pub = None
+        if self._auto_brightness_enable:
+            init_brightness = self._brightness if self._brightness != -1 else 5
+            init_gamma = self._gamma if self._gamma != -1 else 300
+            self._auto_tuner = StereoAutoBrightness(
+                device_index=self._device_index,
+                target_min=self._auto_brightness_min,
+                target_max=self._auto_brightness_max,
+                brightness=init_brightness,
+                gamma=init_gamma,
+                trial_interval_sec=self._auto_brightness_trial_interval_sec,
+                logger=self.get_logger(),
+            )
+            if self._tuning_topic:
+                self._tuning_pub = self.create_publisher(String, self._tuning_topic, 10)
         self._open_camera()
 
         self._timer = self.create_timer(1.0 / self._publish_rate, self._on_timer)
@@ -88,40 +135,180 @@ class RgbCameraNode(Node):
             )
             return
 
-        # Explicitly request known-safe camera settings.
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, float(self._image_width))
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, float(self._image_height))
+        target_w, target_h = self._image_width, self._image_height
+        if self._prefer_max_fov:
+            capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            best_area: Optional[int] = None
+            best_mode: Optional[tuple[int, int]] = None
+            for w, h in (
+                (160, 120),
+                (176, 144),
+                (320, 240),
+                (352, 288),
+                (640, 480),
+                (800, 600),
+            ):
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, float(w))
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, float(h))
+                ok, frame = capture.read()
+                if not ok or frame is None:
+                    continue
+                fh, fw = frame.shape[:2]
+                if fw <= 0 or fh <= 0:
+                    continue
+                area = fw * fh
+                if best_area is None or area < best_area:
+                    best_area = area
+                    best_mode = (w, h)
+                    target_w, target_h = fw, fh
+            if best_mode is not None:
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, float(best_mode[0]))
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, float(best_mode[1]))
+        else:
+            capture.set(cv2.CAP_PROP_FRAME_WIDTH, float(self._image_width))
+            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, float(self._image_height))
+
         capture.set(cv2.CAP_PROP_FPS, float(self._publish_rate))
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self._apply_exposure_controls(capture, device_index=self._device_index)
 
         actual_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         actual_fps = float(capture.get(cv2.CAP_PROP_FPS))
 
+        self._image_width = actual_width
+        self._image_height = actual_height
         self._capture = capture
         self.get_logger().info(
             "Connected RGB camera: "
             f"backend={backend_name}, device_index={self._device_index}, "
-            f"resolution={actual_width}x{actual_height}, fps={actual_fps:.2f}"
+            f"resolution={actual_width}x{actual_height}, fps={actual_fps:.2f}, "
+            f"max_fov={self._prefer_max_fov}"
         )
 
-    def _on_timer(self) -> None:
-        if self._capture is None or not self._capture.isOpened():
-            if self._auto_reconnect:
-                now = time.monotonic()
-                if now - self._last_reconnect_try >= 1.0:
-                    self._last_reconnect_try = now
-                    self._open_camera()
-            return
+    def _apply_exposure_controls(
+        self, capture: cv2.VideoCapture, *, device_index: int
+    ) -> None:
+        """OpenCV props + direct V4L2 ioctls (RealSense D405: brightness/gamma via UVC)."""
+        brightness = self._brightness
+        gamma = self._gamma
+        if self._auto_tuner is not None:
+            brightness = self._auto_tuner.active_brightness
+            gamma = self._auto_tuner.active_gamma
 
-        ok, frame = self._capture.read()
-        if not ok or frame is None:
-            self.get_logger().warn("Camera frame read failed.")
-            if self._auto_reconnect:
-                self._open_camera()
+        mode = "auto" if self._auto_exposure else "manual"
+        if self._auto_exposure:
+            for val in (0.75, 1.0, 3.0):
+                capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, val)
+        else:
+            for val in (0.25, 0.0, 1.0):
+                capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, val)
+            if self._exposure >= 0:
+                capture.set(cv2.CAP_PROP_EXPOSURE, float(self._exposure))
+            if self._gain >= 0:
+                capture.set(cv2.CAP_PROP_GAIN, float(self._gain))
+            if brightness >= 0:
+                capture.set(cv2.CAP_PROP_BRIGHTNESS, float(brightness))
+
+        v4l2 = apply_v4l2_controls(
+            device_index,
+            auto_exposure=self._auto_exposure,
+            exposure=self._exposure,
+            gain=self._gain,
+            brightness=brightness,
+            gamma=gamma,
+        )
+
+        ae = capture.get(cv2.CAP_PROP_AUTO_EXPOSURE)
+        exp = capture.get(cv2.CAP_PROP_EXPOSURE)
+        gain = capture.get(cv2.CAP_PROP_GAIN)
+        bright = capture.get(cv2.CAP_PROP_BRIGHTNESS)
+        self.get_logger().info(
+            f"Exposure {mode}: opencv ae={ae:.3f} exp={exp:.1f} gain={gain:.1f} "
+            f"bright={bright:.1f} | v4l2 set={v4l2.get('set')} readback={v4l2.get('readback')} "
+            f"(requested auto={self._auto_exposure} exp={self._exposure} "
+            f"gain={self._gain} bright={brightness} gamma={gamma})"
+        )
+
+    def _run_brightness_trial(self) -> None:
+        if self._auto_tuner is None:
             return
+        with self._capture_lock:
+            if self._capture is None:
+                return
+            capture = self._capture
+            candidate = self._auto_tuner.next_candidate()
+            if candidate is None:
+                return
+            trial_b, trial_g = candidate
+            self._publish_tuning_stats()
+            self._auto_tuner.apply_values(trial_b, trial_g)
+            time.sleep(0.08)
+            for _ in range(4):
+                capture.read()
+            means = []
+            for _ in range(3):
+                ok, frame = capture.read()
+                if ok and frame is not None:
+                    means.append(StereoAutoBrightness.frame_mean(frame))
+            trial_mean = sum(means) / len(means) if means else None
+        self._auto_tuner.finish_trial(trial_mean)
+        self._publish_tuning_stats()
+
+    def _maybe_start_trial(self, now: float) -> None:
+        if self._auto_tuner is None:
+            return
+        if not self._auto_tuner.should_trial(now):
+            return
+        if self._trial_thread is not None and self._trial_thread.is_alive():
+            return
+        self._trial_thread = threading.Thread(
+            target=self._run_brightness_trial,
+            name="stereo-brightness-trial",
+            daemon=True,
+        )
+        self._trial_thread.start()
+
+    def _publish_tuning_stats(self) -> None:
+        if self._auto_tuner is None or self._tuning_pub is None:
+            return
+        msg = String()
+        msg.data = json.dumps(self._auto_tuner.stats(), separators=(",", ":"))
+        self._tuning_pub.publish(msg)
+
+    def _on_timer(self) -> None:
+        now = time.monotonic()
+        self._maybe_start_trial(now)
+
+        with self._capture_lock:
+            if self._capture is None or not self._capture.isOpened():
+                if self._auto_reconnect:
+                    if now - self._last_reconnect_try >= 1.0:
+                        self._last_reconnect_try = now
+                        self._open_camera()
+                return
+
+            ok, frame = self._capture.read()
+            if not ok or frame is None:
+                self.get_logger().warn("Camera frame read failed.")
+                if self._auto_reconnect:
+                    self._open_camera()
+                return
+
+            for _ in range(1):
+                grabbed = self._capture.grab()
+                if not grabbed:
+                    break
+                ok2, newer = self._capture.retrieve()
+                if ok2 and newer is not None:
+                    frame = newer
 
         if self._flip_horizontal:
             frame = cv2.flip(frame, 1)
+
+        if self._auto_tuner is not None:
+            self._auto_tuner.update_from_frame(frame)
+            self._publish_tuning_stats()
 
         stamp = self.get_clock().now().to_msg()
         image_msg = self._to_image_msg(frame, stamp)

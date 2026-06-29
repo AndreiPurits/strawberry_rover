@@ -41,6 +41,7 @@ _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
 _last_stereo_telemetry: Dict[str, Any] = {}
 _stereo_post_times: List[float] = []
+_stereo_stream_fps_ema: Optional[float] = None
 _last_camera_stamp: Optional[float] = None
 _last_heartbeat_rtt_ms: Optional[float] = None
 _last_hub_ok_at: float = 0.0
@@ -348,14 +349,23 @@ def _refresh_lidar_arc(local_web: str) -> bool:
 
 
 def _stereo_stream_fps() -> Optional[float]:
+    global _stereo_stream_fps_ema
     with _hub_ok_lock:
         times = list(_stereo_post_times)
+        ema = _stereo_stream_fps_ema
     if len(times) < 2:
-        return None
+        return round(ema, 1) if ema is not None else None
     span = times[-1] - times[0]
     if span <= 0:
-        return None
-    return round((len(times) - 1) / span, 1)
+        return round(ema, 1) if ema is not None else None
+    instant = (len(times) - 1) / span
+    if ema is None:
+        ema = instant
+    else:
+        ema = 0.65 * ema + 0.35 * instant
+    with _hub_ok_lock:
+        _stereo_stream_fps_ema = ema
+    return round(ema, 1)
 
 
 def _note_stereo_post() -> None:
@@ -363,8 +373,8 @@ def _note_stereo_post() -> None:
     now = time.monotonic()
     with _hub_ok_lock:
         _stereo_post_times.append(now)
-        if len(_stereo_post_times) > 12:
-            _stereo_post_times = _stereo_post_times[-12:]
+        if len(_stereo_post_times) > 20:
+            _stereo_post_times = _stereo_post_times[-20:]
 
 
 def _refresh_stereo_stats(base: str) -> None:
@@ -385,6 +395,10 @@ def _refresh_stereo_stats(base: str) -> None:
             "brightness": st.get("brightness"),
             "gamma": st.get("gamma"),
             "tuning": st.get("tuning"),
+            "trial_brightness": st.get("trial_brightness"),
+            "trial_gamma": st.get("trial_gamma"),
+            "last_trial_mean": st.get("last_trial_mean"),
+            "trials_total": st.get("trials_total"),
             "target_min": st.get("target_min"),
             "target_max": st.get("target_max"),
         }

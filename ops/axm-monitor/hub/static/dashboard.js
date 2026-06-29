@@ -1030,6 +1030,10 @@ function renderStereoCamera(r) {
   const mean = stereo.brightness_mean;
   const inRange = stereo.brightness_ok !== false;
   const tuning = Boolean(stereo.tuning);
+  const b = stereo.brightness;
+  const g = stereo.gamma;
+  const tb = stereo.trial_brightness;
+  const tg = stereo.trial_gamma;
 
   if (online && live && selectedId) {
     const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
@@ -1043,7 +1047,14 @@ function renderStereoCamera(r) {
       let label = `${fps} fps`;
       if (mean != null) {
         label += ` · ярк ${Math.round(mean)}`;
-        if (tuning) label += " ⟳";
+      }
+      if (b != null && g != null) {
+        label += ` · b${b} g${g}`;
+      }
+      if (tuning && tb != null && tg != null) {
+        label += ` ⟳→b${tb} g${tg}`;
+      } else if (tuning) {
+        label += " ⟳";
       }
       status.textContent = label;
       status.classList.toggle("warn", mean != null && !inRange);

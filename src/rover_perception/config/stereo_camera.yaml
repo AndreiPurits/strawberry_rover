@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    device_index: 4
+    frame_id: "stereo_camera_link"
+    fps: 10.0
+    width: 640
+    height: 480
+    use_v4l2_backend: true
+    image_topic: "/stereo_camera/image_raw"
+    camera_info_topic: "/stereo_camera/camera_info"
+    debug_image_topic: "/stereo_camera/debug/image_annotated"
+    publish_camera_info: false
+    publish_debug_image: false
+    camera_name: "realsense_stereo"
+    auto_reconnect: true
+    flip_horizontal: false
+    # RealSense D405 UVC: brightness (-64..64) + gamma (100..500).
+    auto_exposure: true
+    exposure: -1
+    gain: -1
+    brightness: -20
+    gamma: 280
+    auto_brightness_enable: true
+    auto_brightness_min: 110.0
+    auto_brightness_max: 180.0
+    auto_brightness_trial_interval_sec: 3.0
+    tuning_topic: "/stereo_camera/tuning"
