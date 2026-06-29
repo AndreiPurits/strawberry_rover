@@ -18,7 +18,7 @@ from fastapi import WebSocket
 from fastapi import WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from rclpy.executors import SingleThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.utilities import remove_ros_args
 
 from rover_web_interface.backend.ros_bridge import create_bridge_node
@@ -26,7 +26,7 @@ from rover_web_interface.backend.ros_bridge import create_bridge_node
 app = FastAPI(title="Rover Web Interface API", version="0.1.0")
 
 _bridge = None
-_executor: Optional[SingleThreadedExecutor] = None
+_executor: Optional[MultiThreadedExecutor] = None
 _spin_thread: Optional[threading.Thread] = None
 _ws_clients: List[WebSocket] = []
 _broadcast_task: Optional[asyncio.Task] = None
@@ -66,7 +66,7 @@ async def _broadcast_loop() -> None:
 async def on_startup() -> None:
     global _bridge, _executor, _spin_thread, _broadcast_task
     _bridge = create_bridge_node()
-    _executor = SingleThreadedExecutor()
+    _executor = MultiThreadedExecutor(num_threads=4)
     _executor.add_node(_bridge)
     _spin_thread = threading.Thread(target=_spin_executor, daemon=True)
     _spin_thread.start()

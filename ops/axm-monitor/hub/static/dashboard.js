@@ -1025,6 +1025,12 @@ function renderStereoCamera(r) {
 
   const online = Boolean(r?.online);
   const live = Boolean(r?.stereo_camera_live);
+  const stereo = r?.telemetry?.perception?.stereo || {};
+  const fps = stereo.stream_fps ?? stereo.hub_fps ?? 10;
+  const mean = stereo.brightness_mean;
+  const inRange = stereo.brightness_ok !== false;
+  const tuning = Boolean(stereo.tuning);
+
   if (online && live && selectedId) {
     const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
     if (stereoMjpegUrl !== url) {
@@ -1033,7 +1039,16 @@ function renderStereoCamera(r) {
     }
     img.classList.remove("hidden");
     ph.classList.add("hidden");
-    if (status) status.textContent = "2 fps";
+    if (status) {
+      let label = `${fps} fps`;
+      if (mean != null) {
+        label += ` · ярк ${Math.round(mean)}`;
+        if (tuning) label += " ⟳";
+      }
+      status.textContent = label;
+      status.classList.toggle("warn", mean != null && !inRange);
+      status.classList.toggle("ok", mean != null && inRange);
+    }
   } else {
     if (stereoMjpegUrl) {
       img.removeAttribute("src");
@@ -1042,7 +1057,10 @@ function renderStereoCamera(r) {
     img.classList.add("hidden");
     ph.classList.remove("hidden");
     ph.textContent = online ? "ожидание…" : "offline";
-    if (status) status.textContent = online ? "нет потока" : "—";
+    if (status) {
+      status.textContent = online ? "нет потока" : "—";
+      status.classList.remove("warn", "ok");
+    }
   }
 }
 

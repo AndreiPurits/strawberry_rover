@@ -39,6 +39,8 @@ _lidar_guard_lock = threading.Lock()
 _lidar_override_until: float = 0.0
 _session_active: bool = False
 _last_stereo_camera_stamp: Optional[float] = None
+_last_stereo_telemetry: Dict[str, Any] = {}
+_stereo_post_times: List[float] = []
 _last_camera_stamp: Optional[float] = None
 _last_heartbeat_rtt_ms: Optional[float] = None
 _last_hub_ok_at: float = 0.0
@@ -111,13 +113,21 @@ def _camera_fps() -> float:
 
 
 def _hub_camera_fps() -> float:
-    """JPEG upload rate to hub — keep very low on flaky uplink."""
-    raw = _env("AXM_HUB_CAMERA_FPS", "2")
+    """JPEG upload rate to hub for front camera."""
+    raw = _env("AXM_HUB_CAMERA_FPS", "12")
     try:
         fps = float(raw)
     except ValueError:
-        fps = 2.0
-    return max(0.5, min(fps, 5.0))
+        fps = 12.0
+    return max(0.5, min(fps, 15.0))
+
+
+def _camera_stream_loop_interval() -> float:
+    """Loop cadence — must be fast enough for stereo hub_fps."""
+    front_iv = 1.0 / _hub_camera_fps()
+    if not _hub_stereo_enabled():
+        return front_iv
+    return min(front_iv, 1.0 / _hub_stereo_fps())
 
 
 def _hub_stereo_enabled() -> bool:
@@ -125,12 +135,12 @@ def _hub_stereo_enabled() -> bool:
 
 
 def _hub_stereo_fps() -> float:
-    raw = _env("AXM_HUB_STEREO_FPS", "1")
+    raw = _env("AXM_HUB_STEREO_FPS", "10")
     try:
         fps = float(raw)
     except ValueError:
-        fps = 1.0
-    return max(0.25, min(fps, 3.0))
+        fps = 10.0
+    return max(0.25, min(fps, 10.0))
 
 
 def _touch_hub_ok() -> None:
@@ -337,11 +347,60 @@ def _refresh_lidar_arc(local_web: str) -> bool:
     return True
 
 
+def _stereo_stream_fps() -> Optional[float]:
+    with _hub_ok_lock:
+        times = list(_stereo_post_times)
+    if len(times) < 2:
+        return None
+    span = times[-1] - times[0]
+    if span <= 0:
+        return None
+    return round((len(times) - 1) / span, 1)
+
+
+def _note_stereo_post() -> None:
+    global _stereo_post_times
+    now = time.monotonic()
+    with _hub_ok_lock:
+        _stereo_post_times.append(now)
+        if len(_stereo_post_times) > 12:
+            _stereo_post_times = _stereo_post_times[-12:]
+
+
+def _refresh_stereo_stats(base: str) -> None:
+    """Pull brightness/tuning from local web — not only on hub POST."""
+    global _last_stereo_telemetry
+    if not _hub_stereo_enabled():
+        return
+    st = _fetch_json(f"{base}/api/perception/stereo_camera", 0.35) or {}
+    if not st.get("ok"):
+        return
+    merged = dict(_last_stereo_telemetry)
+    merged.update(
+        {
+            "hub_fps": _hub_stereo_fps(),
+            "stream_fps": _stereo_stream_fps(),
+            "brightness_mean": st.get("brightness_mean"),
+            "brightness_ok": st.get("brightness_ok"),
+            "brightness": st.get("brightness"),
+            "gamma": st.get("gamma"),
+            "tuning": st.get("tuning"),
+            "target_min": st.get("target_min"),
+            "target_max": st.get("target_max"),
+        }
+    )
+    _last_stereo_telemetry = merged
+
+
 def _collect_perception(local_web: str) -> Dict[str, Any]:
+    base = local_web.rstrip("/")
     out: Dict[str, Any] = {}
-    if _refresh_lidar_arc(local_web):
+    if _refresh_lidar_arc(base):
         out["lidar_arc"] = dict(_last_lidar_arc)
     out["lidar_guard"] = _current_lidar_guard()
+    _refresh_stereo_stats(base)
+    if _last_stereo_telemetry:
+        out["stereo"] = dict(_last_stereo_telemetry)
     return out
 
 
@@ -477,7 +536,8 @@ def _camera_stream_loop(
     local_web: str,
     stop_event: threading.Event,
 ) -> None:
-    interval = 1.0 / _hub_camera_fps()
+    global _last_stereo_telemetry
+    interval = _camera_stream_loop_interval()
     stereo_interval = 1.0 / _hub_stereo_fps()
     last_stereo_at = 0.0
     base = local_web.rstrip("/")
@@ -505,6 +565,8 @@ def _camera_stream_loop(
                     if len(sjpeg) <= 120_000:
                         sstamp = float(st.get("stamp") or time.time())
                         _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
+                        _note_stereo_post()
+                        _refresh_stereo_stats(base)
                         last_stereo_at = time.monotonic()
         except Exception:
             pass

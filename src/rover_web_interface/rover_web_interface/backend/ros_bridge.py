@@ -111,6 +111,7 @@ class RosWebBridge(Node):
         self._front_camera_jpeg: Dict[str, Any] = {}
         self._front_camera_jpeg_hub: Dict[str, Any] = {}
         self._stereo_camera_jpeg: Dict[str, Any] = {}
+        self._stereo_tuning: Dict[str, Any] = {}
         self._control_started = False
         self._control_mode = "auto"
         self._last_cmd = {
@@ -155,6 +156,12 @@ class RosWebBridge(Node):
                 self._real_stereo_camera_topic,
                 lambda msg: self._on_image("stereo", msg),
                 qos_profile_sensor_data,
+            )
+            self.create_subscription(
+                String,
+                "/stereo_camera/tuning",
+                self._on_stereo_tuning,
+                10,
             )
         self.create_subscription(
             Image,
@@ -407,18 +414,41 @@ class RosWebBridge(Node):
         except Exception as exc:
             return {"ok": False, "reason": str(exc)}
 
+    def _on_stereo_tuning(self, msg: String) -> None:
+        try:
+            import json
+
+            data = json.loads(str(msg.data))
+            if isinstance(data, dict):
+                with self._lock:
+                    self._stereo_tuning = data
+        except Exception:
+            pass
+
+    def _stereo_tuning_snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            return dict(self._stereo_tuning)
+
+    def _attach_stereo_tuning(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        tuning = self._stereo_tuning_snapshot()
+        if tuning:
+            payload.update(tuning)
+        return payload
+
     def _on_image(self, camera_name: str, msg: Image) -> None:
         if camera_name in ("front", "stereo"):
             jpeg = self._make_jpeg_from_image(msg, hub=False)
             if jpeg.get("ok"):
-                with self._lock:
-                    if camera_name == "front":
+                if camera_name == "front":
+                    hub_jpeg = self._make_jpeg_from_image(msg, hub=True)
+                    with self._lock:
                         self._front_camera_jpeg = jpeg
-                        hub_jpeg = self._make_jpeg_from_image(msg, hub=True)
                         if hub_jpeg.get("ok"):
                             self._front_camera_jpeg_hub = hub_jpeg
-                    else:
-                        self._stereo_camera_jpeg = jpeg
+                else:
+                    merged = self._attach_stereo_tuning(jpeg)
+                    with self._lock:
+                        self._stereo_camera_jpeg = merged
             return
 
         encoded = base64.b64encode(bytes(msg.data)).decode("ascii")
@@ -496,7 +526,7 @@ class RosWebBridge(Node):
         with self._lock:
             cached = dict(self._stereo_camera_jpeg)
         if cached.get("ok") and cached.get("jpeg_b64"):
-            return cached
+            return self._attach_stereo_tuning(cached)
 
         with self._lock:
             img = dict(self._images.get("stereo") or {})
@@ -523,7 +553,6 @@ class RosWebBridge(Node):
             else:
                 return {"ok": False, "reason": f"unsupported_encoding:{encoding}"}
             small = cv2.resize(arr, (640, 360), interpolation=cv2.INTER_AREA)
-            small = cv2.convertScaleAbs(small, alpha=1.28, beta=18)
             ok, jpg = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 62])
             if not ok:
                 return {"ok": False, "reason": "jpeg_encode_failed"}
@@ -534,9 +563,10 @@ class RosWebBridge(Node):
                 "height": 360,
                 "stamp": float(img.get("stamp") or time.time()),
             }
+            merged = self._attach_stereo_tuning(result)
             with self._lock:
-                self._stereo_camera_jpeg = result
-            return result
+                self._stereo_camera_jpeg = merged
+            return dict(merged)
         except Exception as exc:
             return {"ok": False, "reason": str(exc)}
 

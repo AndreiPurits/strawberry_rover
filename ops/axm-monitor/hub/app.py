@@ -414,6 +414,12 @@ def _merge_telemetry(prev: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any
                     ng["active"] = True
                     ng["latched_forward"] = True
                     p["lidar_guard"] = ng
+            new_stereo = val.get("stereo")
+            prev_stereo = prev_p.get("stereo") or {}
+            if isinstance(new_stereo, dict) and new_stereo:
+                p["stereo"] = {**prev_stereo, **new_stereo}
+            elif prev_stereo:
+                p["stereo"] = prev_stereo
             merged["perception"] = p
         elif key == "mega" and isinstance(val, dict):
             m = dict(merged.get("mega") or {})
