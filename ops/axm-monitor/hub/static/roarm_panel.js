@@ -392,13 +392,21 @@
   }
 
   async function goHome() {
-    if (!savedPoints.length) await loadPoints();
+    await loadPoints();
     const homePt = getHomePoint();
     if (homePt) {
-      setPtStatus(`HOME → ${homePt.name}`);
+      const j = normalizeJoints(homePt.joints);
+      if (!j) {
+        setPtStatus(`HOME «${homePt.name}» без шарниров — пересохраните точку`);
+        log("HOME ERROR no joints on home point");
+        return null;
+      }
+      setPtStatus(`HOME → ${homePt.name} (T:102 staged)`);
+      log(`HOME → ${homePt.name} joints B=${j.base} S=${j.shoulder} E=${j.elbow}`);
       return goToPoint(homePt);
     }
-    setPtStatus("HOME → T:100 (нет сохранённой точки Home/Дом)");
+    setPtStatus("HOME → T:100 заводская (нет точки Home/Дом — см. ★ HOME)");
+    log("HOME → T:100 factory (no saved home point)");
     return rpc("home");
   }
 
@@ -423,8 +431,17 @@
     }
     savedPoints = data.points || savedPoints;
     renderPointsList();
-    setPtStatus(`★ HOME = ${pt.name}`);
+    setPtStatus(`★ HOME = ${pt.name} · кнопка HOME на панели → сюда`);
     log(`home point set: ${pt.name}`);
+    if (
+      window.confirm(
+        `«${pt.name}» — HOME для кнопки на сайте.\n\n` +
+          "Чтобы при ВКЛЮЧЕНИИ питания лапа вставала сюда же — нужен T:502 в сервоприводы.\n\n" +
+          "Сейчас перейти в точку и записать T:502?"
+      )
+    ) {
+      await commitSelectedToServo();
+    }
   }
 
   async function commitSelectedToServo() {
