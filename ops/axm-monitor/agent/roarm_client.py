@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 from urllib.parse import quote
@@ -156,8 +158,58 @@ class RoArmClient:
     def gripper_open(self, timeout_sec: float | None = None) -> Tuple[str, str]:
         return self.send_raw_json({"T": 106, "cmd": 1.08, "spd": 0, "acc": 0}, timeout_sec=timeout_sec)
 
+    def gripper_ctrl(
+        self,
+        cmd: float,
+        spd: float = 0.0,
+        acc: float = 0.0,
+        timeout_sec: float | None = None,
+    ) -> Tuple[str, str]:
+        return self.send_raw_json(
+            {"T": 106, "cmd": float(cmd), "spd": float(spd), "acc": float(acc)},
+            timeout_sec=timeout_sec,
+        )
+
+    def dynamic_torque_limits(
+        self,
+        *,
+        mode: int = 0,
+        b: int = 1000,
+        s: int = 1000,
+        e: int = 1000,
+        t: int = 1000,
+        r: int = 1000,
+        g: int = 1000,
+        timeout_sec: float | None = None,
+    ) -> Tuple[str, str]:
+        """T:112 — per-joint torque caps; mode 0 sets limits, mode 1 enables load adaptation."""
+        return self.send_raw_json(
+            {"T": 112, "mode": int(mode), "b": b, "s": s, "e": e, "t": t, "r": r, "g": g},
+            timeout_sec=timeout_sec,
+        )
+
+    def gripper_close_force(self, timeout_sec: float | None = None) -> Tuple[str, str]:
+        """Close with max grip torque + repeated T:106 (pads/blades need squeeze, not just angle)."""
+        close_rad = float(os.environ.get("ROARM_GRIP_CLOSE_RAD", "3.14"))
+        torque_g = int(os.environ.get("ROARM_GRIP_TORQUE_G", "1000"))
+        pulses = max(1, int(os.environ.get("ROARM_GRIP_CLOSE_PULSES", "1")))
+        pulse_delay = float(os.environ.get("ROARM_GRIP_PULSE_DELAY_S", "0.2"))
+        close_acc = float(os.environ.get("ROARM_GRIP_CLOSE_ACC", "50"))
+
+        self.dynamic_torque_limits(mode=0, g=torque_g, timeout_sec=timeout_sec)
+        time.sleep(0.05)
+
+        last_url, last_resp = self.gripper_ctrl(close_rad, spd=0, acc=close_acc, timeout_sec=timeout_sec)
+        for _ in range(pulses - 1):
+            time.sleep(pulse_delay)
+            last_url, last_resp = self.gripper_ctrl(close_rad, spd=0, acc=close_acc, timeout_sec=timeout_sec)
+        return last_url, last_resp
+
     def gripper_close(self, timeout_sec: float | None = None) -> Tuple[str, str]:
-        return self.send_raw_json({"T": 106, "cmd": 3.14, "spd": 0, "acc": 0}, timeout_sec=timeout_sec)
+        effective = self.timeout_sec if timeout_sec is None else float(timeout_sec)
+        if os.environ.get("ROARM_GRIP_CLOSE_FORCE", "1").lower() not in ("0", "false", "no"):
+            return self.gripper_close_force(timeout_sec=effective)
+        return self.gripper_ctrl(3.14, spd=0, acc=0, timeout_sec=effective)
 
     def move_xyz(
         self,

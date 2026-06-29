@@ -1119,7 +1119,6 @@ function renderPanel() {
     roverPanel.classList.add("hidden");
     roarmPanel?.classList.remove("hidden");
     window.RoArmPanel?.onFleetUpdate?.(r);
-    window.RoArmPanel?.onSelect?.(r);
     return;
   }
 

@@ -1047,19 +1047,45 @@ def main() -> int:
         if not roarm_enabled():
             return
         poll_s = float(_env("AXM_ROARM_POLL_S", "0.15"))
+        exec_q: "queue.Queue[tuple[str, str, str, Dict[str, Any]] | None]" = __import__("queue").Queue()
 
-        def _run_one(req_id: str, op: str, params: Dict[str, Any]) -> None:
-            try:
-                result = execute_rpc(op, params)
-            except Exception as exc:
-                result = {"ok": False, "error": str(exc)}
-            post_roarm_result(
-                args.hub_url,
-                args.rover_id,
-                args.token,
-                req_id,
-                result,
-            )
+        def _executor_loop() -> None:
+            while True:
+                item = exec_q.get()
+                if item is None:
+                    break
+                req_id, op, params = item
+                try:
+                    result = execute_rpc(op, params)
+                except Exception as exc:
+                    result = {"ok": False, "error": str(exc)}
+                post_roarm_result(
+                    args.hub_url,
+                    args.rover_id,
+                    args.token,
+                    req_id,
+                    result,
+                )
+
+        threading.Thread(target=_executor_loop, daemon=True, name="roarm-exec").start()
+
+        def _enqueue(req_id: str, op: str, params: Dict[str, Any]) -> None:
+            if op == "status":
+                pending = []
+                while True:
+                    try:
+                        pending.append(exec_q.get_nowait())
+                    except Exception:
+                        break
+                for old in pending:
+                    if old is None:
+                        exec_q.put(None)
+                        return
+                    if old[1] != "status":
+                        exec_q.put(old)
+                exec_q.put((req_id, op, params))
+                return
+            exec_q.put((req_id, op, params))
 
         while not poll_stop.is_set():
             if not _hub_link_ok():
@@ -1073,12 +1099,7 @@ def main() -> int:
                     params = item.get("params") or {}
                     if not req_id or not op:
                         continue
-                    threading.Thread(
-                        target=_run_one,
-                        args=(req_id, op, params),
-                        daemon=True,
-                        name=f"roarm-{op[:12]}",
-                    ).start()
+                    _enqueue(req_id, op, params)
             except Exception:
                 pass
             poll_stop.wait(poll_s)

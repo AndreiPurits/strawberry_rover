@@ -820,6 +820,12 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
     if not parent or (time.time() - float(parent.get("last_seen", 0))) > AGENT_STALE_S:
         raise HTTPException(status_code=503, detail="roarm_gateway_offline")
     req_id = uuid.uuid4().hex
+    if body.op == "status":
+        # Keep only the newest status poll — stale ones would timeout and flood RoArm HTTP.
+        stale_status_ids = [c.get("id") for c in _roarm_queue if c.get("op") == "status"]
+        _roarm_queue[:] = [c for c in _roarm_queue if c.get("op") != "status"]
+        for sid in stale_status_ids:
+            _roarm_waiters.pop(sid, None)
     _roarm_queue.append({"id": req_id, "op": body.op, "params": body.params, "user": user})
     loop = asyncio.get_running_loop()
     fut: asyncio.Future = loop.create_future()
@@ -829,6 +835,8 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
         if body.op == "home_joints_staged":
             timeout_s = float(_env("AXM_ROARM_STAGED_RPC_TIMEOUT_S", "120"))
+    if body.op in ("gripper_close", "gripper_close_force"):
+        timeout_s = float(_env("AXM_ROARM_GRIP_RPC_TIMEOUT_S", "25"))
     try:
         result = await asyncio.wait_for(fut, timeout=timeout_s)
         return {"ok": True, "id": req_id, **(result if isinstance(result, dict) else {"result": result})}

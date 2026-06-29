@@ -6,6 +6,8 @@
   let savedPoints = [];
   let selectedPointId = null;
   let lastFeedback = null;
+  let lastStatusAt = 0;
+  const STATUS_MIN_INTERVAL_MS = 4000;
   let syncingJointSliders = false;
   const jointSendTimers = {};
 
@@ -15,7 +17,7 @@
     { id: 3, key: "e", label: "Локоть", min: -0.5, max: 3.5 },
     { id: 4, key: "t", label: "Запястье", min: -3.14, max: 3.14 },
     { id: 5, key: "r", label: "Кисть", min: -3.14, max: 3.14 },
-    { id: 6, key: "g", label: "Захват", min: 0, max: 3.14 },
+    { id: 6, key: "g", label: "Захват", min: 1.08, max: 3.14 },
   ];
 
   const JOINT_KEYS = ["base", "shoulder", "elbow", "wrist", "roll", "hand"];
@@ -525,7 +527,7 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = data.detail || data.error || res.status;
-        if (res.status === 504 && op === "status") {
+        if (op === "status" && (res.status === 504 || detail === "roarm_timeout")) {
           return { ok: false, error: "roarm_timeout", silent: true };
         }
         log(`${op} ERROR ${detail}`);
@@ -568,7 +570,11 @@
     }
   }
 
-  async function refreshStatus() {
+  async function refreshStatus(force = false) {
+    const now = Date.now();
+    if (!force && now - lastStatusAt < STATUS_MIN_INTERVAL_MS) return;
+    if (!force && motionBusy) return;
+    lastStatusAt = now;
     const data = await rpc("status", {}, { blocking: false });
     if (!data) return;
     if (data.silent || data.error === "roarm_timeout") {
@@ -866,7 +872,7 @@
       document.getElementById(id)?.addEventListener("input", updateReachability);
     });
 
-    document.getElementById("btn-refresh")?.addEventListener("click", refreshStatus);
+    document.getElementById("btn-refresh")?.addEventListener("click", () => refreshStatus(true));
     document.getElementById("btn-home")?.addEventListener("click", () => goHome());
     document.getElementById("pt-save")?.addEventListener("click", () => savePoint());
     document.getElementById("pt-go")?.addEventListener("click", () => goToPoint(selectedPoint()));
@@ -1002,7 +1008,7 @@
     onSelect(device) {
       bindOnce();
       renderFleetStatus(device);
-      refreshStatus();
+      refreshStatus(true);
       loadPoints();
     },
     onFleetUpdate(device) {
