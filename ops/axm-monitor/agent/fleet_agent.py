@@ -1047,6 +1047,20 @@ def main() -> int:
         if not roarm_enabled():
             return
         poll_s = float(_env("AXM_ROARM_POLL_S", "0.15"))
+
+        def _run_one(req_id: str, op: str, params: Dict[str, Any]) -> None:
+            try:
+                result = execute_rpc(op, params)
+            except Exception as exc:
+                result = {"ok": False, "error": str(exc)}
+            post_roarm_result(
+                args.hub_url,
+                args.rover_id,
+                args.token,
+                req_id,
+                result,
+            )
+
         while not poll_stop.is_set():
             if not _hub_link_ok():
                 poll_stop.wait(max(0.5, poll_s))
@@ -1059,14 +1073,12 @@ def main() -> int:
                     params = item.get("params") or {}
                     if not req_id or not op:
                         continue
-                    result = execute_rpc(op, params)
-                    post_roarm_result(
-                        args.hub_url,
-                        args.rover_id,
-                        args.token,
-                        req_id,
-                        result,
-                    )
+                    threading.Thread(
+                        target=_run_one,
+                        args=(req_id, op, params),
+                        daemon=True,
+                        name=f"roarm-{op[:12]}",
+                    ).start()
             except Exception:
                 pass
             poll_stop.wait(poll_s)

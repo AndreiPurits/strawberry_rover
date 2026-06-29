@@ -24,7 +24,7 @@ def _env(name: str, default: str) -> str:
 
 
 def _pause_sec() -> float:
-    return float(_env("ROARM_STAGED_PAUSE_S", "1.4"))
+    return float(_env("ROARM_STAGED_PAUSE_S", "0.9"))
 
 
 def _move_timeout() -> float:
@@ -42,6 +42,16 @@ def joints_from_params(params: Dict[str, Any]) -> Dict[str, float]:
     }
 
 
+def _pause_after_joint(joint_key: str, target_rad: float, current_rad: float | None) -> float:
+    """Sleep after T:101 so the servo can move before the next joint."""
+    base = float(_env("ROARM_STAGED_PAUSE_S", "0.9"))
+    if current_rad is None:
+        return base
+    delta = abs(float(target_rad) - float(current_rad))
+    # ~1.2 rad/s effective; clamp 0.35–2.5 s
+    return min(2.5, max(0.35, base * 0.5 + delta / 1.2))
+
+
 def move_joints_staged(
     client: RoArmClient,
     params: Dict[str, Any],
@@ -50,18 +60,31 @@ def move_joints_staged(
     joints = joints_from_params(params)
     spd = float(params.get("spd", 0))
     acc = float(params.get("acc", 10))
-    timeout = _move_timeout()
-    pause = _pause_sec()
+    per_joint_timeout = min(_move_timeout(), float(_env("ROARM_STAGED_JOINT_TIMEOUT_S", "12")))
     last_url = ""
     last_resp = ""
+    feedback: Dict[str, float] = {}
+    try:
+        _url, fb = client.servo_feedback(timeout_sec=8.0)
+        if isinstance(fb, dict):
+            for jid, key in STAGED_ORDER:
+                v = fb.get(key if key != "base" else "b")
+                if v is not None:
+                    feedback[key] = float(v)
+    except Exception:
+        pass
+
     for joint_id, key in STAGED_ORDER:
+        target = joints[key]
+        current = feedback.get(key)
         url, resp = client.joint_control(
             joint_id,
-            joints[key],
+            target,
             spd=spd,
             acc=acc,
-            timeout_sec=timeout,
+            timeout_sec=per_joint_timeout,
         )
         last_url, last_resp = url, resp
-        time.sleep(pause)
+        time.sleep(_pause_after_joint(key, target, current))
+        feedback[key] = target
     return last_url, last_resp

@@ -525,9 +525,12 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = data.detail || data.error || res.status;
+        if (res.status === 504 && op === "status") {
+          return { ok: false, error: "roarm_timeout", silent: true };
+        }
         log(`${op} ERROR ${detail}`);
         if (detail === "roarm_gateway_offline") log("Orin offline — проверьте fleet-agent");
-        return data;
+        return { ...data, ok: false, error: detail };
       }
       if (blocking && op !== "sequence_status") log(`${op} OK`);
       return data;
@@ -568,6 +571,12 @@
   async function refreshStatus() {
     const data = await rpc("status", {}, { blocking: false });
     if (!data) return;
+    if (data.silent || data.error === "roarm_timeout") {
+      if (lastFeedback && jsonEl) {
+        jsonEl.textContent = JSON.stringify(lastFeedback, null, 2);
+      }
+      return;
+    }
     if (data.ok === false || data.error) {
       if (jsonEl) jsonEl.textContent = JSON.stringify(data, null, 2);
       return;
