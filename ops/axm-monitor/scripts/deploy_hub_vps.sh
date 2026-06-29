@@ -5,6 +5,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 mkdir -p "${ROOT}/hub/data"
+if [ -f "${ROOT}/hub/data/roarm_points.json" ]; then
+  cp -a "${ROOT}/hub/data/roarm_points.json" "${ROOT}/hub/data/roarm_points.json.bak"
+fi
+if [ -f "${ROOT}/hub/data/roarm_home.json" ]; then
+  cp -a "${ROOT}/hub/data/roarm_home.json" "${ROOT}/hub/data/roarm_home.json.bak"
+fi
 echo "[deploy] dir=$ROOT"
 git pull origin main
 docker compose build hub

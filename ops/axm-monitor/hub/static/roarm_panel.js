@@ -196,6 +196,13 @@
     });
   }
 
+  function applyArmFeedback(fb) {
+    if (!fb || typeof fb !== "object") return;
+    lastFeedback = fb;
+    if (!motionBusy) syncJointSlidersFromFeedback(fb);
+    if (jsonEl) jsonEl.textContent = JSON.stringify(fb, null, 2);
+  }
+
   function syncJointSlidersFromFeedback(fb) {
     if (!fb || typeof fb !== "object") return;
     syncingJointSliders = true;
@@ -385,6 +392,7 @@
   }
 
   async function goHome() {
+    if (!savedPoints.length) await loadPoints();
     const homePt = getHomePoint();
     if (homePt) {
       setPtStatus(`HOME → ${homePt.name}`);
@@ -589,8 +597,8 @@
     }
     const st = data.status || data.feedback || data.result?.status || data.result?.feedback;
     if (st && typeof st === "object") {
-      lastFeedback = st;
-      syncJointSlidersFromFeedback(st);
+      applyArmFeedback(st);
+      return;
     }
     if (jsonEl) jsonEl.textContent = JSON.stringify(st || data, null, 2);
   }
@@ -859,6 +867,10 @@
           : `${device.name || ROARM_ID} · proxy online, arm offline`
         : `${device.name || ROARM_ID} · offline`;
     }
+
+    if (rt.arm && typeof rt.arm === "object") {
+      applyArmFeedback(rt.arm);
+    }
   }
 
   function bindOnce() {
@@ -1014,6 +1026,7 @@
     onFleetUpdate(device) {
       if (!device) return;
       renderFleetStatus(device);
+      if (!savedPoints.length) loadPoints();
     },
   };
 
