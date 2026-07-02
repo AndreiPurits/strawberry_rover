@@ -362,6 +362,14 @@ button.btn-sm { padding: 4px 10px; font-size: 0.72rem; border-radius: 6px; }
   text-overflow: ellipsis;
 }
 
+.aux-meta.ok {
+  color: var(--ok, #6bcf7f);
+}
+
+.aux-meta.warn {
+  color: var(--warn, #ffb347);
+}
+
 .aux-placeholder {
   min-height: 0;
   display: grid;
@@ -752,6 +760,52 @@ input {
   overflow: hidden;
   height: 100%;
 }
+.roarm-col-camera {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.roarm-camera-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0a0e18;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.roarm-camera-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.roarm-stereo-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.roarm-approach-status {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(91, 140, 255, 0.08);
+  line-height: 1.35;
+}
+
+.roarm-approach-result {
+  margin-bottom: 0.35rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
 .roarm-col-seq {
   display: flex;
   flex-direction: column;

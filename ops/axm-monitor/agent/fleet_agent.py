@@ -20,6 +20,7 @@ from gnss_reader import gnss_snapshot, start_gnss_reader
 from ntrip_client import ntrip_configured
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
 from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_telemetry
+from roarm_approach_preview import collect_roarm_approach_preview
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
@@ -714,6 +715,13 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
     perception = _collect_perception(base) if health.get("bridge_active") else {}
     rtk = gnss_snapshot()
 
+    roarm = roarm_telemetry()
+    if roarm_enabled() and health.get("bridge_active"):
+        try:
+            roarm["approach"] = collect_roarm_approach_preview(base, _fetch_json)
+        except Exception:
+            pass
+
     cam_age = _camera_age_ms()
     rtt = _last_heartbeat_rtt_ms
     return {
@@ -730,7 +738,7 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
         "mega": mega,
         "perception": perception,
         "rtk": rtk,
-        "roarm": roarm_telemetry(),
+        "roarm": roarm,
         "link": {
             "rtt_ms": rtt,
             "camera_age_ms": cam_age,

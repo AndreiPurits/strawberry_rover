@@ -447,8 +447,11 @@ def _roarm_public(current_user: Optional[str] = None) -> Dict[str, Any]:
     parent = _rovers.get(parent_id) or {}
     parent_last = float(parent.get("last_seen", 0))
     parent_online = bool(parent_last and (time.time() - parent_last) <= AGENT_STALE_S)
-    roarm_t = dict((parent.get("telemetry") or {}).get("roarm") or {})
+    parent_telemetry = dict(parent.get("telemetry") or {})
+    roarm_t = dict(parent_telemetry.get("roarm") or {})
     reachable = bool(roarm_t.get("reachable"))
+    stereo_live = bool((_stereo_camera_frames.get(parent_id) or {}).get("bytes"))
+    perception = dict(parent_telemetry.get("perception") or {})
     return {
         "id": ROARM_DEVICE_ID,
         "name": _env("AXM_ROARM_NAME", "RoArm-01"),
@@ -459,7 +462,11 @@ def _roarm_public(current_user: Optional[str] = None) -> Dict[str, Any]:
         "parent_rover_id": parent_id,
         "last_seen": parent_last,
         "last_seen_ago_s": max(0.0, time.time() - parent_last) if parent_last else None,
-        "telemetry": {"roarm": roarm_t},
+        "stereo_camera_live": stereo_live,
+        "telemetry": {
+            "roarm": roarm_t,
+            "perception": perception,
+        },
         "meta": {"device": "roarm-m3"},
         "operator": {"locked": False, "holder": None, "you": False},
         "link": {
@@ -837,7 +844,7 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
     fut: asyncio.Future = loop.create_future()
     _roarm_waiters[req_id] = fut
     timeout_s = float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12"))
-    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "home_joints_staged", "joint_move"):
+    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "home_joints_staged", "joint_move", "joints_move"):
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
         if body.op == "home_joints_staged":
             timeout_s = float(_env("AXM_ROARM_STAGED_RPC_TIMEOUT_S", "120"))
@@ -953,13 +960,16 @@ async def rover_camera_mjpeg(rover_id: str, user: str = Depends(require_user)) -
 
 @app.get("/api/rovers/{rover_id}/camera/stereo/mjpeg")
 async def rover_stereo_camera_mjpeg(rover_id: str, user: str = Depends(require_user)) -> StreamingResponse:
-    if rover_id not in _rovers and rover_id not in _agent_tokens():
+    stream_id = rover_id
+    if rover_id == ROARM_DEVICE_ID:
+        stream_id = _roarm_agent_rover_id()
+    if stream_id not in _rovers and stream_id not in _agent_tokens():
         raise HTTPException(status_code=404, detail="rover_not_found")
 
     async def stream() -> Any:
         last_sent = 0.0
         while True:
-            frame = _stereo_camera_frames.get(rover_id) or {}
+            frame = _stereo_camera_frames.get(stream_id) or {}
             data = frame.get("bytes")
             stamp = float(frame.get("stamp") or 0.0)
             if data and stamp != last_sent:

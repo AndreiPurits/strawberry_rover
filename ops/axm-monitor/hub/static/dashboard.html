@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AXM Rover</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/static/style.css?v=1.3.2" />
+  <link rel="stylesheet" href="/static/style.css?v=1.3.3" />
 </head>
 <body class="dashboard-page">
   <header class="topbar compact">
@@ -204,44 +204,44 @@
           </aside>
 
           <div class="roarm-col-right">
-            <section class="roarm-block roarm-block-card roarm-col-seq">
+            <section class="roarm-block roarm-block-card roarm-col-camera">
               <div class="roarm-seq-head">
-                <h2>Очередь</h2>
-                <span id="seq-progress" class="muted tiny"></span>
+                <h2>Камера · подход</h2>
+                <span id="roarm-cam-status" class="muted tiny">—</span>
               </div>
+              <div class="roarm-camera-wrap stereo-frame">
+                <img id="roarm-stereo-camera" alt="Стерео" class="hidden" />
+                <canvas id="roarm-stereo-overlay" class="roarm-stereo-overlay" width="640" height="360"></canvas>
+                <div id="roarm-stereo-placeholder" class="aux-placeholder muted tiny">нет кадра стерео</div>
+              </div>
+              <div id="roarm-approach-status" class="roarm-approach-status muted tiny">—</div>
+            </section>
+
+            <section id="roarm-seq-hidden" class="hidden" aria-hidden="true">
               <div class="seq-table-wrap">
                 <table id="seq-table" class="seq-table">
                   <thead>
                     <tr>
-                      <th>type</th>
-                      <th>x</th>
-                      <th>y</th>
-                      <th>z</th>
-                      <th>t</th>
-                      <th>r</th>
-                      <th>g</th>
-                      <th>mode</th>
-                      <th>reach</th>
-                      <th>status</th>
+                      <th>type</th><th>x</th><th>y</th><th>z</th><th>t</th><th>r</th><th>g</th>
+                      <th>mode</th><th>reach</th><th>status</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
                 </table>
               </div>
-              <div class="btn-row tight">
-                <button type="button" id="seq-add-home" class="btn">+ Home</button>
-                <button type="button" id="seq-add-gripper" class="btn">+ Gripper</button>
-                <button type="button" id="seq-add-delay" class="btn">+ Delay</button>
-                <button type="button" id="seq-del" class="btn ghost">Del</button>
-                <button type="button" id="seq-up" class="btn ghost">↑</button>
-                <button type="button" id="seq-down" class="btn ghost">↓</button>
-                <button type="button" id="seq-save" class="btn ghost">Save</button>
-                <button type="button" id="seq-load" class="btn ghost">Load</button>
-                <button type="button" id="seq-load-test" class="btn ghost">Test</button>
-                <button type="button" id="seq-load-fps" class="btn ghost">ФПС</button>
-                <button type="button" id="seq-run" class="btn primary">Run</button>
-                <button type="button" id="seq-stop" class="btn danger">Stop</button>
-              </div>
+              <span id="seq-progress" class="muted tiny"></span>
+              <button type="button" id="seq-add-home" class="hidden"></button>
+              <button type="button" id="seq-add-gripper" class="hidden"></button>
+              <button type="button" id="seq-add-delay" class="hidden"></button>
+              <button type="button" id="seq-del" class="hidden"></button>
+              <button type="button" id="seq-up" class="hidden"></button>
+              <button type="button" id="seq-down" class="hidden"></button>
+              <button type="button" id="seq-save" class="hidden"></button>
+              <button type="button" id="seq-load" class="hidden"></button>
+              <button type="button" id="seq-load-test" class="hidden"></button>
+              <button type="button" id="seq-load-fps" class="hidden"></button>
+              <button type="button" id="seq-run" class="hidden"></button>
+              <button type="button" id="seq-stop" class="hidden"></button>
             </section>
 
             <section class="roarm-block roarm-block-card roarm-col-points">
@@ -270,7 +270,8 @@
             </section>
 
             <section class="roarm-block roarm-block-card roarm-col-log">
-              <h2>Логи</h2>
+              <h2>Логи · статус подхода</h2>
+              <div id="roarm-approach-result" class="roarm-approach-result muted tiny">—</div>
               <pre id="roarm-log" class="roarm-log"></pre>
             </section>
           </div>
@@ -279,7 +280,7 @@
     </section>
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/dashboard.js?v=1.3.6"></script>
-  <script src="/static/roarm_panel.js?v=1.8.4"></script>
+  <script src="/static/dashboard.js?v=1.3.7"></script>
+  <script src="/static/roarm_panel.js?v=1.9.0"></script>
 </body>
 </html>

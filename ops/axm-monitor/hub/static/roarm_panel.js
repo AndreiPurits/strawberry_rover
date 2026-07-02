@@ -3,6 +3,10 @@
   const ROARM_ID = "roarm-01";
   const LS_KEY = "axm_roarm_sequence_v1";
 
+  let stereoMjpegUrl = "";
+  let lastApproach = null;
+  let lastApproachLogLine = "";
+
   let savedPoints = [];
   let selectedPointId = null;
   let lastFeedback = null;
@@ -64,6 +68,116 @@
       joints[key] = Number(slider?.value ?? 0);
     });
     return joints;
+  }
+
+  function drawApproachOverlay(approach) {
+    const canvas = document.getElementById("roarm-stereo-overlay");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
+    const cw = Math.max(1, Math.round(rect.width));
+    const ch = Math.max(1, Math.round(rect.height));
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+    }
+    ctx.clearRect(0, 0, cw, ch);
+    if (!approach?.valid || approach.px == null || approach.py == null) return;
+
+    const iw = Number(approach.image_w) || 640;
+    const ih = Number(approach.image_h) || 360;
+    const scale = Math.min(cw / iw, ch / ih);
+    const offX = (cw - iw * scale) * 0.5;
+    const offY = (ch - ih * scale) * 0.5;
+    const x = offX + Number(approach.px) * scale;
+    const y = offY + Number(approach.py) * scale;
+
+    ctx.strokeStyle = "#3dff9a";
+    ctx.fillStyle = "rgba(61, 255, 154, 0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - 22, y);
+    ctx.lineTo(x + 22, y);
+    ctx.moveTo(x, y - 22);
+    ctx.lineTo(x, y + 22);
+    ctx.stroke();
+    ctx.fillStyle = "#3dff9a";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText("TARGET", x + 20, y - 10);
+  }
+
+  function updateStereoCamera(device) {
+    const img = document.getElementById("roarm-stereo-camera");
+    const ph = document.getElementById("roarm-stereo-placeholder");
+    const status = document.getElementById("roarm-cam-status");
+    const live = Boolean(device?.stereo_camera_live);
+    const stereo = (device?.telemetry?.perception || {}).stereo || {};
+    const fps = stereo.stream_fps ?? stereo.hub_fps;
+
+    if (live) {
+      const url = `/api/rovers/${encodeURIComponent(ROARM_ID)}/camera/stereo/mjpeg`;
+      if (stereoMjpegUrl !== url) {
+        stereoMjpegUrl = url;
+        if (img) {
+          img.onload = () => {
+            img.classList.remove("hidden");
+            ph?.classList.add("hidden");
+            drawApproachOverlay(lastApproach);
+          };
+          img.src = `${url}?t=${Date.now()}`;
+        }
+      }
+      if (status) {
+        status.textContent = fps ? `live · ${Number(fps).toFixed(1)} fps` : "live";
+      }
+      ph?.classList.add("hidden");
+    } else {
+      if (img) {
+        img.classList.add("hidden");
+        img.removeAttribute("src");
+      }
+      stereoMjpegUrl = "";
+      ph?.classList.remove("hidden");
+      if (status) status.textContent = "нет кадра";
+      drawApproachOverlay(null);
+    }
+  }
+
+  function updateApproachUi(device) {
+    const approach = (device?.telemetry?.roarm || {}).approach || {};
+    lastApproach = approach;
+    drawApproachOverlay(approach);
+
+    const statusEl = document.getElementById("roarm-approach-status");
+    const resultEl = document.getElementById("roarm-approach-result");
+    if (statusEl) {
+      statusEl.textContent = approach.status_text || (approach.valid ? "Цель найдена" : "Поиск цели…");
+    }
+    if (resultEl) {
+      const parts = [];
+      if (approach.valid) {
+        parts.push(`✓ цель (${approach.px}, ${approach.py})`);
+        if (approach.depth_m != null) parts.push(`depth ${approach.depth_m} m`);
+        if (approach.cam_err_m != null) parts.push(`Δ ${approach.cam_err_m} m`);
+        parts.push(approach.source || "");
+      } else {
+        parts.push(`✗ ${approach.reject_reason || approach.status || "no target"}`);
+      }
+      resultEl.textContent = parts.filter(Boolean).join(" · ");
+    }
+
+    const line = approach.status_text || "";
+    if (line && line !== lastApproachLogLine) {
+      lastApproachLogLine = line;
+      seqLog(`approach: ${line}`);
+    }
+    (approach.log || []).forEach((entry) => {
+      if (entry && !logEl?.textContent.includes(entry)) seqLog(entry);
+    });
   }
 
   function resolveSequenceSteps(sequence) {
@@ -888,6 +1002,9 @@
     if (rt.arm && typeof rt.arm === "object") {
       applyArmFeedback(rt.arm);
     }
+
+    updateStereoCamera(device);
+    updateApproachUi(device);
   }
 
   function bindOnce() {
@@ -1039,10 +1156,14 @@
       renderFleetStatus(device);
       refreshStatus(true);
       loadPoints();
+      updateStereoCamera(device);
+      updateApproachUi(device);
     },
     onFleetUpdate(device) {
       if (!device) return;
       renderFleetStatus(device);
+      updateStereoCamera(device);
+      updateApproachUi(device);
       if (!savedPoints.length) loadPoints();
     },
   };
