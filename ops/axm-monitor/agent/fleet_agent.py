@@ -20,7 +20,7 @@ from gnss_reader import gnss_snapshot, start_gnss_reader
 from ntrip_client import ntrip_configured
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
 from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_telemetry
-from roarm_approach_preview import collect_roarm_approach_preview, last_approach_overlay
+from roarm_strawberry_preview import collect_roarm_strawberry_preview, last_strawberry_overlay
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
@@ -581,9 +581,9 @@ def _camera_stream_loop(
                         # Annotate with the LAST cached overlay only — no ROS/perception
                         # work in this loop (that would block the camera stream).
                         try:
-                            overlay = last_approach_overlay()
+                            overlay = last_strawberry_overlay()
                             if overlay and overlay.get("updated_at"):
-                                from pipelines.roarm_target_overlay import annotate_jpeg_bytes
+                                from pipelines.roarm_strawberry_overlay import annotate_jpeg_bytes
 
                                 if (time.time() - float(overlay["updated_at"])) < 8.0:
                                     sjpeg = annotate_jpeg_bytes(sjpeg, overlay, quality=72)
@@ -729,7 +729,7 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
     roarm = roarm_telemetry()
     if roarm_enabled() and health.get("bridge_active"):
         try:
-            roarm["approach"] = collect_roarm_approach_preview(base, _fetch_json)
+            roarm["strawberry"] = collect_roarm_strawberry_preview(base, _fetch_json)
         except Exception:
             pass
 

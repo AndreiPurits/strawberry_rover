@@ -4,24 +4,7 @@
   const LS_KEY = "axm_roarm_sequence_v1";
 
   let stereoMjpegUrl = "";
-  let lastApproach = null;
-  let overlayRaf = 0;
-
-  function startOverlayLoop() {
-    if (overlayRaf) return;
-    const tick = () => {
-      drawApproachOverlay(lastApproach);
-      startOverlayLoop();
-      overlayRaf = requestAnimationFrame(tick);
-    };
-    overlayRaf = requestAnimationFrame(tick);
-  }
-
-  function stopOverlayLoop() {
-    if (!overlayRaf) return;
-    cancelAnimationFrame(overlayRaf);
-    overlayRaf = 0;
-  }
+  let lastApproachLogLine = "";
 
   let savedPoints = [];
   let selectedPointId = null;
@@ -86,147 +69,6 @@
     return joints;
   }
 
-  function drawApproachOverlay(approach) {
-    const canvas = document.getElementById("roarm-stereo-overlay");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-    const cw = Math.max(1, Math.round(rect.width));
-    const ch = Math.max(1, Math.round(rect.height));
-    if (canvas.width !== cw || canvas.height !== ch) {
-      canvas.width = cw;
-      canvas.height = ch;
-    }
-    ctx.clearRect(0, 0, cw, ch);
-
-    const iw = Number(approach?.image_w) || 640;
-    const ih = Number(approach?.image_h) || 360;
-    const scale = Math.min(cw / iw, ch / ih);
-    const offX = (cw - iw * scale) * 0.5;
-    const offY = (ch - ih * scale) * 0.5;
-
-    const toX = (px) => offX + Number(px) * scale;
-    const toY = (py) => offY + Number(py) * scale;
-
-    // Image center (where we want the target)
-    const cx = toX(iw * 0.5);
-    const cy = toY(ih * 0.5);
-    ctx.strokeStyle = "rgba(255, 220, 80, 0.55)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx - 18, cy);
-    ctx.lineTo(cx + 18, cy);
-    ctx.moveTo(cx, cy - 18);
-    ctx.lineTo(cx, cy + 18);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    if (!approach) return;
-
-    const tolPx = Number(approach.track_tolerance_px) || 95;
-    const tolR = tolPx * scale;
-
-    const cornerIdx = Number(approach.corner_idx);
-    if (Array.isArray(approach.candidates)) {
-      ctx.fillStyle = "rgba(160, 160, 160, 0.55)";
-      approach.candidates.slice(0, 60).forEach((cand) => {
-        if (!Array.isArray(cand) || cand.length < 3) return;
-        if (Number(cand[0]) === cornerIdx) return;
-        ctx.beginPath();
-        ctx.arc(toX(cand[1]), toY(cand[2]), 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    if (approach.anchor_px != null && approach.anchor_py != null) {
-      const ax = toX(approach.anchor_px);
-      const ay = toY(approach.anchor_py);
-      ctx.strokeStyle = "rgba(120, 180, 255, 0.7)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(ax, ay, Math.max(6, tolR), 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(120, 180, 255, 0.85)";
-      ctx.beginPath();
-      ctx.arc(ax, ay, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.font = "9px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(120, 180, 255, 0.9)";
-      ctx.fillText("якорь", ax + 8, ay - 6);
-    }
-
-    if (approach.track_px != null && approach.track_py != null) {
-      const tx = toX(approach.track_px);
-      const ty = toY(approach.track_py);
-      ctx.strokeStyle = "rgba(220, 120, 255, 0.85)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(tx, ty, 6, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    if (!approach.valid || approach.px == null || approach.py == null) {
-      if (approach.status_text) {
-        ctx.fillStyle = "rgba(255, 120, 80, 0.9)";
-        ctx.font = "11px system-ui, sans-serif";
-        ctx.fillText(approach.status_text.slice(0, 48), 8, ch - 10);
-      }
-      return;
-    }
-
-    const x = toX(approach.px);
-    const y = toY(approach.py);
-
-    // Distinct diamond + ring so the locked corner never blends into the crowd.
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(0,0,0,0.8)";
-    ctx.beginPath();
-    ctx.moveTo(x, y - 22);
-    ctx.lineTo(x + 22, y);
-    ctx.lineTo(x, y + 22);
-    ctx.lineTo(x - 22, y);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.strokeStyle = "#3dff9a";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(61, 255, 154, 0.18)";
-    ctx.beginPath();
-    ctx.arc(x, y, 15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x - 26, y);
-    ctx.lineTo(x + 26, y);
-    ctx.moveTo(x, y - 26);
-    ctx.lineTo(x, y + 26);
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = "#ff3b3b";
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    let label = cornerIdx >= 0 ? `ЦЕЛЬ #${cornerIdx}` : "ЦЕЛЬ";
-    if (approach.template_score != null) label += ` ${Number(approach.template_score).toFixed(2)}`;
-    ctx.font = "bold 12px system-ui, sans-serif";
-    ctx.strokeStyle = "rgba(0,0,0,0.8)";
-    ctx.lineWidth = 3;
-    ctx.strokeText(label, x + 18, y - 12);
-    ctx.fillStyle = "#3dff9a";
-    ctx.fillText(label, x + 18, y - 12);
-
-    const lines = [];
-    if (approach.depth_m != null) lines.push(`z ${Number(approach.depth_m).toFixed(2)}m`);
-    if (approach.cam_err_m != null) lines.push(`Δ ${Number(approach.cam_err_m).toFixed(2)}m`);
-    if (approach.source) lines.push(String(approach.source).replace("plane:", ""));
-    ctx.font = "10px system-ui, sans-serif";
-    ctx.fillStyle = "rgba(61, 255, 154, 0.95)";
-    lines.forEach((line, i) => ctx.fillText(line, x + 18, y + 4 + i * 12));
-  }
-
   function updateStereoCamera(device) {
     const img = document.getElementById("roarm-stereo-camera");
     const ph = document.getElementById("roarm-stereo-placeholder");
@@ -243,14 +85,10 @@
           img.onload = () => {
             img.classList.remove("hidden");
             ph?.classList.add("hidden");
-            drawApproachOverlay(lastApproach);
-      startOverlayLoop();
           };
           img.src = `${url}?t=${Date.now()}`;
         }
       }
-      drawApproachOverlay(lastApproach);
-      startOverlayLoop();
       if (status) {
         status.textContent = fps ? `live · ${Number(fps).toFixed(1)} fps` : "live";
       }
@@ -263,40 +101,36 @@
       stereoMjpegUrl = "";
       ph?.classList.remove("hidden");
       if (status) status.textContent = "нет кадра";
-      drawApproachOverlay(null);
-      stopOverlayLoop();
     }
   }
 
   function updateApproachUi(device) {
-    const approach = (device?.telemetry?.roarm || {}).approach || {};
-    lastApproach = approach;
-    drawApproachOverlay(approach);
+    const berry = (device?.telemetry?.roarm || {}).strawberry || {};
 
     const statusEl = document.getElementById("roarm-approach-status");
     const resultEl = document.getElementById("roarm-approach-result");
     if (statusEl) {
-      statusEl.textContent = approach.status_text || (approach.valid ? "Цель найдена" : "Поиск цели…");
+      statusEl.textContent = berry.status_text || (berry.valid ? "Клубника найдена" : "Поиск клубники…");
     }
     if (resultEl) {
       const parts = [];
-      if (approach.valid) {
-        parts.push(`✓ цель (${approach.px}, ${approach.py})`);
-        if (approach.depth_m != null) parts.push(`depth ${approach.depth_m} m`);
-        if (approach.cam_err_m != null) parts.push(`Δ ${approach.cam_err_m} m`);
-        parts.push(approach.source || "");
+      if (berry.valid && Array.isArray(berry.detections)) {
+        parts.push(`✓ ${berry.count || berry.detections.length} berry`);
+        berry.detections.slice(0, 3).forEach((d, i) => {
+          parts.push(`#${i + 1} conf ${Number(d.conf).toFixed(2)}`);
+        });
       } else {
-        parts.push(`✗ ${approach.reject_reason || approach.status || "no target"}`);
+        parts.push(`✗ ${berry.status || "no detections"}`);
       }
       resultEl.textContent = parts.filter(Boolean).join(" · ");
     }
 
-    const line = approach.status_text || "";
+    const line = berry.status_text || "";
     if (line && line !== lastApproachLogLine) {
       lastApproachLogLine = line;
-      seqLog(`approach: ${line}`);
+      seqLog(`detect: ${line}`);
     }
-    (approach.log || []).forEach((entry) => {
+    (berry.log || []).forEach((entry) => {
       if (entry && !logEl?.textContent.includes(entry)) seqLog(entry);
     });
   }
