@@ -20,7 +20,7 @@ from gnss_reader import gnss_snapshot, start_gnss_reader
 from ntrip_client import ntrip_configured
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
 from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_telemetry
-from roarm_approach_preview import collect_roarm_approach_preview
+from roarm_approach_preview import collect_roarm_approach_preview, last_approach_overlay
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
@@ -578,6 +578,17 @@ def _camera_stream_loop(
                 if st.get("ok") and st.get("jpeg_b64"):
                     sjpeg = base64.b64decode(st["jpeg_b64"])
                     if len(sjpeg) <= 120_000:
+                        # Annotate with the LAST cached overlay only — no ROS/perception
+                        # work in this loop (that would block the camera stream).
+                        try:
+                            overlay = last_approach_overlay()
+                            if overlay and overlay.get("updated_at"):
+                                from pipelines.roarm_target_overlay import annotate_jpeg_bytes
+
+                                if (time.time() - float(overlay["updated_at"])) < 8.0:
+                                    sjpeg = annotate_jpeg_bytes(sjpeg, overlay, quality=72)
+                        except Exception:
+                            pass
                         sstamp = float(st.get("stamp") or time.time())
                         _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
                         _note_stereo_post()

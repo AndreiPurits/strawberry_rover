@@ -1,0 +1,105 @@
+# RoArm chessboard learn — geometry, kinematics, curriculum, success gates.
+
+geometry:
+  target_camera_distance_m: 0.11
+  # Stereo depth → arm-frame delta (mm per unit normalized error / meter cam_err).
+  stereo_kx_mm_per_m: 250.0
+  stereo_ky_mm_per_u: 80.0
+  stereo_kz_mm_per_v: 80.0
+  # Normalized pixel deadzone (|u|,|v| must be below for success).
+  uv_deadzone: 0.06
+  # Depth sample window radius (pixels).
+  depth_median_radius: 5
+  depth_valid_min_m: 0.05
+  depth_valid_max_m: 2.5
+  depth_jump_max_m: 0.4
+
+kinematics:
+  link_l1_mm: 285.0   # shoulder → elbow
+  link_l2_mm: 375.0   # elbow → gripper
+  ik_damping: 0.08
+  max_step_rad: 0.35
+  calibrate_max_step_rad: 0.08
+  calibrate_disable_explicit_reach: true
+  base_gain_rad_per_u: 0.12
+  base_u_deadzone: 0.12
+  base_max_step_rad: 0.06
+  base_only_when_fine: true   # дальний подход: только плечо+локоть, base ближе к цели
+  # Explicit reach when |cam_err| exceeds threshold.
+  explicit_reach_cam_err_m: 0.10
+  explicit_reach_shoulder_frac: 0.70
+  explicit_reach_elbow_frac: 0.30
+  # Jacobian file (bench calibration overwrites).
+  calibration_json: runs/roarm_kinematics/calibration.json
+
+joint_limits:
+  base: [-1.57, 1.57]
+  shoulder: [-1.60, 0.60]
+  elbow: [1.20, 3.20]
+  wrist: [-1.57, 1.57]
+  roll: [-1.57, 1.57]
+  hand: [0.0, 3.14]
+
+success:
+  depth_max_m: 0.22
+  cam_err_max_m: 0.08
+  depth_progress_min_m: 0.18
+
+curriculum:
+  phases:
+    - name: phase_11cm
+      target_camera_distance_m: 0.11
+    - name: phase_8cm
+      target_camera_distance_m: 0.08
+  max_steps_per_episode: 8
+  settle_s: 0.5
+  calibrate_settle_s: 0.55
+
+motion:
+  command_mode: staged   # staged (T:101) | simultaneous (T:102)
+  staged_acc: 8.0
+  staged_spd: 0.0
+  joint_stall_rad: 0.04
+  joint_stall_timeout_s: 1.2
+
+perception:
+  chessboard_cols: 9
+  chessboard_rows: 6
+  corner_strategy: depth_center  # center + valid depth; before lock
+  track_max_jump_px: 110.0
+  track_lost_max_frames: 6
+  track_reacquire_scale: 3.5
+  corner_track_tolerance_px: 95.0
+  # Template lock — один угол, локальный поиск (этап 1 / калибровка).
+  use_template_lock: true
+  template_patch_px: 64
+  template_search_radius_px: 48      # узкое окно поиска у прошлой позиции
+  template_reacquire_radius_px: 140  # шире только при потере
+  template_min_score: 0.52
+  template_spatial_penalty: 0.45     # штраф за уход от прошлой точки (анти-прыжок)
+  template_max_jump_px: 40.0         # жёсткий лимит скачка за кадр
+  # Plane tracking on tarp/grid (stereo depth RANSAC).
+  plane:
+    sample_step_px: 6
+    ransac_iters: 120
+    ransac_thresh_m: 0.028
+    min_points: 28
+    min_inlier_frac: 0.52
+    smooth_alpha: 0.38
+    mask_sky_frac: 0.18
+    mask_bottom_frac: 0.78
+
+approach_retry:
+  max_attempts: 4
+  max_same_failures: 3
+  tune_jump_px_per_attempt: 18.0
+  tune_reacquire_per_attempt: 0.5
+  tune_lost_frames_per_attempt: 1
+
+rl:
+  enabled: false
+  residual_alpha: 0.0
+  checkpoint_dir: runs/roarm_learn/checkpoints
+
+logging:
+  log_dir: runs/roarm_learn/logs
