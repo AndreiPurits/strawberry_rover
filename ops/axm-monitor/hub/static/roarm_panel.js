@@ -117,7 +117,11 @@
       if (berry.valid && Array.isArray(berry.detections)) {
         parts.push(`✓ ${berry.count || berry.detections.length} berry`);
         berry.detections.slice(0, 3).forEach((d, i) => {
-          parts.push(`#${i + 1} conf ${Number(d.conf).toFixed(2)}`);
+          const z =
+            d.depth_m != null && Number.isFinite(Number(d.depth_m))
+              ? ` z=${Number(d.depth_m).toFixed(2)}m`
+              : "";
+          parts.push(`#${i + 1} conf ${Number(d.conf).toFixed(2)}${z}`);
         });
       } else {
         parts.push(`✗ ${berry.status || "no detections"}`);
