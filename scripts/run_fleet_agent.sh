@@ -21,6 +21,7 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
+export PYTHONPATH="${REPO_ROOT}/.venv_cuda/lib/python3.8/site-packages:${PYTHONPATH:-}"
 AXM_DEVICES_ENV="${AXM_DEVICES_ENV:-$HOME/.config/axm/devices.env}"
 if [ -f "$AXM_DEVICES_ENV" ]; then
   set -a
@@ -40,5 +41,7 @@ fi
 
 export AXM_LOCAL_WEB="${AXM_LOCAL_WEB:-http://127.0.0.1:8080}"
 export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB1}"
+
+bash "$REPO_ROOT/scripts/ensure_gnss_serial.sh" 2>/dev/null || true
 
 exec "$PYTHON_BIN" "$AGENT_DIR/fleet_agent.py" "$@"

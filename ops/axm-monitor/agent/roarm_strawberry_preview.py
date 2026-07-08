@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -331,3 +332,25 @@ def collect_roarm_strawberry_preview(
             "updated_at": time.time(),
         }
         return {**_cache, "log": list(_log)}
+
+
+def start_strawberry_detect_thread(
+    local_web: str,
+    fetch_json: Callable[[str, float], Optional[dict]],
+    stop_event: threading.Event,
+    *,
+    interval_s: float = 0.7,
+) -> threading.Thread:
+    """Background YOLO+depth — keeps camera MJPEG loop fast (annotate only)."""
+
+    def _loop() -> None:
+        while not stop_event.is_set():
+            try:
+                collect_roarm_strawberry_preview(local_web, fetch_json, interval_s=0.0)
+            except Exception as exc:
+                _push_log(f"bg detect: {exc}")
+            stop_event.wait(max(0.25, interval_s))
+
+    t = threading.Thread(target=_loop, daemon=True, name="strawberry-detect")
+    t.start()
+    return t

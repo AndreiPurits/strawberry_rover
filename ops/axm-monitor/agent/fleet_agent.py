@@ -23,10 +23,11 @@ from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_
 from roarm_strawberry_preview import (
     collect_roarm_strawberry_preview,
     last_strawberry_overlay,
-    update_strawberry_overlay_from_jpeg,
+    start_strawberry_detect_thread,
 )
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+sys.path.insert(0, _REPO_ROOT)
 sys.path.insert(0, os.path.join(_REPO_ROOT, "tools", "rover_mega"))
 from tank_drive import ui_to_cmd_vel, ui_to_pwm, ui_to_tracks  # noqa: E402
 
@@ -583,15 +584,14 @@ def _camera_stream_loop(
                     sjpeg = base64.b64decode(st["jpeg_b64"])
                     if len(sjpeg) <= 120_000:
                         try:
-                            overlay = update_strawberry_overlay_from_jpeg(
-                                sjpeg, min_interval_s=0.35
-                            )
-                            if overlay and overlay.get("detections"):
+                            overlay = last_strawberry_overlay()
+                            age_s = time.time() - float(overlay.get("updated_at") or 0)
+                            if overlay.get("detections") and age_s < 5.0:
                                 from pipelines.roarm_strawberry_overlay import annotate_jpeg_bytes
 
                                 sjpeg = annotate_jpeg_bytes(sjpeg, overlay, quality=72)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            print(f"[fleet-agent] stereo annotate: {exc}", file=sys.stderr)
                         sstamp = float(st.get("stamp") or time.time())
                         _post_stereo_camera_frame(hub_url, rover_id, token, sjpeg, sstamp)
                         _note_stereo_post()
@@ -1092,6 +1092,9 @@ def main() -> int:
         name="camera-stream",
     )
     cam_thread.start()
+    berry_stop = threading.Event()
+    if roarm_enabled():
+        start_strawberry_detect_thread(args.local_web, _fetch_json, berry_stop, interval_s=0.7)
 
     poll_stop = threading.Event()
 
@@ -1264,6 +1267,7 @@ def main() -> int:
 
             time.sleep(max(0.05, min(telem_interval, 60.0)))
     finally:
+        berry_stop.set()
         keepalive_stop.set()
         poll_stop.set()
         cam_stop.set()
