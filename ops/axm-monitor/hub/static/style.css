@@ -968,7 +968,7 @@ input {
 }
 .joint-slider-row {
   display: grid;
-  grid-template-columns: minmax(68px, 80px) 1fr minmax(40px, 48px);
+  grid-template-columns: minmax(68px, 80px) minmax(96px, 1fr) 44px 58px 48px 48px;
   gap: 4px;
   align-items: center;
 }
@@ -988,6 +988,23 @@ input {
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--text);
+}
+.joint-slider-row .joint-num {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #0d1324;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+.joint-slider-row .joint-step {
+  padding: 4px 5px;
+  font-size: 0.62rem;
+  white-space: nowrap;
 }
 .roarm-block-move {
   flex-shrink: 0;

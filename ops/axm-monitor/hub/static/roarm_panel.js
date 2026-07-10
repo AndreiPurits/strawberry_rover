@@ -210,6 +210,21 @@
     return Number(v).toFixed(2);
   }
 
+  function clampJointValue(joint, value) {
+    const n = Number(value);
+    const safe = Number.isFinite(n) ? n : 0;
+    return Math.min(joint.max, Math.max(joint.min, safe));
+  }
+
+  function sendJointMove(joint, value) {
+    clearTimeout(jointSendTimers[joint.id]);
+    return rpc(
+      "joint_move",
+      { joint: joint.id, rad: Number(value), spd: 0, acc: 10 },
+      { blocking: false }
+    );
+  }
+
   function buildJointSliders() {
     const root = document.getElementById("joint-sliders");
     if (!root || root.childElementCount) return;
@@ -234,8 +249,46 @@
       val.id = `j-val-${joint.id}`;
       val.textContent = "0.00";
 
+      const manual = document.createElement("input");
+      manual.type = "number";
+      manual.className = "joint-num";
+      manual.id = `j-num-${joint.id}`;
+      manual.min = String(joint.min);
+      manual.max = String(joint.max);
+      manual.step = "0.01";
+      manual.value = "0.00";
+      manual.inputMode = "decimal";
+      manual.title = "Введите значение в радианах и нажмите Enter";
+
+      const minus = document.createElement("button");
+      minus.type = "button";
+      minus.className = "btn-xs ghost joint-step";
+      minus.textContent = "-0.03";
+      minus.title = `${joint.label}: -0.03 rad`;
+
+      const plus = document.createElement("button");
+      plus.type = "button";
+      plus.className = "btn-xs ghost joint-step";
+      plus.textContent = "+0.03";
+      plus.title = `${joint.label}: +0.03 rad`;
+
       const updateVal = () => {
-        val.textContent = formatRad(slider.value);
+        const formatted = formatRad(slider.value);
+        val.textContent = formatted;
+        manual.value = formatted;
+      };
+
+      const setJointUi = (value) => {
+        const next = clampJointValue(joint, value);
+        slider.value = String(next);
+        updateVal();
+        return next;
+      };
+
+      const commitManual = () => {
+        if (syncingJointSliders) return;
+        const next = setJointUi(manual.value);
+        sendJointMove(joint, next);
       };
 
       slider.addEventListener("input", () => {
@@ -243,28 +296,42 @@
         if (syncingJointSliders) return;
         clearTimeout(jointSendTimers[joint.id]);
         jointSendTimers[joint.id] = setTimeout(() => {
-          rpc(
-            "joint_move",
-            { joint: joint.id, rad: Number(slider.value), spd: 0, acc: 10 },
-            { blocking: false }
-          );
+          sendJointMove(joint, slider.value);
         }, 80);
       });
 
       slider.addEventListener("change", () => {
         updateVal();
         if (syncingJointSliders) return;
-        clearTimeout(jointSendTimers[joint.id]);
-        rpc(
-          "joint_move",
-          { joint: joint.id, rad: Number(slider.value), spd: 0, acc: 10 },
-          { blocking: false }
-        );
+        sendJointMove(joint, slider.value);
+      });
+
+      manual.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          commitManual();
+          manual.blur();
+        }
+      });
+
+      manual.addEventListener("change", commitManual);
+
+      minus.addEventListener("click", () => {
+        const next = setJointUi(Number(slider.value) - 0.03);
+        sendJointMove(joint, next);
+      });
+
+      plus.addEventListener("click", () => {
+        const next = setJointUi(Number(slider.value) + 0.03);
+        sendJointMove(joint, next);
       });
 
       row.appendChild(label);
       row.appendChild(slider);
       row.appendChild(val);
+      row.appendChild(manual);
+      row.appendChild(minus);
+      row.appendChild(plus);
       root.appendChild(row);
     });
   }
@@ -284,8 +351,11 @@
       if (rad === undefined) return;
       const slider = document.getElementById(`j-slider-${joint.id}`);
       const val = document.getElementById(`j-val-${joint.id}`);
-      if (slider) slider.value = String(Math.min(joint.max, Math.max(joint.min, rad)));
-      if (val) val.textContent = formatRad(slider?.value ?? rad);
+      const manual = document.getElementById(`j-num-${joint.id}`);
+      const next = clampJointValue(joint, rad);
+      if (slider) slider.value = String(next);
+      if (val) val.textContent = formatRad(next);
+      if (manual && document.activeElement !== manual) manual.value = formatRad(next);
     });
     syncingJointSliders = false;
   }
