@@ -262,12 +262,65 @@ def _infer_on_bgr(det_model, bgr) -> List[dict]:
     out = []
     for d in det_model.infer(masked):
         x1, y1, x2, y2 = d.bbox_xyxy
-        out.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "conf": round(float(d.detector_conf), 3)})
+        out.append({
+            "x1": x1,
+            "y1": y1,
+            "x2": x2,
+            "y2": y2,
+            "conf": round(float(d.detector_conf), 3),
+            "source": "yolo",
+        })
     regions = _resolve_exclude_for_frame(bgr)[1]
     if regions:
         _, _, filter_detections_exclude_regions, _ = _brightness_mask_module()
         out = filter_detections_exclude_regions(out, regions, w, h)
     return out
+
+
+def _center_distance(a: dict, b: dict) -> float:
+    ax, ay = _bbox_center(a)
+    bx, by = _bbox_center(b)
+    return float(np.hypot(ax - bx, ay - by))
+
+
+def _color_fallback_detections(bgr) -> List[dict]:
+    """Detect red berry-like blobs that YOLO misses; used for multi-berry preview."""
+    from pipelines.strawberry_color_detect import detect_red_berry_bboxes
+
+    out = []
+    for x1, y1, x2, y2, score in detect_red_berry_bboxes(
+        bgr,
+        min_area_px=int(os.environ.get("AXM_BERRY_COLOR_MIN_AREA", "18")),
+        max_area_frac=float(os.environ.get("AXM_BERRY_COLOR_MAX_AREA_FRAC", "0.08")),
+    ):
+        det = {
+            "x1": float(x1),
+            "y1": float(y1),
+            "x2": float(x2),
+            "y2": float(y2),
+            "conf": round(float(score), 3),
+            "color_score": round(float(score), 3),
+            "source": "color",
+        }
+        cx, cy = _bbox_center(det)
+        # Bench berries hang in the upper/mid frame; this rejects red gripper/table artifacts.
+        if cy > float(os.environ.get("AXM_BERRY_COLOR_MAX_CY", "230")):
+            continue
+        out.append(det)
+    return _filter_work_band(_filter_padding(out))
+
+
+def _merge_color_fallback(yolo_dets: List[dict], color_dets: List[dict]) -> List[dict]:
+    merged = list(yolo_dets)
+    overlap_px = float(os.environ.get("AXM_BERRY_COLOR_MERGE_DIST_PX", "45"))
+    for cdet in color_dets:
+        near = [yd for yd in merged if _center_distance(yd, cdet) <= overlap_px]
+        if near:
+            for yd in near:
+                yd["color_score"] = max(float(yd.get("color_score", 0.0)), float(cdet.get("color_score", 0.0)))
+            continue
+        merged.append(cdet)
+    return sorted(merged, key=lambda d: float(d.get("conf", 0.0)), reverse=True)
 
 
 def _infer_full_and_roi(det_model, bgr, tracker: Optional["StrawberryTargetTracker"]) -> List[dict]:
@@ -389,9 +442,8 @@ def detect_strawberry_in_frame(
     det_model,
     tracker: Optional[StrawberryTargetTracker],
 ) -> Optional[dict]:
-    """Stable single-target pick: full frame + ROI around previous bbox."""
-    raw_dets = _infer_full_and_roi(det_model, bgr, tracker)
-    dets = _filter_work_band(_filter_padding(raw_dets))
+    """Stable single-target pick: choose the current highest-confidence berry."""
+    dets = detect_strawberries_in_frame(bgr, det_model, tracker)
     return _pick_detection(
         dets,
         tracker.last_px if tracker else None,
@@ -400,6 +452,18 @@ def detect_strawberry_in_frame(
         preferred_py=tracker.preferred_py if tracker else None,
         preferred_max_dist_px=tracker.preferred_max_dist_px if tracker else None,
     )
+
+
+def detect_strawberries_in_frame(
+    bgr,
+    det_model,
+    tracker: Optional[StrawberryTargetTracker] = None,
+) -> List[dict]:
+    """Return all visible berry candidates for overlay; includes color fallback."""
+    raw_dets = _infer_full_and_roi(det_model, bgr, tracker)
+    yolo_dets = _filter_work_band(_filter_padding(raw_dets))
+    color_dets = _color_fallback_detections(bgr)
+    return _merge_color_fallback(yolo_dets, color_dets)
 
 
 def measure_strawberry_hub(

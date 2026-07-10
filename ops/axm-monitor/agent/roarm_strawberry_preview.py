@@ -30,6 +30,16 @@ _detector_mode = "none"  # yolo | missing
 _ros_provider = None
 _manifest: Optional[dict] = None
 _perc_cfg = None
+_hub_tracker = None
+
+
+def _get_hub_tracker():
+    global _hub_tracker
+    if _hub_tracker is None:
+        from pipelines.roarm_strawberry_target import StrawberryTargetTracker
+
+        _hub_tracker = StrawberryTargetTracker()
+    return _hub_tracker
 
 
 def _weights_available(path: str) -> bool:
@@ -92,7 +102,7 @@ def _get_detector():
         weights_path=weights,
         device="cuda",
         imgsz=480,
-        conf=0.35,
+        conf=0.28,
         iou=0.6,
         max_det=8,
     )
@@ -140,34 +150,125 @@ def _run_detector(bgr) -> List[dict]:
         return []
     t0 = time.perf_counter()
     det = _get_detector()
-    dets = det.infer(bgr)
-    out = []
-    for d in dets:
-        x1, y1, x2, y2 = d.bbox_xyxy
-        out.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "conf": round(d.detector_conf, 3)})
+    from pipelines.roarm_strawberry_target import detect_strawberries_in_frame
+
+    tracker = _get_hub_tracker()
+    out = [dict(d) for d in detect_strawberries_in_frame(bgr, det, tracker)]
+    if out:
+        tracker.update(max(out, key=lambda d: float(d.get("conf", 0.0))))
     ms = (time.perf_counter() - t0) * 1000.0
-    _push_log(f"detect(yolo): {len(out)} berry(s) in {ms:.0f}ms")
+    src = "roi" if any(d.get("from_roi") for d in out) else "full"
+    yolo_n = sum(1 for d in out if d.get("source") == "yolo")
+    color_n = sum(1 for d in out if d.get("source") == "color")
+    _push_log(f"detect({src}): {len(out)} berry in {ms:.0f}ms (yolo={yolo_n} color={color_n})")
     return out
 
 
-def _scale_depth_to_bgr(depth_m, bgr_shape: Tuple[int, int, int]):
+def _letterbox_array(arr, max_w: int, max_h: int):
+    """Match rover_web_interface ros_bridge._encode_jpeg_bgr_fit letterbox."""
     import cv2
     import numpy as np
 
+    src_h, src_w = arr.shape[:2]
+    scale = min(max_w / src_w, max_h / src_h)
+    new_w = max(1, int(round(src_w * scale)))
+    new_h = max(1, int(round(src_h * scale)))
+    interp = cv2.INTER_NEAREST if arr.ndim == 2 else cv2.INTER_AREA
+    resized = cv2.resize(arr, (new_w, new_h), interpolation=interp)
+    meta = {
+        "scale": scale,
+        "x0": (max_w - new_w) // 2,
+        "y0": (max_h - new_h) // 2,
+        "content_w": new_w,
+        "content_h": new_h,
+    }
+    if new_w == max_w and new_h == max_h:
+        return resized, meta
+    if arr.ndim == 2:
+        canvas = np.zeros((max_h, max_w), dtype=arr.dtype)
+    else:
+        canvas = np.zeros((max_h, max_w, arr.shape[2]), dtype=arr.dtype)
+    y0, x0 = meta["y0"], meta["x0"]
+    canvas[y0 : y0 + new_h, x0 : x0 + new_w] = resized
+    return canvas, meta
+
+
+def _hub_content_rect(hub_w: int, hub_h: int, src_w: int, src_h: int) -> Tuple[int, int, int, int]:
+    scale = min(hub_w / src_w, hub_h / src_h)
+    new_w = max(1, int(round(src_w * scale)))
+    new_h = max(1, int(round(src_h * scale)))
+    x0 = (hub_w - new_w) // 2
+    y0 = (hub_h - new_h) // 2
+    return x0, y0, new_w, new_h
+
+
+def _filter_detections_in_padding(
+    detections: List[dict],
+    hub_w: int,
+    hub_h: int,
+    *,
+    src_w: int = 848,
+    src_h: int = 480,
+    margin_px: int = 6,
+) -> List[dict]:
+    """Drop bbox hits in letterbox black bars (hub JPEG != native ROS size)."""
+    x0, y0, cw, ch = _hub_content_rect(hub_w, hub_h, src_w, src_h)
+    kept: List[dict] = []
+    for det in detections:
+        cx = (float(det["x1"]) + float(det["x2"])) * 0.5
+        cy = (float(det["y1"]) + float(det["y2"])) * 0.5
+        if cx < x0 + margin_px or cx >= x0 + cw - margin_px:
+            continue
+        if cy < y0 + margin_px or cy >= y0 + ch - margin_px:
+            continue
+        kept.append(det)
+    dropped = len(detections) - len(kept)
+    if dropped:
+        _push_log(f"filter: dropped {dropped} bbox in letterbox padding")
+    return kept
+
+
+def _align_depth_to_hub_bgr(depth_m, hub_w: int, hub_h: int):
     if depth_m is None:
         return None
-    bh, bw = bgr_shape[:2]
     dh, dw = depth_m.shape[:2]
-    if (dh, dw) == (bh, bw):
+    if dw == hub_w and dh == hub_h:
         return depth_m
-    return cv2.resize(depth_m, (bw, bh), interpolation=cv2.INTER_NEAREST)
+    aligned, _ = _letterbox_array(depth_m, hub_w, hub_h)
+    return aligned
+
+
+def _fetch_hub_stereo_bgr(
+    local_web: str,
+    fetch_json: Callable[[str, float], Optional[dict]],
+) -> Optional[Any]:
+    base = local_web.rstrip("/")
+    st = fetch_json(f"{base}/api/perception/stereo_camera", 0.8) or {}
+    if not st.get("ok") or not st.get("jpeg_b64"):
+        return None
+    return _decode_stereo_jpeg(st)
+
+
+def _fetch_ros_depth(timeout_s: float = 0.5):
+    try:
+        provider = _get_ros_provider()
+        if provider is None:
+            return None
+        pair = provider.read(timeout_s=timeout_s)
+        if pair is None:
+            return None
+        return pair.depth_m
+    except Exception:
+        return None
 
 
 def _attach_depth(detections: List[dict], depth_m, *, rgb_w: int, rgb_h: int) -> None:
     from pipelines.roarm_perception import sample_depth_median
 
     cfg = _perception_cfg()
-    depth_aligned = _scale_depth_to_bgr(depth_m, (rgb_h, rgb_w, 3))
+    depth_aligned = depth_m
+    if depth_m is not None and depth_m.shape[:2] != (rgb_h, rgb_w):
+        depth_aligned = _align_depth_to_hub_bgr(depth_m, rgb_w, rgb_h)
     for det in detections:
         cx = int(round((det["x1"] + det["x2"]) * 0.5))
         cy = int(round((det["y1"] + det["y2"]) * 0.5))
@@ -192,10 +293,14 @@ def _status_from_detections(detections: List[dict], mode: str) -> Tuple[str, str
     parts = [f"Клубника: {len(detections)}"]
     for i, d in enumerate(detections[:3]):
         z = d.get("depth_m")
+        src = str(d.get("source") or "yolo")
+        xy = ""
+        if d.get("px") is not None and d.get("py") is not None:
+            xy = f" px={int(d['px'])} py={int(d['py'])}"
         if z is not None:
-            parts.append(f"#{i + 1} {z:.2f}m conf {d['conf']:.2f}")
+            parts.append(f"#{i + 1} {src} {z:.2f}m conf {d['conf']:.2f}{xy}")
         else:
-            parts.append(f"#{i + 1} conf {d['conf']:.2f}")
+            parts.append(f"#{i + 1} {src} conf {d['conf']:.2f}{xy}")
     return "ok", " · ".join(parts)
 
 
@@ -203,12 +308,14 @@ def _build_overlay(bgr, depth_m) -> Dict[str, Any]:
     h, w = bgr.shape[:2]
     mode = _get_detector_mode()
     detections = _run_detector(bgr)
-    _attach_depth(detections, depth_m, rgb_w=w, rgb_h=h)
+    detections = _filter_detections_in_padding(detections, w, h)
+    depth_hub = _align_depth_to_hub_bgr(depth_m, w, h) if depth_m is not None else None
+    _attach_depth(detections, depth_hub, rgb_w=w, rgb_h=h)
     status, status_text = _status_from_detections(detections, mode)
     with_depth = sum(1 for d in detections if d.get("depth_m") is not None)
-    if detections and depth_m is not None:
+    if detections and depth_hub is not None:
         _push_log(f"depth: {with_depth}/{len(detections)} bbox with z")
-    elif detections and depth_m is None:
+    elif detections and depth_hub is None:
         _push_log("depth: no aligned depth frame")
     return {
         "valid": len(detections) > 0,
@@ -216,7 +323,7 @@ def _build_overlay(bgr, depth_m) -> Dict[str, Any]:
         "detections": detections,
         "image_w": w,
         "image_h": h,
-        "depth_ok": depth_m is not None,
+        "depth_ok": depth_hub is not None,
         "status": status,
         "status_text": status_text,
         "updated_at": time.time(),
@@ -243,15 +350,7 @@ def update_strawberry_overlay_from_jpeg(
     if bgr is None:
         return dict(_cache) if _cache else {}
 
-    depth_m = None
-    try:
-        provider = _get_ros_provider()
-        if provider is not None:
-            pair = provider.read(timeout_s=0.35)
-            if pair is not None:
-                depth_m = pair.depth_m
-    except Exception:
-        depth_m = None
+    depth_m = _fetch_ros_depth(timeout_s=0.35)
 
     try:
         _cache = _build_overlay(bgr, depth_m)
@@ -283,36 +382,22 @@ def collect_roarm_strawberry_preview(
     if _cache and (now - _last_at) < interval_s:
         return {**dict(_cache), "log": list(_log)}
 
-    # Prefer synchronized RGB+depth from ROS; fallback to HTTP JPEG (depth may be missing).
-    bgr = None
-    depth_m = None
-    try:
-        provider = _get_ros_provider()
-        if provider is not None:
-            pair = provider.read(timeout_s=1.2)
-            if pair is not None:
-                bgr = pair.rgb_bgr
-                depth_m = pair.depth_m
-    except Exception:
-        pass
+    # Detect on the same hub JPEG (640×480 letterbox), not native ROS 848×480.
+    bgr = _fetch_hub_stereo_bgr(local_web, fetch_json)
+    depth_m = _fetch_ros_depth(timeout_s=0.5)
 
     if bgr is None:
-        base = local_web.rstrip("/")
-        st = fetch_json(f"{base}/api/perception/stereo_camera", 0.8) or {}
-        if not st.get("ok") or not st.get("jpeg_b64"):
-            reason = st.get("reason") or st.get("error") or "no_stereo_frame"
-            _push_log(f"камера: {reason}")
-            _last_at = now
-            _cache = {
-                "valid": False,
-                "count": 0,
-                "detections": [],
-                "status": "no_frame",
-                "status_text": "Нет кадра стерео",
-                "updated_at": time.time(),
-            }
-            return {**_cache, "log": list(_log)}
-        bgr = _decode_stereo_jpeg(st)
+        _push_log("камера: no_stereo_frame")
+        _last_at = now
+        _cache = {
+            "valid": False,
+            "count": 0,
+            "detections": [],
+            "status": "no_frame",
+            "status_text": "Нет кадра стерео",
+            "updated_at": time.time(),
+        }
+        return {**_cache, "log": list(_log)}
 
     try:
         if bgr is None:

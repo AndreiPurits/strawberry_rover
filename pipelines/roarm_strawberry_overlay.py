@@ -35,16 +35,18 @@ def draw_strawberry_overlay_bgr(bgr: np.ndarray, overlay: Optional[Dict[str, Any
         x2, y2 = min(w - 1, x2), min(h - 1, y2)
         if x2 <= x1 or y2 <= y1:
             continue
-        cv2.rectangle(out, (x1, y1), (x2, y2), (40, 220, 40), 2, cv2.LINE_AA)
+        source = str(det.get("source") or "yolo")
+        color = (40, 220, 40) if source == "yolo" else (0, 165, 255)
+        cv2.rectangle(out, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
         depth_m = det.get("depth_m")
         if depth_m is not None:
-            label = f"berry {conf:.2f} {float(depth_m):.2f}m"
+            label = f"{source} {conf:.2f} {float(depth_m):.2f}m"
         else:
-            label = f"berry {conf:.2f}"
+            label = f"{source} {conf:.2f}"
         cv2.putText(out, label, (x1, max(14, y1 - 4)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
         cv2.putText(out, label, (x1, max(14, y1 - 4)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (40, 255, 40), 1, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
     return out
 
 
