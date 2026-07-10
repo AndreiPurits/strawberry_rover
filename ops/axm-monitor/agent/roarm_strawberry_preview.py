@@ -27,7 +27,6 @@ _last_at: float = 0.0
 _log: list[str] = []
 _detector = None
 _classifier = None
-_segmenter = None
 _detector_mode = "none"  # yolo | missing
 _ros_provider = None
 _manifest: Optional[dict] = None
@@ -134,21 +133,6 @@ def _get_classifier():
     return _classifier
 
 
-def _get_segmenter():
-    global _segmenter
-    if _segmenter is not None:
-        return _segmenter
-    from pipelines.strawberry_ensemble import YoloSegmenterRoi
-
-    cfg = _production_config()
-    if not _weights_available(cfg.segmenter_weights):
-        _push_log(f"segmenter weights missing: {cfg.segmenter_weights}")
-        return None
-    _segmenter = YoloSegmenterRoi(cfg.segmenter_weights, device="cuda", imgsz=cfg.segmenter_imgsz)
-    _push_log(f"segmenter loaded: {Path(cfg.segmenter_weights).name}")
-    return _segmenter
-
-
 def _get_ros_provider():
     global _ros_provider
     if _ros_provider is not None:
@@ -204,36 +188,12 @@ def _clamp_bbox(det: dict, w: int, h: int, *, pad_frac: float = 0.15) -> Optiona
     return x1i, y1i, x2i, y2i
 
 
-def _mask_contour_points(mask_full) -> Optional[List[List[int]]]:
-    import cv2
-    import numpy as np
-
-    if mask_full is None or not bool(np.any(mask_full > 0)):
-        return None
-    contours, _ = cv2.findContours(mask_full, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return None
-    contour = max(contours, key=cv2.contourArea)
-    if cv2.contourArea(contour) < 8.0:
-        return None
-    eps = max(1.0, 0.01 * cv2.arcLength(contour, True))
-    approx = cv2.approxPolyDP(contour, eps, True).reshape(-1, 2)
-    if approx.shape[0] > 80:
-        idx = np.linspace(0, approx.shape[0] - 1, 80).astype(int)
-        approx = approx[idx]
-    return [[int(x), int(y)] for x, y in approx]
-
-
-def _classify_and_segment(bgr, detections: List[dict]) -> None:
-    """Attach ripeness_class/classifier_conf and mask_contour to each detection."""
+def _classify_detections(bgr, detections: List[dict]) -> None:
+    """Attach ripeness_class/classifier_conf to each detection."""
     if not detections:
         return
-    import cv2
-    import numpy as np
-
     h, w = bgr.shape[:2]
     classifier = _get_classifier()
-    segmenter = _get_segmenter()
     crops: List[Any] = []
     crop_meta: List[Tuple[int, int, int, int, dict]] = []
     for det in detections:
@@ -255,26 +215,6 @@ def _classify_and_segment(bgr, detections: List[dict]) -> None:
         except Exception as exc:
             _push_log(f"classifier error: {str(exc)[:80]}")
 
-    max_seg = max(0, int(float(str(__import__("os").environ.get("AXM_STRAWBERRY_SEG_MAX", "4")))))
-    if segmenter is None or max_seg <= 0:
-        return
-    for x1, y1, x2, y2, det in crop_meta[:max_seg]:
-        try:
-            crop = bgr[y1:y2, x1:x2]
-            mask_crop = segmenter.infer_mask_on_crop(crop)
-            if mask_crop is None:
-                continue
-            if mask_crop.shape[:2] != crop.shape[:2]:
-                mask_crop = cv2.resize(mask_crop, (crop.shape[1], crop.shape[0]), interpolation=cv2.INTER_NEAREST)
-            mask_full = np.zeros((h, w), dtype=np.uint8)
-            mask_full[y1:y2, x1:x2] = mask_crop
-            contour = _mask_contour_points(mask_full)
-            if contour:
-                det["mask_contour"] = contour
-        except Exception as exc:
-            _push_log(f"segmenter error: {str(exc)[:80]}")
-            return
-
 
 def _run_detector(bgr) -> List[dict]:
     mode = _get_detector_mode()
@@ -286,7 +226,7 @@ def _run_detector(bgr) -> List[dict]:
 
     tracker = _get_hub_tracker()
     out = [dict(d) for d in detect_strawberries_in_frame(bgr, det, tracker)]
-    _classify_and_segment(bgr, out)
+    _classify_detections(bgr, out)
     if out:
         tracker.update(max(out, key=lambda d: float(d.get("conf", 0.0))))
     ms = (time.perf_counter() - t0) * 1000.0

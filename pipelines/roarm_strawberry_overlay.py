@@ -49,22 +49,6 @@ def draw_strawberry_overlay_bgr(bgr: np.ndarray, overlay: Optional[Dict[str, Any
             continue
         label_name = str(det.get("ripeness_class") or "berry")
         color = _class_color(label_name)
-        contour_raw = det.get("mask_contour") or []
-        if contour_raw:
-            try:
-                contour = np.array(
-                    [[int(round(float(px) * sx)), int(round(float(py) * sy))] for px, py in contour_raw],
-                    dtype=np.int32,
-                ).reshape((-1, 1, 2))
-                mask = np.zeros((h, w), dtype=np.uint8)
-                cv2.drawContours(mask, [contour], -1, 255, -1)
-                tint = np.zeros_like(out, dtype=np.uint8)
-                tint[:, :] = color
-                m = mask > 0
-                out[m] = (out[m].astype(np.float32) * 0.65 + tint[m].astype(np.float32) * 0.35).astype(np.uint8)
-                cv2.drawContours(out, [contour], -1, color, 2, cv2.LINE_AA)
-            except Exception:
-                pass
         cv2.rectangle(out, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
         depth_m = det.get("depth_m")
         cls_conf = det.get("classifier_conf")
