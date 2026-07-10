@@ -13,6 +13,9 @@
   const STATUS_MIN_INTERVAL_MS = 4000;
   let syncingJointSliders = false;
   const jointSendTimers = {};
+  /** Ожидаемые радианы после ручного ввода — не откатывать UI на устаревший feedback. */
+  const pendingJointRad = {};
+  const JOINT_FEEDBACK_TOL = 0.015;
 
   const JOINT_DEFS = [
     { id: 1, key: "b", label: "Основание", min: -3.14, max: 3.14 },
@@ -216,11 +219,30 @@
     return Math.min(joint.max, Math.max(joint.min, safe));
   }
 
+  function patchFeedbackJoint(joint, value) {
+    if (!lastFeedback || typeof lastFeedback !== "object") lastFeedback = {};
+    lastFeedback[joint.key] = Number(value);
+  }
+
+  function markPendingJoint(joint, value) {
+    const next = Number(value);
+    pendingJointRad[joint.key] = next;
+    patchFeedbackJoint(joint, next);
+    const key = joint.key;
+    setTimeout(() => {
+      if (pendingJointRad[key] !== undefined && Math.abs(pendingJointRad[key] - next) < 0.0001) {
+        delete pendingJointRad[key];
+      }
+    }, 12000);
+  }
+
   function sendJointMove(joint, value) {
     clearTimeout(jointSendTimers[joint.id]);
+    const next = clampJointValue(joint, value);
+    markPendingJoint(joint, next);
     return rpc(
       "joint_move",
-      { joint: joint.id, rad: Number(value), spd: 0, acc: 10 },
+      { joint: joint.id, rad: next, spd: 0, acc: 10 },
       { blocking: false }
     );
   }
@@ -287,6 +309,7 @@
       slider.addEventListener("input", () => {
         updateVal();
         if (syncingJointSliders) return;
+        markPendingJoint(joint, slider.value);
         clearTimeout(jointSendTimers[joint.id]);
         jointSendTimers[joint.id] = setTimeout(() => {
           sendJointMove(joint, slider.value);
@@ -341,6 +364,11 @@
     JOINT_DEFS.forEach((joint) => {
       const rad = pickFeedback(fb, joint.key);
       if (rad === undefined) return;
+      const pending = pendingJointRad[joint.key];
+      if (pending !== undefined) {
+        if (Math.abs(Number(rad) - pending) > JOINT_FEEDBACK_TOL) return;
+        delete pendingJointRad[joint.key];
+      }
       const slider = document.getElementById(`j-slider-${joint.id}`);
       const manual = document.getElementById(`j-num-${joint.id}`);
       const next = clampJointValue(joint, rad);
@@ -688,7 +716,12 @@
         if (op === "status" && (res.status === 504 || detail === "roarm_timeout")) {
           return { ok: false, error: "roarm_timeout", silent: true };
         }
-        log(`${op} ERROR ${detail}`);
+        if (op === "joint_move" && (res.status === 504 || detail === "roarm_timeout")) {
+          return { ok: false, error: "roarm_timeout", silent: true };
+        }
+        if (!opts.silent && !(data.coalesced || data.superseded)) {
+          log(`${op} ERROR ${detail}`);
+        }
         if (detail === "roarm_gateway_offline") log("Orin offline — проверьте fleet-agent");
         return { ...data, ok: false, error: detail };
       }

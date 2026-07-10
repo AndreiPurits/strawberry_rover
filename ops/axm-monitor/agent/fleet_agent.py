@@ -697,6 +697,37 @@ def _mega_status_dict(arduino_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _strawberry_preview_timeout_s() -> float:
+    raw = _env("AXM_STRAWBERRY_PREVIEW_TIMEOUT_S", "8")
+    try:
+        return max(1.0, min(float(raw), 30.0))
+    except ValueError:
+        return 8.0
+
+
+def _strawberry_preview_bounded(local_web: str) -> Dict[str, Any]:
+    """Run strawberry overlay with a hard cap so heartbeats never stall."""
+    timeout_s = _strawberry_preview_timeout_s()
+    out: Dict[str, Any] = {}
+    err: List[BaseException] = []
+
+    def _run() -> None:
+        try:
+            nonlocal out
+            out = collect_roarm_strawberry_preview(local_web, _fetch_json) or {}
+        except BaseException as exc:
+            err.append(exc)
+
+    t = threading.Thread(target=_run, daemon=True, name="berry-preview")
+    t.start()
+    t.join(timeout=timeout_s)
+    if t.is_alive():
+        return last_strawberry_overlay() or {"status": "timeout", "status_text": "preview timeout"}
+    if err:
+        return last_strawberry_overlay() or {"status": "error", "status_text": str(err[0])[:120]}
+    return out
+
+
 def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
     base = local_web.rstrip("/")
     health = _fetch_json(f"{base}/api/health") or {}
@@ -731,10 +762,10 @@ def collect_telemetry(local_web: str, mega_port: str) -> Dict[str, Any]:
 
     roarm = roarm_telemetry()
     if roarm_enabled() and health.get("bridge_active"):
-        try:
-            roarm["strawberry"] = collect_roarm_strawberry_preview(base, _fetch_json)
-        except Exception:
-            pass
+        # Background strawberry-detect thread fills overlay; never block heartbeats here.
+        overlay = last_strawberry_overlay()
+        if overlay:
+            roarm["strawberry"] = overlay
 
     cam_age = _camera_age_ms()
     rtt = _last_heartbeat_rtt_ms
@@ -1184,6 +1215,31 @@ def main() -> int:
                         return
                     if old[1] != "status":
                         exec_q.put(old)
+                exec_q.put((req_id, op, params))
+                return
+            if op == "joint_move":
+                joint_id = int((params or {}).get("joint", 0))
+                pending = []
+                while True:
+                    try:
+                        pending.append(exec_q.get_nowait())
+                    except Exception:
+                        break
+                for old in pending:
+                    if old is None:
+                        exec_q.put(None)
+                        return
+                    old_id, old_op, old_params = old
+                    if old_op == "joint_move" and int((old_params or {}).get("joint", 0)) == joint_id:
+                        post_roarm_result(
+                            args.hub_url,
+                            args.rover_id,
+                            args.token,
+                            old_id,
+                            {"ok": True, "coalesced": True, "superseded": True},
+                        )
+                        continue
+                    exec_q.put(old)
                 exec_q.put((req_id, op, params))
                 return
             exec_q.put((req_id, op, params))

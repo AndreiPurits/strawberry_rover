@@ -44,8 +44,28 @@ def _get_client() -> RoArmClient:
     return _client
 
 
+def reset_client() -> None:
+    """Drop cached HTTP client (after RoArm power-cycle or IP change)."""
+    global _client, _last_probe, _last_status, _last_feedback, _last_feedback_ts
+    _client = None
+    _last_probe = 0.0
+    _last_feedback = {}
+    _last_feedback_ts = 0.0
+    _last_status = {
+        "enabled": roarm_enabled(),
+        "reachable": False,
+        "ip": _client_ip(),
+        "error": "reset",
+        "updated_at": time.time(),
+    }
+
+
 def _move_timeout() -> float:
     return float(_env("ROARM_MOVE_TIMEOUT_S", "30"))
+
+
+def _joint_move_timeout() -> float:
+    return float(_env("ROARM_JOINT_MOVE_TIMEOUT_S", "8"))
 
 
 def _grip_timeout() -> float:
@@ -161,9 +181,22 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
                 float(params.get("rad", 0)),
                 spd=float(params.get("spd", 0)),
                 acc=float(params.get("acc", 10)),
-                timeout_sec=_move_timeout(),
+                timeout_sec=_joint_move_timeout(),
             )
             return {"ok": True, "url": url, "response": resp}
+        if op == "joints_move":
+            url, resp = client.joints_rad_ctrl(
+                base=float(params.get("base", 0)),
+                shoulder=float(params.get("shoulder", 0)),
+                elbow=float(params.get("elbow", 1.57)),
+                wrist=float(params.get("wrist", 0)),
+                roll=float(params.get("roll", 0)),
+                hand=float(params.get("hand", 3.14)),
+                spd=float(params.get("spd", 0)),
+                acc=float(params.get("acc", 10)),
+                timeout_sec=_move_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp, "t102": True}
         if op == "feedback":
             url, fb = client.servo_feedback(timeout_sec=8.0)
             return {"ok": True, "url": url, "feedback": fb}

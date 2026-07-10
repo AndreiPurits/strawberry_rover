@@ -838,13 +838,30 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
         stale_status_ids = [c.get("id") for c in _roarm_queue if c.get("op") == "status"]
         _roarm_queue[:] = [c for c in _roarm_queue if c.get("op") != "status"]
         for sid in stale_status_ids:
-            _roarm_waiters.pop(sid, None)
+            fut = _roarm_waiters.pop(sid, None)
+            if fut and not fut.done():
+                fut.set_result({"ok": True, "coalesced": True, "superseded": True})
+    elif body.op == "joint_move":
+        joint_id = int((body.params or {}).get("joint", 0))
+        superseded_ids = [
+            c.get("id")
+            for c in _roarm_queue
+            if c.get("op") == "joint_move"
+            and int((c.get("params") or {}).get("joint", 0)) == joint_id
+        ]
+        _roarm_queue[:] = [c for c in _roarm_queue if c.get("id") not in superseded_ids]
+        for sid in superseded_ids:
+            fut = _roarm_waiters.pop(sid, None)
+            if fut and not fut.done():
+                fut.set_result({"ok": True, "coalesced": True, "superseded": True})
     _roarm_queue.append({"id": req_id, "op": body.op, "params": body.params, "user": user})
     loop = asyncio.get_running_loop()
     fut: asyncio.Future = loop.create_future()
     _roarm_waiters[req_id] = fut
     timeout_s = float(_env("AXM_ROARM_RPC_TIMEOUT_S", "12"))
-    if body.op in ("move_xyz", "move_xyz_direct", "home_joints", "home_joints_staged", "joint_move", "joints_move"):
+    if body.op == "joint_move":
+        timeout_s = float(_env("AXM_ROARM_JOINT_MOVE_RPC_TIMEOUT_S", "18"))
+    elif body.op in ("move_xyz", "move_xyz_direct", "home_joints", "home_joints_staged", "joints_move"):
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
         if body.op == "home_joints_staged":
             timeout_s = float(_env("AXM_ROARM_STAGED_RPC_TIMEOUT_S", "120"))
