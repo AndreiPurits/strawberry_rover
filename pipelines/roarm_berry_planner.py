@@ -18,7 +18,7 @@ J_INPUTS = ("d_shoulder", "d_elbow", "d_base")
 J_OUTPUTS = ("dpx", "dpy", "ddepth_m")
 FALLBACK_PX_PER_BASE_RAD = 900.0
 FALLBACK_CENTER_PX = 320.0
-FALLBACK_BASE_CENTER_GAIN = 1.0
+FALLBACK_BASE_CENTER_GAIN = 1.35
 
 
 def _as_float_dict(d: Dict[str, Any], keys: Tuple[str, ...] = ALL_JOINT_KEYS) -> Dict[str, float]:
