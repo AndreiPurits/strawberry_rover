@@ -968,8 +968,8 @@ input {
 }
 .joint-slider-row {
   display: grid;
-  grid-template-columns: minmax(68px, 80px) minmax(96px, 1fr) 44px 58px 48px 48px;
-  gap: 4px;
+  grid-template-columns: minmax(86px, 120px) minmax(240px, 1fr) 74px 54px;
+  gap: 6px;
   align-items: center;
 }
 .joint-slider-row label {
@@ -982,12 +982,6 @@ input {
   width: 100%;
   margin: 0;
   accent-color: var(--accent);
-}
-.joint-slider-row .joint-val {
-  font-size: 0.68rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--text);
 }
 .joint-slider-row .joint-num {
   width: 100%;
@@ -1007,7 +1001,7 @@ input {
   white-space: nowrap;
 }
 .roarm-block-move {
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 .roarm-block-move .roarm-block-sub {
   margin-bottom: 4px;

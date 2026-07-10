@@ -244,11 +244,6 @@
       slider.step = "0.01";
       slider.value = "0";
 
-      const val = document.createElement("span");
-      val.className = "joint-val";
-      val.id = `j-val-${joint.id}`;
-      val.textContent = "0.00";
-
       const manual = document.createElement("input");
       manual.type = "number";
       manual.className = "joint-num";
@@ -266,16 +261,8 @@
       minus.textContent = "-0.03";
       minus.title = `${joint.label}: -0.03 rad`;
 
-      const plus = document.createElement("button");
-      plus.type = "button";
-      plus.className = "btn-xs ghost joint-step";
-      plus.textContent = "+0.03";
-      plus.title = `${joint.label}: +0.03 rad`;
-
       const updateVal = () => {
-        const formatted = formatRad(slider.value);
-        val.textContent = formatted;
-        manual.value = formatted;
+        manual.value = formatRad(slider.value);
       };
 
       const setJointUi = (value) => {
@@ -321,17 +308,10 @@
         sendJointMove(joint, next);
       });
 
-      plus.addEventListener("click", () => {
-        const next = setJointUi(Number(slider.value) + 0.03);
-        sendJointMove(joint, next);
-      });
-
       row.appendChild(label);
       row.appendChild(slider);
-      row.appendChild(val);
       row.appendChild(manual);
       row.appendChild(minus);
-      row.appendChild(plus);
       root.appendChild(row);
     });
   }
@@ -350,11 +330,9 @@
       const rad = pickFeedback(fb, joint.key);
       if (rad === undefined) return;
       const slider = document.getElementById(`j-slider-${joint.id}`);
-      const val = document.getElementById(`j-val-${joint.id}`);
       const manual = document.getElementById(`j-num-${joint.id}`);
       const next = clampJointValue(joint, rad);
       if (slider) slider.value = String(next);
-      if (val) val.textContent = formatRad(next);
       if (manual && document.activeElement !== manual) manual.value = formatRad(next);
     });
     syncingJointSliders = false;
