@@ -1,0 +1,69 @@
+# Reference joint poses (firmware rad scale from T:105).
+# Signs: base+ = left, shoulder+ = forward/toward board, elbow+ = fold, elbow- = extend.
+
+# Synced with dashboard point «Дом» (T:105 on bench 2026-07-02).
+HOME:
+  base: 0.17
+  shoulder: -1.24
+  elbow: 3.04
+  wrist: 0.0
+  roll: 0.0
+  hand: 3.14
+
+GRID_VIEW:
+  base: 0.17
+  shoulder: -0.52
+  elbow: 2.08
+  wrist: 0.0
+  roll: 0.0
+  hand: 3.14
+
+# Saved on bench: camera sees strawberry below gripper (dashboard «Дом2»).
+# Approach tests: gripper OPEN (hand≈1.08) so claws don't block the camera.
+HOME2:
+  base: 0.17
+  shoulder: 0.0
+  elbow: 2.55
+  wrist: 0.0
+  roll: 0.0
+  hand: 1.08
+
+# Dashboard/Home pose «дом_финал» captured from T:105 on 2026-07-10.
+DOM_FINAL:
+  base: 0.012271846
+  shoulder: -0.691825335
+  elbow: 2.867010093
+  wrist: 0.018407769
+  roll: -0.003067962
+  hand: 1.537048749
+
+# Dashboard point «тест3» (saved 2026-07-10).
+TEST3:
+  base: 0.1779
+  shoulder: -1.017
+  elbow: 2.732
+  wrist: 0.0184
+  roll: -0.0015
+  hand: 1.08
+
+# Operator GUI pose for strawberry learn (saved 2026-07-10).
+OPERATOR_LEARN_START:
+  base: 0.1779
+  shoulder: -1.0078
+  elbow: 2.6814
+  wrist: 0.0184
+  roll: -0.0015
+  hand: 1.08
+
+MANUAL_SUCCESS:
+  base: 0.1227
+  shoulder: 1.3100
+  elbow: 1.0508
+  wrist: 0.0077
+  roll: -0.0031
+  hand: 1.08
+  # Operator manual reach ~12 cm; delta from HOME2: sh+1.21, el-1.50, base-0.04
+
+shoulder_home_floor: -1.30
+
+# GRID_VIEW / APPROACH_VIEW — legacy bench poses; perception uses HOME (= точка «Дом» на dashboard).
