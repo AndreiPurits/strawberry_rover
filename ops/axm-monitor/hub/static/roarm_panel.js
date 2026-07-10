@@ -261,6 +261,12 @@
       minus.textContent = "-0.03";
       minus.title = `${joint.label}: -0.03 rad`;
 
+      const plus = document.createElement("button");
+      plus.type = "button";
+      plus.className = "btn-xs ghost joint-step";
+      plus.textContent = "+0.03";
+      plus.title = `${joint.label}: +0.03 rad`;
+
       const updateVal = () => {
         manual.value = formatRad(slider.value);
       };
@@ -308,10 +314,16 @@
         sendJointMove(joint, next);
       });
 
+      plus.addEventListener("click", () => {
+        const next = setJointUi(Number(slider.value) + 0.03);
+        sendJointMove(joint, next);
+      });
+
       row.appendChild(label);
       row.appendChild(slider);
       row.appendChild(manual);
       row.appendChild(minus);
+      row.appendChild(plus);
       root.appendChild(row);
     });
   }

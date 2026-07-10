@@ -968,7 +968,7 @@ input {
 }
 .joint-slider-row {
   display: grid;
-  grid-template-columns: minmax(86px, 120px) minmax(240px, 1fr) 74px 54px;
+  grid-template-columns: minmax(86px, 120px) minmax(240px, 1fr) 74px 54px 54px;
   gap: 6px;
   align-items: center;
 }
