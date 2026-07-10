@@ -16,6 +16,7 @@ JOINT_KEYS = ("base", "shoulder", "elbow")
 ALL_JOINT_KEYS = ("base", "shoulder", "elbow", "wrist", "roll", "hand")
 J_INPUTS = ("d_shoulder", "d_elbow", "d_base")
 J_OUTPUTS = ("dpx", "dpy", "ddepth_m")
+FALLBACK_PX_PER_BASE_RAD = 900.0
 
 
 def _as_float_dict(d: Dict[str, Any], keys: Tuple[str, ...] = ALL_JOINT_KEYS) -> Dict[str, float]:
@@ -235,6 +236,7 @@ def plan_one_shot(
 ) -> Dict[str, Any]:
     q0 = _as_float_dict(q_start)
     demo = nearest_demo(learned, q0, berry_lock)
+    demo_start_px: Optional[float] = None
     if demo:
         dq_demo = np.array(
             [
@@ -245,6 +247,9 @@ def plan_one_shot(
             dtype=np.float64,
         )
         target = demo.get("berry_success") or {}
+        demo_start = demo.get("berry_start") or {}
+        if demo_start.get("px") is not None:
+            demo_start_px = float(demo_start.get("px"))
         target_px = float(target.get("px", berry_lock.get("px", 320.0)))
         target_py = float(target.get("py", berry_lock.get("py", 240.0)))
         target_depth = float(target.get("depth_m", standoff_m))
@@ -266,6 +271,14 @@ def plan_one_shot(
     )
     jacobian = load_local_jacobian(learned, calib_path)
     dq_s, dq_e, dq_b = solve_delta_with_prior(error, dq_demo, jacobian, prior_weight=prior_weight)
+    adjustments: List[str] = []
+    if jacobian is None and demo_start_px is not None:
+        current_px = float(berry_lock.get("px", demo_start_px))
+        px_per_base = float(learned.get("fallback_px_per_base_rad") or FALLBACK_PX_PER_BASE_RAD)
+        base_corr = -(current_px - demo_start_px) / max(1.0, abs(px_per_base))
+        base_corr = float(np.clip(base_corr, -0.28, 0.28))
+        dq_b = float(dq_b) + base_corr
+        adjustments.append(f"fallback_base_px_corr={base_corr:+.3f}")
     delta_q = {"base": float(dq_b), "shoulder": float(dq_s), "elbow": float(dq_e)}
     q_target = apply_delta(q0, delta_q)
     dq_plan = np.array([delta_q["shoulder"], delta_q["elbow"], delta_q["base"]], dtype=np.float64)
@@ -286,6 +299,7 @@ def plan_one_shot(
         "reason": reason + (" + local_jacobian_projection" if jacobian is not None else " + prior_only"),
         "target_image": {"px": target_px, "py": target_py, "depth_m": target_depth},
         "warnings": warnings,
+        "adjustments": adjustments,
     }
 
 

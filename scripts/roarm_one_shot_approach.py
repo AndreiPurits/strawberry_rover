@@ -11,6 +11,7 @@ import json
 import math
 import sys
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -276,7 +277,57 @@ def lock_berry(provider, tracker) -> Optional[Tuple]:
         if m:
             return m
         time.sleep(0.2)
-    return None
+    return lock_berry_from_preview(tracker)
+
+
+def _fetch_json(url: str, timeout: float = 4.0) -> Optional[dict]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def lock_berry_from_preview(tracker) -> Optional[Tuple]:
+    """Fallback to fleet-agent preview detections when local ROS depth is not ready."""
+    try:
+        from roarm_strawberry_preview import collect_roarm_strawberry_preview
+        from pipelines.roarm_strawberry_target import _bbox_center
+
+        out = collect_roarm_strawberry_preview("http://127.0.0.1:8080", _fetch_json, interval_s=0.0)
+        default_depth_m = float(__import__("os").environ.get("AXM_BERRY_LOCK_DEFAULT_DEPTH_M", "0.43"))
+        dets = list(out.get("detections") or [])
+        if not dets:
+            return None
+        preferred_px = getattr(tracker, "preferred_px", None)
+        preferred_py = getattr(tracker, "preferred_py", None)
+        max_dist = getattr(tracker, "preferred_max_dist_px", None)
+        if preferred_px is not None and preferred_py is not None:
+            filtered = []
+            for d in dets:
+                px = float(d.get("px", _bbox_center(d)[0]))
+                py = float(d.get("py", _bbox_center(d)[1]))
+                dist = math.hypot(px - float(preferred_px), py - float(preferred_py))
+                if max_dist is None or dist <= float(max_dist):
+                    filtered.append((dist, d))
+            if not filtered:
+                return None
+            det = max((d for _, d in filtered), key=lambda d: float(d.get("conf", 0.0)))
+        else:
+            det = max(dets, key=lambda d: float(d.get("conf", 0.0)))
+        px = float(det.get("px", _bbox_center(det)[0]))
+        py = float(det.get("py", _bbox_center(det)[1]))
+        depth_raw = det.get("depth_m")
+        depth = float(depth_raw) if depth_raw is not None else default_depth_m
+        conf = float(det.get("conf", 0.0))
+        if depth_raw is None:
+            print(f"[one] preview fallback: no depth, using default {depth:.2f}m")
+        if hasattr(tracker, "update"):
+            tracker.update(det)
+        return px, py, depth, conf, (int(out.get("image_w") or 640), int(out.get("image_h") or 480))
+    except Exception as exc:
+        print(f"[one] preview fallback failed: {exc}")
+        return None
 
 
 def wait_berry_standoff(
