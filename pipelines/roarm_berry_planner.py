@@ -19,6 +19,7 @@ J_OUTPUTS = ("dpx", "dpy", "ddepth_m")
 FALLBACK_PX_PER_BASE_RAD = 900.0
 FALLBACK_CENTER_PX = 320.0
 FALLBACK_BASE_CENTER_GAIN = 1.35
+FALLBACK_BASE_CENTER_GAIN_RIGHT = 1.9
 
 
 def _as_float_dict(d: Dict[str, Any], keys: Tuple[str, ...] = ALL_JOINT_KEYS) -> Dict[str, float]:
@@ -278,7 +279,8 @@ def plan_one_shot(
         current_px = float(berry_lock.get("px", demo_start_px))
         px_per_base = float(learned.get("fallback_px_per_base_rad") or FALLBACK_PX_PER_BASE_RAD)
         center_px = float(learned.get("fallback_center_px") or FALLBACK_CENTER_PX)
-        center_gain = float(learned.get("fallback_base_center_gain") or FALLBACK_BASE_CENTER_GAIN)
+        default_gain = FALLBACK_BASE_CENTER_GAIN_RIGHT if current_px > center_px else FALLBACK_BASE_CENTER_GAIN
+        center_gain = float(learned.get("fallback_base_center_gain") or default_gain)
         centered_dq_b = (center_px - current_px) / max(1.0, abs(px_per_base))
         centered_dq_b *= center_gain
         centered_dq_b = float(np.clip(centered_dq_b, -0.35, 0.35))
