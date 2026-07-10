@@ -207,10 +207,33 @@ def _pick_detection(
     last_px: Optional[float],
     last_py: Optional[float],
     *,
+    preferred_px: Optional[float] = None,
+    preferred_py: Optional[float] = None,
+    preferred_max_dist_px: Optional[float] = None,
     max_jump_px: float = 140.0,
 ) -> Optional[dict]:
     if not detections:
         return None
+    if (last_px is None or last_py is None) and preferred_px is not None and preferred_py is not None:
+        if preferred_max_dist_px is not None:
+            detections = [
+                d for d in detections
+                if float(np.hypot(_bbox_center(d)[0] - preferred_px, _bbox_center(d)[1] - preferred_py))
+                <= preferred_max_dist_px
+            ]
+            if not detections:
+                return None
+        return max(
+            detections,
+            key=lambda d: _score_detection(
+                d,
+                preferred_px,
+                preferred_py,
+                spatial_penalty=0.0035,
+                roi_bonus=0.08,
+                roi_radius_px=170.0,
+            ),
+        )
     if last_px is None or last_py is None:
         return max(detections, key=lambda d: float(d.get("conf", 0)))
     scored = sorted(
@@ -292,7 +315,15 @@ def _infer_full_and_roi(det_model, bgr, tracker: Optional["StrawberryTargetTrack
 
 
 class StrawberryTargetTracker:
-    def __init__(self, *, roi_pad_px: float = 150.0, hold_max: int = 14) -> None:
+    def __init__(
+        self,
+        *,
+        roi_pad_px: float = 150.0,
+        hold_max: int = 14,
+        preferred_px: Optional[float] = None,
+        preferred_py: Optional[float] = None,
+        preferred_max_dist_px: Optional[float] = None,
+    ) -> None:
         self.last_px: Optional[float] = None
         self.last_py: Optional[float] = None
         self.last_bbox: Optional[dict] = None
@@ -301,6 +332,9 @@ class StrawberryTargetTracker:
         self.hold_streak = 0
         self.roi_pad_px = roi_pad_px
         self.hold_max = hold_max
+        self.preferred_px = preferred_px
+        self.preferred_py = preferred_py
+        self.preferred_max_dist_px = preferred_max_dist_px
         self.lock_count = 0
 
     def update(self, det: Optional[dict]) -> bool:
@@ -315,6 +349,15 @@ class StrawberryTargetTracker:
         self.hold_streak = 0
         self.lock_count += 1
         return True
+
+    def reset_lock(self) -> None:
+        self.last_px = None
+        self.last_py = None
+        self.last_bbox = None
+        self.last_conf = 0.0
+        self.lost_streak = 0
+        self.hold_streak = 0
+        self.lock_count = 0
 
     @property
     def is_lost(self) -> bool:
@@ -353,6 +396,9 @@ def detect_strawberry_in_frame(
         dets,
         tracker.last_px if tracker else None,
         tracker.last_py if tracker else None,
+        preferred_px=tracker.preferred_px if tracker else None,
+        preferred_py=tracker.preferred_py if tracker else None,
+        preferred_max_dist_px=tracker.preferred_max_dist_px if tracker else None,
     )
 
 

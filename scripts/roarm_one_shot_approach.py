@@ -279,6 +279,29 @@ def lock_berry(provider, tracker) -> Optional[Tuple]:
     return None
 
 
+def wait_berry_standoff(
+    provider,
+    tracker,
+    *,
+    timeout_s: float,
+    depth_min: float = 0.10,
+    depth_max: float = 0.17,
+) -> Optional[Tuple]:
+    t0 = time.time()
+    best = None
+    while time.time() - t0 < timeout_s:
+        m = measure(provider, tracker, "http://127.0.0.1:8080", frames=2)
+        if not m:
+            time.sleep(0.12)
+            continue
+        if best is None or abs(float(m[2]) - 0.14) < abs(float(best[2]) - 0.14):
+            best = m
+        if depth_min <= float(m[2]) <= depth_max:
+            return m
+        time.sleep(0.12)
+    return best
+
+
 def load_or_seed_learned(path: Path, *, label: str) -> Dict[str, Any]:
     if path.is_file():
         return load_learned(path, label=label)
@@ -339,13 +362,20 @@ def run_attempt(
     )
     print(f"[one] attempt {attempt_idx}/{args.repeat} → {args.home_pose} (open grip)")
     move_t102_smooth(execute_rpc, q_home_move, spd=args.return_spd, acc=args.return_acc)
-    q_start = wait_reach(execute_rpc, q_home_move, timeout_s=est_move_duration(q_home_move, q_home_move, spd=args.return_spd, acc=args.return_acc) + 4.0)
+    q_start = wait_reach(
+        execute_rpc,
+        q_home_move,
+        timeout_s=est_move_duration(q_home_move, q_home_move, spd=args.return_spd, acc=args.return_acc) + 4.0,
+        tol=args.return_tol,
+    )
     q_start = q_start or read_q(execute_rpc) or q_home_move
     q_start.hand = GRIPPER_OPEN
 
     print(
         f"[one] START b={q_start.base:.3f} s={q_start.shoulder:.3f} e={q_start.elbow:.3f}"
     )
+    if args.reset_target_each_attempt and hasattr(tracker, "reset_lock"):
+        tracker.reset_lock()
     m0 = lock_berry(provider, tracker)
     out_path = REPO / "runs/roarm_learn" / f"one_shot_{label}.json"
     lock_path = REPO / "runs/roarm_learn" / f"{label}_lock.json"
@@ -424,11 +454,13 @@ def run_attempt(
     t_move = time.time()
     print("[one] ▶ ONE smooth T:102 move")
     move_t102_smooth(execute_rpc, q_end, spd=args.spd, acc=args.acc)
-    q_done = wait_reach(execute_rpc, q_end, timeout_s=est_s + 6.0)
+    q_done = wait_reach(execute_rpc, q_end, timeout_s=est_s + 3.0, tol=args.reach_tol)
     move_elapsed = time.time() - t_move
-    time.sleep(0.35)
+    time.sleep(args.settle_s)
 
-    m1 = lock_berry(provider, tracker)
+    t_verify = time.time()
+    m1 = wait_berry_standoff(provider, tracker, timeout_s=args.verify_wait_s)
+    verify_wait_elapsed = time.time() - t_verify
     q_final = q_done or read_q(execute_rpc) or q_end
     result: Dict[str, Any] = {
         "ok": False,
@@ -439,6 +471,7 @@ def run_attempt(
         "spd": args.spd,
         "acc": args.acc,
         "move_elapsed_s": round(move_elapsed, 2),
+        "verify_wait_elapsed_s": round(verify_wait_elapsed, 2),
         "target_source": args.target,
         "joints_start": q_start.as_dict(),
         "joints_target": q_end.as_dict(),
@@ -464,6 +497,7 @@ def run_attempt(
             expected_px=expected.get("px"),
             expected_py=expected.get("py"),
             min_conf=args.verify_min_conf,
+            depth_max_m=args.verify_depth_max,
         )
         result["ok"] = bool(ok)
         result["verify"] = checks
@@ -490,8 +524,13 @@ def run_attempt(
     if args.return_home:
         print(f"[one] return → {args.home_pose}")
         move_t102_smooth(execute_rpc, q_home_move, spd=args.return_spd, acc=args.return_acc)
-        wait_reach(execute_rpc, q_home_move, timeout_s=est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 6.0)
-        time.sleep(0.25)
+        wait_reach(
+            execute_rpc,
+            q_home_move,
+            timeout_s=est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 3.0,
+            tol=args.return_tol,
+        )
+        time.sleep(args.settle_s)
     return result
 
 
@@ -508,8 +547,18 @@ def main() -> int:
     ap.add_argument("--return-acc", type=float, default=4.5, help="Return-to-home T:102 accel")
     ap.add_argument("--home-pose", default="DOM_FINAL", help="Pose name from config/roarm_home_joints.yaml")
     ap.add_argument("--repeat", type=int, default=1, help="Number of attempts from the fixed home pose")
+    ap.add_argument("--target-px", type=float, default=250.0, help="Preferred berry x when multiple berries are visible")
+    ap.add_argument("--target-py", type=float, default=145.0, help="Preferred berry y when multiple berries are visible")
+    ap.add_argument("--target-max-dist", type=float, default=190.0, help="Reject initial lock farther than this from preferred target")
     ap.add_argument("--min-elbow-target", type=float, default=1.35, help="Clamp target elbow lower bound for DOM_FINAL standoff")
     ap.add_argument("--verify-min-conf", type=float, default=0.30, help="Minimum detector confidence for close-range verify")
+    ap.add_argument("--verify-depth-max", type=float, default=0.17, help="Maximum accepted standoff depth")
+    ap.add_argument("--reach-tol", type=float, default=0.075, help="Joint tolerance for approach completion")
+    ap.add_argument("--return-tol", type=float, default=0.085, help="Joint tolerance for return-home completion")
+    ap.add_argument("--settle-s", type=float, default=0.18, help="Short camera settle after each move")
+    ap.add_argument("--verify-wait-s", type=float, default=3.5, help="Wait for camera depth to settle near standoff")
+    ap.add_argument("--reset-target-each-attempt", dest="reset_target_each_attempt", action="store_true", default=True)
+    ap.add_argument("--keep-target-between-attempts", dest="reset_target_each_attempt", action="store_false")
     ap.add_argument("--no-return-home", dest="return_home", action="store_false", help="Do not return home after each attempt")
     ap.set_defaults(return_home=True)
     ap.add_argument("--skip-home", action="store_true", help="Assume already at start pose (test4)")
@@ -534,7 +583,11 @@ def main() -> int:
         rgb_topic=STEREO_RGB, depth_topic=STEREO_DEPTH, sync_slop_s=0.15
     )
     provider.open(camera_info_topic=STEREO_INFO)
-    tracker = StrawberryTargetTracker()
+    tracker = StrawberryTargetTracker(
+        preferred_px=args.target_px,
+        preferred_py=args.target_py,
+        preferred_max_dist_px=args.target_max_dist,
+    )
 
     print(
         f"[one] repeat approach label={label} home={args.home_pose} repeat={args.repeat} "

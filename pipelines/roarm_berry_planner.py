@@ -299,6 +299,8 @@ def verify_success(
     expected_px: Optional[float] = None,
     expected_py: Optional[float] = None,
     min_conf: float = 0.5,
+    depth_min_m: float = 0.10,
+    depth_max_m: float = 0.17,
 ) -> Tuple[bool, Dict[str, Any]]:
     reasons: List[str] = []
     if not berry_after:
@@ -307,7 +309,7 @@ def verify_success(
     px0, py0, d0 = float(berry_before.get("px", 0.0)), float(berry_before.get("py", 0.0)), float(berry_before.get("depth_m", 9.0))
     px1, py1, d1 = float(berry_after.get("px", 0.0)), float(berry_after.get("py", 0.0)), float(berry_after.get("depth_m", 9.0))
     in_frame = 45.0 <= px1 <= 600.0 and 60.0 <= py1 <= 390.0
-    depth_ok = 0.10 <= d1 <= 0.16
+    depth_ok = depth_min_m <= d1 <= depth_max_m
     progress_ok = d1 < d0 - min(0.08, max(0.025, (d0 - 0.16) * 0.35))
     py_ok = 140.0 <= py1 <= 340.0
     px_ok = True if expected_px is None else abs(px1 - expected_px) <= 95.0
