@@ -635,6 +635,7 @@ def main() -> int:
     ap.add_argument("--target-py", type=float, default=145.0, help="Preferred berry y when multiple berries are visible")
     ap.add_argument("--target-sequence", default="", help="Comma list name:px:py; runs all in one process")
     ap.add_argument("--target-max-dist", type=float, default=190.0, help="Reject initial lock farther than this from preferred target")
+    ap.add_argument("--lock-radius-px", type=float, default=85.0, help="After lock, ignore other berries outside this radius")
     ap.add_argument("--min-elbow-target", type=float, default=1.35, help="Clamp target elbow lower bound for DOM_FINAL standoff")
     ap.add_argument("--verify-min-conf", type=float, default=0.30, help="Minimum detector confidence for close-range verify")
     ap.add_argument("--verify-depth-max", type=float, default=0.17, help="Maximum accepted standoff depth")
@@ -673,6 +674,8 @@ def main() -> int:
         preferred_px=args.target_px,
         preferred_py=args.target_py,
         preferred_max_dist_px=args.target_max_dist,
+        strict_lock=True,
+        lock_radius_px=args.lock_radius_px,
     )
 
     print(
