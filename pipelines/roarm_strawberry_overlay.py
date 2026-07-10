@@ -7,6 +7,18 @@ import cv2
 import numpy as np
 
 
+def _class_color(label: str) -> tuple[int, int, int]:
+    if label == "ripe":
+        return (20, 220, 20)
+    if label == "turning":
+        return (0, 215, 255)
+    if label == "green":
+        return (0, 180, 0)
+    if label == "rotten":
+        return (30, 30, 255)
+    return (40, 220, 40)
+
+
 def draw_strawberry_overlay_bgr(bgr: np.ndarray, overlay: Optional[Dict[str, Any]]) -> np.ndarray:
     """Return BGR image with strawberry bounding boxes only (no grid/corner HUD)."""
     if bgr is None or bgr.size == 0 or not overlay:
@@ -35,14 +47,32 @@ def draw_strawberry_overlay_bgr(bgr: np.ndarray, overlay: Optional[Dict[str, Any
         x2, y2 = min(w - 1, x2), min(h - 1, y2)
         if x2 <= x1 or y2 <= y1:
             continue
-        source = str(det.get("source") or "yolo")
-        color = (40, 220, 40) if source == "yolo" else (0, 165, 255)
+        label_name = str(det.get("ripeness_class") or "berry")
+        color = _class_color(label_name)
+        contour_raw = det.get("mask_contour") or []
+        if contour_raw:
+            try:
+                contour = np.array(
+                    [[int(round(float(px) * sx)), int(round(float(py) * sy))] for px, py in contour_raw],
+                    dtype=np.int32,
+                ).reshape((-1, 1, 2))
+                mask = np.zeros((h, w), dtype=np.uint8)
+                cv2.drawContours(mask, [contour], -1, 255, -1)
+                tint = np.zeros_like(out, dtype=np.uint8)
+                tint[:, :] = color
+                m = mask > 0
+                out[m] = (out[m].astype(np.float32) * 0.65 + tint[m].astype(np.float32) * 0.35).astype(np.uint8)
+                cv2.drawContours(out, [contour], -1, color, 2, cv2.LINE_AA)
+            except Exception:
+                pass
         cv2.rectangle(out, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
         depth_m = det.get("depth_m")
+        cls_conf = det.get("classifier_conf")
+        conf_txt = f" {float(cls_conf):.2f}" if cls_conf is not None else ""
         if depth_m is not None:
-            label = f"{source} {conf:.2f} {float(depth_m):.2f}m"
+            label = f"{label_name}{conf_txt} {float(depth_m):.2f}m"
         else:
-            label = f"{source} {conf:.2f}"
+            label = f"{label_name}{conf_txt}"
         cv2.putText(out, label, (x1, max(14, y1 - 4)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
         cv2.putText(out, label, (x1, max(14, y1 - 4)),
