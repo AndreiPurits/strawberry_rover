@@ -17,6 +17,10 @@ ALL_JOINT_KEYS = ("base", "shoulder", "elbow", "wrist", "roll", "hand")
 J_INPUTS = ("d_shoulder", "d_elbow", "d_base")
 J_OUTPUTS = ("dpx", "dpy", "ddepth_m")
 FALLBACK_PX_PER_BASE_RAD = 900.0
+FALLBACK_PX_PER_SHOULDER_RAD = 13.0
+FALLBACK_PX_PER_ELBOW_RAD = -44.0
+FALLBACK_CENTER_PX = 320.0
+FALLBACK_BASE_CENTER_GAIN = 0.55
 
 
 def _as_float_dict(d: Dict[str, Any], keys: Tuple[str, ...] = ALL_JOINT_KEYS) -> Dict[str, float]:
@@ -275,10 +279,18 @@ def plan_one_shot(
     if jacobian is None and demo_start_px is not None:
         current_px = float(berry_lock.get("px", demo_start_px))
         px_per_base = float(learned.get("fallback_px_per_base_rad") or FALLBACK_PX_PER_BASE_RAD)
-        base_corr = -(current_px - demo_start_px) / max(1.0, abs(px_per_base))
-        base_corr = float(np.clip(base_corr, -0.28, 0.28))
-        dq_b = float(dq_b) + base_corr
-        adjustments.append(f"fallback_base_px_corr={base_corr:+.3f}")
+        center_px = float(learned.get("fallback_center_px") or FALLBACK_CENTER_PX)
+        center_gain = float(learned.get("fallback_base_center_gain") or FALLBACK_BASE_CENTER_GAIN)
+        px_per_shoulder = float(learned.get("fallback_px_per_shoulder_rad") or FALLBACK_PX_PER_SHOULDER_RAD)
+        px_per_elbow = float(learned.get("fallback_px_per_elbow_rad") or FALLBACK_PX_PER_ELBOW_RAD)
+        dpx_without_base = px_per_shoulder * float(dq_s) + px_per_elbow * float(dq_e)
+        centered_dq_b = (center_px - current_px - dpx_without_base) / max(1.0, abs(px_per_base))
+        centered_dq_b *= center_gain
+        centered_dq_b = float(np.clip(centered_dq_b, -0.35, 0.35))
+        dq_b = centered_dq_b
+        adjustments.append(f"fallback_base_center_px={center_px:.0f}")
+        adjustments.append(f"fallback_base_center_gain={center_gain:.2f}")
+        adjustments.append(f"fallback_base_dq={centered_dq_b:+.3f}")
     delta_q = {"base": float(dq_b), "shoulder": float(dq_s), "elbow": float(dq_e)}
     q_target = apply_delta(q0, delta_q)
     dq_plan = np.array([delta_q["shoulder"], delta_q["elbow"], delta_q["base"]], dtype=np.float64)

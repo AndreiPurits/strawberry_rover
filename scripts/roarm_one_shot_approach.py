@@ -271,7 +271,9 @@ def wait_reach(
     return read_q(execute_rpc)
 
 
-def lock_berry(provider, tracker) -> Optional[Tuple]:
+def lock_berry(provider, tracker, *, preview_first: bool = False) -> Optional[Tuple]:
+    if preview_first:
+        return lock_berry_from_preview(tracker)
     for _ in range(14):
         m = measure(provider, tracker, "http://127.0.0.1:8080", frames=2)
         if m:
@@ -453,7 +455,7 @@ def run_attempt(
         tracker.preferred_max_dist_px = float(args.target_max_dist)
     if args.reset_target_each_attempt and hasattr(tracker, "reset_lock"):
         tracker.reset_lock()
-    m0 = lock_berry(provider, tracker)
+    m0 = lock_berry(provider, tracker, preview_first=bool(args.target_sequence))
     out_path = REPO / "runs/roarm_learn" / f"one_shot_{label}.json"
     lock_path = REPO / "runs/roarm_learn" / f"{label}_lock.json"
     if not m0:
@@ -606,7 +608,10 @@ def run_attempt(
         wait_reach(
             execute_rpc,
             q_home_move,
-            timeout_s=est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 3.0,
+            timeout_s=min(
+                est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 3.0,
+                args.return_wait_s,
+            ),
             tol=args.return_tol,
         )
         time.sleep(args.settle_s)
@@ -637,6 +642,7 @@ def main() -> int:
     ap.add_argument("--return-tol", type=float, default=0.085, help="Joint tolerance for return-home completion")
     ap.add_argument("--settle-s", type=float, default=0.18, help="Short camera settle after each move")
     ap.add_argument("--verify-wait-s", type=float, default=3.5, help="Wait for camera depth to settle near standoff")
+    ap.add_argument("--return-wait-s", type=float, default=5.0, help="Max wait for return-home reach in sequence")
     ap.add_argument("--reset-target-each-attempt", dest="reset_target_each_attempt", action="store_true", default=True)
     ap.add_argument("--keep-target-between-attempts", dest="reset_target_each_attempt", action="store_false")
     ap.add_argument("--no-return-home", dest="return_home", action="store_false", help="Do not return home after each attempt")
