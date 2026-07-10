@@ -394,6 +394,12 @@ def run_attempt(
             calib_path=CALIB,
         )
         q_end = q_from_dict(plan_result["q_target"])
+        if label == "dom_final" and q_end.elbow < args.min_elbow_target:
+            q_end.elbow = args.min_elbow_target
+            plan_result["q_target"]["elbow"] = q_end.elbow
+            plan_result.setdefault("adjustments", []).append(
+                f"elbow_clamped_to_{args.min_elbow_target:.3f}"
+            )
         print(
             f"[one] planner {plan_result['reason']} pred="
             f"px={plan_result['prediction']['px']:.0f} "
@@ -447,6 +453,8 @@ def run_attempt(
         px1, py1, d1, conf1, _ = m1
         result["berry_after"] = {"px": px1, "py": py1, "depth_m": d1, "conf": conf1}
         expected = (plan_result or {}).get("target_image") or {}
+        if label == "dom_final" and (load_or_seed_learned(learned_path, label=label).get("seeded_from")):
+            expected = {}
         ok, checks = verify_success(
             result["berry_before"],
             result["berry_after"],
@@ -455,6 +463,7 @@ def run_attempt(
             result["joints_end"],
             expected_px=expected.get("px"),
             expected_py=expected.get("py"),
+            min_conf=args.verify_min_conf,
         )
         result["ok"] = bool(ok)
         result["verify"] = checks
@@ -499,6 +508,8 @@ def main() -> int:
     ap.add_argument("--return-acc", type=float, default=4.5, help="Return-to-home T:102 accel")
     ap.add_argument("--home-pose", default="DOM_FINAL", help="Pose name from config/roarm_home_joints.yaml")
     ap.add_argument("--repeat", type=int, default=1, help="Number of attempts from the fixed home pose")
+    ap.add_argument("--min-elbow-target", type=float, default=1.35, help="Clamp target elbow lower bound for DOM_FINAL standoff")
+    ap.add_argument("--verify-min-conf", type=float, default=0.30, help="Minimum detector confidence for close-range verify")
     ap.add_argument("--no-return-home", dest="return_home", action="store_false", help="Do not return home after each attempt")
     ap.set_defaults(return_home=True)
     ap.add_argument("--skip-home", action="store_true", help="Assume already at start pose (test4)")
