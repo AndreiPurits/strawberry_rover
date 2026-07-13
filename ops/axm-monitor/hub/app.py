@@ -486,7 +486,9 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
     now = time.time()
     last = float(row.get("last_seen", 0))
     online = (now - last) <= AGENT_STALE_S
-    cam = _camera_frames.get(row["id"]) or {}
+    stereo_cam = _stereo_camera_frames.get(row["id"]) or {}
+    front_cam = _camera_frames.get(row["id"]) or {}
+    cam = stereo_cam if stereo_cam.get("bytes") else front_cam
     cam_age_ms = None
     if cam.get("updated_at"):
         cam_age_ms = round((now - float(cam["updated_at"])) * 1000.0, 1)
@@ -494,6 +496,7 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
     if cam_age_ms is not None:
         link["camera_age_ms"] = cam_age_ms
     link["status"] = _link_status(link.get("rtt_ms"), cam_age_ms)
+    stereo_live = bool(stereo_cam.get("bytes"))
     return {
         "id": row["id"],
         "name": row.get("name", row["id"]),
@@ -506,8 +509,8 @@ def _rover_public(row: Dict[str, Any], current_user: Optional[str] = None) -> Di
         "last_commands": row.get("last_commands", []),
         "operator": _operator_info(row["id"], current_user),
         "link": link,
-        "camera_live": bool(cam.get("bytes")),
-        "stereo_camera_live": bool((_stereo_camera_frames.get(row["id"]) or {}).get("bytes")),
+        "camera_live": stereo_live or bool(front_cam.get("bytes")),
+        "stereo_camera_live": stereo_live,
     }
 
 
@@ -1088,7 +1091,7 @@ def api_webrtc_config(user: str = Depends(require_user)) -> Dict[str, Any]:
 
 
 def _get_camera_jpeg(rover_id: str) -> tuple:
-    frame = _camera_frames.get(rover_id) or {}
+    frame = _stereo_camera_frames.get(rover_id) or _camera_frames.get(rover_id) or {}
     data = frame.get("bytes")
     stamp = float(frame.get("updated_at") or time.time())
     return data, stamp

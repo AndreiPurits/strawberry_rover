@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Front camera (/dev/video0) + RPLidar via ROS2.
+# Stereo camera (+ optional front RGB) + RPLidar via ROS2.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -12,6 +12,7 @@ source "$REPO_ROOT/scripts/axm_single_instance.sh"
 LIDAR_PORT="${LIDAR_PORT:-/dev/ttyUSB1}"
 CAMERA_DEVICE="${CAMERA_DEVICE:-0}"
 STEREO_CAMERA_DEVICE="${STEREO_CAMERA_DEVICE:-4}"
+ENABLE_RGB_CAMERA="${ENABLE_RGB_CAMERA:-false}"
 ENABLE_STEREO_CAMERA="${ENABLE_STEREO_CAMERA:-true}"
 USE_FAKE_LIDAR="${USE_FAKE_LIDAR:-false}"
 MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
@@ -49,11 +50,12 @@ if [ "$prep_rc" -eq 2 ]; then
   exit 0
 fi
 
-echo "[perception] camera=/dev/video${CAMERA_DEVICE} stereo=/dev/video${STEREO_CAMERA_DEVICE} lidar=${LIDAR_PORT} fake_lidar=${USE_FAKE_LIDAR}"
+echo "[perception] front=${ENABLE_RGB_CAMERA} camera=/dev/video${CAMERA_DEVICE} stereo=${ENABLE_STEREO_CAMERA} stereo=/dev/video${STEREO_CAMERA_DEVICE} lidar=${LIDAR_PORT} fake_lidar=${USE_FAKE_LIDAR}"
 
 exec ros2 launch rover_bringup perception_sensors.launch.py \
   lidar_serial_port:="$LIDAR_PORT" \
   camera_device_index:="$CAMERA_DEVICE" \
   stereo_camera_device_index:="$STEREO_CAMERA_DEVICE" \
+  enable_rgb_camera:="$ENABLE_RGB_CAMERA" \
   enable_stereo_camera:="$ENABLE_STEREO_CAMERA" \
   use_fake_lidar:="$USE_FAKE_LIDAR"

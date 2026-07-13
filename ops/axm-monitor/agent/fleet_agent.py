@@ -119,8 +119,12 @@ def _camera_fps() -> float:
     return fps if fps > 0 else 30.0
 
 
+def _hub_front_camera_enabled() -> bool:
+    return _env("AXM_HUB_FRONT_CAMERA", "false").lower() in ("1", "true", "yes")
+
+
 def _hub_camera_fps() -> float:
-    """JPEG upload rate to hub for front camera."""
+    """JPEG upload rate to hub for front camera (legacy)."""
     raw = _env("AXM_HUB_CAMERA_FPS", "12")
     try:
         fps = float(raw)
@@ -131,10 +135,11 @@ def _hub_camera_fps() -> float:
 
 def _camera_stream_loop_interval() -> float:
     """Loop cadence — must be fast enough for stereo hub_fps."""
-    front_iv = 1.0 / _hub_camera_fps()
-    if not _hub_stereo_enabled():
-        return front_iv
-    return min(front_iv, 1.0 / _hub_stereo_fps())
+    if _hub_stereo_enabled():
+        return 1.0 / _hub_stereo_fps()
+    if _hub_front_camera_enabled():
+        return 1.0 / _hub_camera_fps()
+    return 0.1
 
 
 def _hub_stereo_enabled() -> bool:
@@ -142,12 +147,12 @@ def _hub_stereo_enabled() -> bool:
 
 
 def _hub_stereo_fps() -> float:
-    raw = _env("AXM_HUB_STEREO_FPS", "10")
+    raw = _env("AXM_HUB_STEREO_FPS", "12")
     try:
         fps = float(raw)
     except ValueError:
-        fps = 10.0
-    return max(0.25, min(fps, 10.0))
+        fps = 12.0
+    return max(0.5, min(fps, 15.0))
 
 
 def _touch_hub_ok() -> None:
@@ -571,13 +576,14 @@ def _camera_stream_loop(
             if not health.get("bridge_active"):
                 stop_event.wait(interval)
                 continue
-            cam = _fetch_json(f"{base}/api/perception/front_camera?hub=1", 0.4) or {}
-            if cam.get("ok") and cam.get("jpeg_b64"):
-                jpeg = base64.b64decode(cam["jpeg_b64"])
-                if len(jpeg) <= 120_000:
-                    stamp = float(cam.get("stamp") or time.time())
-                    _post_camera_frame(hub_url, rover_id, token, jpeg, stamp)
-                    _touch_hub_ok()
+            if _hub_front_camera_enabled():
+                cam = _fetch_json(f"{base}/api/perception/front_camera?hub=1", 0.4) or {}
+                if cam.get("ok") and cam.get("jpeg_b64"):
+                    jpeg = base64.b64decode(cam["jpeg_b64"])
+                    if len(jpeg) <= 120_000:
+                        stamp = float(cam.get("stamp") or time.time())
+                        _post_camera_frame(hub_url, rover_id, token, jpeg, stamp)
+                        _touch_hub_ok()
             if stereo and (time.monotonic() - last_stereo_at) >= stereo_interval:
                 st = _fetch_json(f"{base}/api/perception/stereo_camera", 0.4) or {}
                 if st.get("ok") and st.get("jpeg_b64"):

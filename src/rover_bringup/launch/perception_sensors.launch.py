@@ -1,4 +1,4 @@
-"""Front RGB camera + RPLidar only (no sim / navigation)."""
+"""Stereo camera + RPLidar (front RGB optional)."""
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -15,7 +15,8 @@ from launch_ros.actions import Node
 def generate_launch_description() -> LaunchDescription:
     perception_share = get_package_share_directory("rover_perception")
     rplidar_share = get_package_share_directory("rplidar_ros")
-    camera_config = os.path.join(perception_share, "config", "rgb_camera.yaml")
+    front_camera_config = os.path.join(perception_share, "config", "rgb_camera.yaml")
+    stereo_camera_config = os.path.join(perception_share, "config", "stereo_camera.yaml")
 
     lidar_port_arg = DeclareLaunchArgument(
         "lidar_serial_port",
@@ -25,7 +26,22 @@ def generate_launch_description() -> LaunchDescription:
     camera_device_arg = DeclareLaunchArgument(
         "camera_device_index",
         default_value="0",
-        description="V4L2 camera device index (/dev/videoN).",
+        description="V4L2 front camera device index (/dev/videoN).",
+    )
+    stereo_camera_device_arg = DeclareLaunchArgument(
+        "stereo_camera_device_index",
+        default_value="4",
+        description="V4L2 stereo camera device index (/dev/videoN).",
+    )
+    enable_rgb_camera_arg = DeclareLaunchArgument(
+        "enable_rgb_camera",
+        default_value="false",
+        description="Start legacy front RGB camera node.",
+    )
+    enable_stereo_camera_arg = DeclareLaunchArgument(
+        "enable_stereo_camera",
+        default_value="true",
+        description="Start stereo camera node.",
     )
     use_fake_lidar_arg = DeclareLaunchArgument(
         "use_fake_lidar",
@@ -39,9 +55,22 @@ def generate_launch_description() -> LaunchDescription:
         name="rgb_camera_node",
         output="screen",
         parameters=[
-            camera_config,
+            front_camera_config,
             {"device_index": LaunchConfiguration("camera_device_index")},
         ],
+        condition=IfCondition(LaunchConfiguration("enable_rgb_camera")),
+    )
+
+    stereo_camera = Node(
+        package="rover_perception",
+        executable="rgb_camera_node",
+        name="stereo_camera_node",
+        output="screen",
+        parameters=[
+            stereo_camera_config,
+            {"device_index": LaunchConfiguration("stereo_camera_device_index")},
+        ],
+        condition=IfCondition(LaunchConfiguration("enable_stereo_camera")),
     )
 
     rplidar = IncludeLaunchDescription(
@@ -70,8 +99,12 @@ def generate_launch_description() -> LaunchDescription:
         [
             lidar_port_arg,
             camera_device_arg,
+            stereo_camera_device_arg,
+            enable_rgb_camera_arg,
+            enable_stereo_camera_arg,
             use_fake_lidar_arg,
             rgb_camera,
+            stereo_camera,
             rplidar,
             fake_lidar,
         ]

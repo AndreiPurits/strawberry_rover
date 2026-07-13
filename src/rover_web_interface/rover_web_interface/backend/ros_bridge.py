@@ -38,7 +38,7 @@ class RosWebBridge(Node):
         self.declare_parameter("lidar_forward_angle_deg", 180.0)
         # RPLidar scan order vs rover-left: flip sector index for UI + guard.
         self.declare_parameter("lidar_mirror_lr", True)
-        self.declare_parameter("real_front_camera_topic", "/camera/image_raw")
+        self.declare_parameter("real_front_camera_topic", "")
         self.declare_parameter("real_stereo_camera_topic", "/stereo_camera/image_raw")
         self.declare_parameter("control_publish_period_s", 0.05)
         self.declare_parameter("route_record_min_dt_s", 0.15)
@@ -437,15 +437,17 @@ class RosWebBridge(Node):
 
     def _on_image(self, camera_name: str, msg: Image) -> None:
         if camera_name in ("front", "stereo"):
-            jpeg = self._make_jpeg_from_image(msg, hub=False)
-            if jpeg.get("ok"):
-                if camera_name == "front":
+            if camera_name == "front":
+                jpeg = self._make_jpeg_from_image(msg, hub=False)
+                if jpeg.get("ok"):
                     hub_jpeg = self._make_jpeg_from_image(msg, hub=True)
                     with self._lock:
                         self._front_camera_jpeg = jpeg
                         if hub_jpeg.get("ok"):
                             self._front_camera_jpeg_hub = hub_jpeg
-                else:
+            else:
+                jpeg = self._make_jpeg_from_image(msg, hub=True)
+                if jpeg.get("ok"):
                     merged = self._attach_stereo_tuning(jpeg)
                     with self._lock:
                         self._stereo_camera_jpeg = merged

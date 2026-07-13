@@ -2,7 +2,7 @@
   ros__parameters:
     device_index: 4
     frame_id: "stereo_camera_link"
-    fps: 10.0
+    fps: 12.0
     width: 640
     height: 480
     use_v4l2_backend: true

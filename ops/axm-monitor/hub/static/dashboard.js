@@ -591,9 +591,41 @@ function selectRover(id, persist = true) {
   roverSelect.value = selectedId;
   renderRoverList();
   renderPanel();
-  if (selectedId) {
-    const r = getRover(selectedId);
-    if (r?.online) startWebRtcFront(selectedId);
+}
+
+function renderFrontCamera(r) {
+  const img = document.getElementById("front-camera");
+  const ph = document.getElementById("camera-placeholder");
+  const status = document.getElementById("cam-status");
+  if (!img || !ph || !status) return;
+
+  stopWebRtcFront();
+  const online = Boolean(r?.online);
+  const live = Boolean(r?.stereo_camera_live ?? r?.camera_live);
+  const stereo = r?.telemetry?.perception?.stereo || {};
+  const fps = stereo.stream_fps ?? stereo.hub_fps ?? 12;
+
+  if (online && live && selectedId) {
+    const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
+    if (mjpegUrl !== url) {
+      mjpegUrl = url;
+      img.src = url;
+    }
+    img.classList.remove("hidden");
+    ph.classList.add("hidden");
+    const age = r.link?.camera_age_ms;
+    let label = `Стерео · ${fps} fps`;
+    if (age != null) label += ` · ${Math.round(age)} ms`;
+    status.textContent = label;
+  } else {
+    if (mjpegUrl) {
+      img.removeAttribute("src");
+      mjpegUrl = "";
+    }
+    img.classList.add("hidden");
+    ph.classList.remove("hidden");
+    ph.textContent = online ? "Стерео — ожидание" : "Стерео — нет сигнала";
+    status.textContent = online ? "Стерео · ожидание" : "Стерео · offline";
   }
 }
 
@@ -831,13 +863,13 @@ async function startWebRtcFront(roverId) {
       setTimeout(() => {
         if (!videoHasFrames()) {
           stopWebRtcFront();
-          renderFrontCameraMjpeg(getRover(roverId));
+          renderFrontCamera(getRover(roverId));
         }
       }, 2500);
     } else if (pc.connectionState === "failed") {
       status.textContent = "WebRTC — ошибка, MJPEG…";
       stopWebRtcFront();
-      renderFrontCameraMjpeg(getRover(roverId));
+      renderFrontCamera(getRover(roverId));
     }
   };
 
@@ -870,7 +902,7 @@ async function startWebRtcFront(roverId) {
     });
     if (!res.ok) {
       if (status) status.textContent = "WebRTC недоступен — MJPEG";
-      renderFrontCameraMjpeg(getRover(roverId));
+      renderFrontCamera(getRover(roverId));
       return;
     }
     const data = await res.json();
@@ -879,48 +911,61 @@ async function startWebRtcFront(roverId) {
     }
   } catch (err) {
     if (status) status.textContent = "WebRTC недоступен — MJPEG";
-    renderFrontCameraMjpeg(getRover(roverId));
+    renderFrontCamera(getRover(roverId));
   }
 }
 
-function renderFrontCameraMjpeg(r) {
-  const img = document.getElementById("front-camera");
-  const video = document.getElementById("front-camera-webrtc");
-  const ph = document.getElementById("camera-placeholder");
-  const status = document.getElementById("cam-status");
-  if (!img || !ph || !status) return;
+function renderStereoCamera(r) {
+  const img = document.getElementById("stereo-camera");
+  const ph = document.getElementById("stereo-camera-placeholder");
+  const status = document.getElementById("stereo-cam-status");
+  if (!img || !ph) return;
+
+  if (stereoMjpegUrl) {
+    img.removeAttribute("src");
+    stereoMjpegUrl = "";
+  }
+  img.classList.add("hidden");
 
   const online = Boolean(r?.online);
-  const live = Boolean(r?.camera_live);
-  if (online && live && selectedId) {
-    const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/mjpeg`;
-    if (mjpegUrl !== url) {
-      mjpegUrl = url;
-      img.src = url;
+  const live = Boolean(r?.stereo_camera_live);
+  const stereo = r?.telemetry?.perception?.stereo || {};
+  const fps = stereo.stream_fps ?? stereo.hub_fps ?? 12;
+  const mean = stereo.brightness_mean;
+  const inRange = stereo.brightness_ok !== false;
+  const tuning = Boolean(stereo.tuning);
+  const b = stereo.brightness;
+  const g = stereo.gamma;
+  const tb = stereo.trial_brightness;
+  const tg = stereo.trial_gamma;
+
+  if (online && live) {
+    ph.classList.remove("hidden");
+    ph.textContent = "поток в основном окне";
+    if (status) {
+      let label = `${fps} fps`;
+      if (mean != null) label += ` · ярк ${Math.round(mean)}`;
+      if (b != null && g != null) label += ` · b${b} g${g}`;
+      if (tuning) {
+        label += " · подстройка";
+        if (b != null && tb != null && tb !== b) label += ` b${b}→${tb}`;
+        else if (tb != null) label += ` b→${tb}`;
+        if (g != null && tg != null && tg !== g) label += ` g${g}→${tg}`;
+        else if (tg != null) label += ` g→${tg}`;
+        label += " ⟳";
+      }
+      status.textContent = label;
+      status.classList.toggle("warn", mean != null && !inRange);
+      status.classList.toggle("ok", mean != null && inRange);
     }
-    video?.classList.add("hidden");
-    img.classList.remove("hidden");
-    ph.classList.add("hidden");
-    const age = r.link?.camera_age_ms;
-    status.textContent = age != null ? `MJPEG · ${Math.round(age)} ms` : "MJPEG · резерв";
   } else {
-    if (mjpegUrl) {
-      img.removeAttribute("src");
-      mjpegUrl = "";
-    }
-    img.classList.add("hidden");
-    if (!video || video.classList.contains("hidden")) {
-      ph.classList.remove("hidden");
-      ph.textContent = online ? "Камера — ожидание" : "Камера — нет сигнала";
-    }
-    if (status && (!video || video.classList.contains("hidden"))) {
-      status.textContent = online ? "Передняя · ожидание" : "Передняя · offline";
+    ph.classList.remove("hidden");
+    ph.textContent = online ? "ожидание…" : "offline";
+    if (status) {
+      status.textContent = online ? "нет потока" : "—";
+      status.classList.remove("warn", "ok");
     }
   }
-}
-
-function renderFrontCamera(r) {
-  renderFrontCameraMjpeg(r);
 }
 
 function videoHasFrames() {
@@ -1015,73 +1060,6 @@ function renderRtkMap(rtk) {
     rtkTrail.setLatLngs(rtkTrack);
   }
   if (rtkTrack.length <= 2) rtkMap.setView(pt, 18);
-}
-
-function renderStereoCamera(r) {
-  const img = document.getElementById("stereo-camera");
-  const ph = document.getElementById("stereo-camera-placeholder");
-  const status = document.getElementById("stereo-cam-status");
-  if (!img || !ph) return;
-
-  const online = Boolean(r?.online);
-  const live = Boolean(r?.stereo_camera_live);
-  const stereo = r?.telemetry?.perception?.stereo || {};
-  const fps = stereo.stream_fps ?? stereo.hub_fps ?? 10;
-  const mean = stereo.brightness_mean;
-  const inRange = stereo.brightness_ok !== false;
-  const tuning = Boolean(stereo.tuning);
-  const b = stereo.brightness;
-  const g = stereo.gamma;
-  const tb = stereo.trial_brightness;
-  const tg = stereo.trial_gamma;
-
-  if (online && live && selectedId) {
-    const url = `/api/rovers/${encodeURIComponent(selectedId)}/camera/stereo/mjpeg`;
-    if (stereoMjpegUrl !== url) {
-      stereoMjpegUrl = url;
-      img.src = url;
-    }
-    img.classList.remove("hidden");
-    ph.classList.add("hidden");
-    if (status) {
-      let label = `${fps} fps`;
-      if (mean != null) {
-        label += ` · ярк ${Math.round(mean)}`;
-      }
-      if (b != null && g != null) {
-        label += ` · b${b} g${g}`;
-      }
-      if (tuning) {
-        label += " · подстройка";
-        if (b != null && tb != null && tb !== b) {
-          label += ` b${b}→${tb}`;
-        } else if (tb != null) {
-          label += ` b→${tb}`;
-        }
-        if (g != null && tg != null && tg !== g) {
-          label += ` g${g}→${tg}`;
-        } else if (tg != null) {
-          label += ` g→${tg}`;
-        }
-        label += " ⟳";
-      }
-      status.textContent = label;
-      status.classList.toggle("warn", mean != null && !inRange);
-      status.classList.toggle("ok", mean != null && inRange);
-    }
-  } else {
-    if (stereoMjpegUrl) {
-      img.removeAttribute("src");
-      stereoMjpegUrl = "";
-    }
-    img.classList.add("hidden");
-    ph.classList.remove("hidden");
-    ph.textContent = online ? "ожидание…" : "offline";
-    if (status) {
-      status.textContent = online ? "нет потока" : "—";
-      status.classList.remove("warn", "ok");
-    }
-  }
 }
 
 function renderLinkIndicator(r) {
