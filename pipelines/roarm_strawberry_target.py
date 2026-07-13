@@ -376,6 +376,8 @@ class StrawberryTargetTracker:
         preferred_px: Optional[float] = None,
         preferred_py: Optional[float] = None,
         preferred_max_dist_px: Optional[float] = None,
+        strict_lock: bool = False,
+        lock_radius_px: float = 85.0,
     ) -> None:
         self.last_px: Optional[float] = None
         self.last_py: Optional[float] = None
@@ -388,6 +390,8 @@ class StrawberryTargetTracker:
         self.preferred_px = preferred_px
         self.preferred_py = preferred_py
         self.preferred_max_dist_px = preferred_max_dist_px
+        self.strict_lock = bool(strict_lock)
+        self.lock_radius_px = float(lock_radius_px)
         self.lock_count = 0
 
     def update(self, det: Optional[dict]) -> bool:
@@ -444,6 +448,12 @@ def detect_strawberry_in_frame(
 ) -> Optional[dict]:
     """Stable single-target pick: choose the current highest-confidence berry."""
     dets = detect_strawberries_in_frame(bgr, det_model, tracker)
+    if tracker and tracker.strict_lock and tracker.last_px is not None and tracker.last_py is not None:
+        radius = float(tracker.lock_radius_px)
+        dets = [
+            d for d in dets
+            if float(np.hypot(_bbox_center(d)[0] - tracker.last_px, _bbox_center(d)[1] - tracker.last_py)) <= radius
+        ]
     return _pick_detection(
         dets,
         tracker.last_px if tracker else None,

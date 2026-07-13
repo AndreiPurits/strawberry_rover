@@ -271,7 +271,9 @@ def wait_reach(
     return read_q(execute_rpc)
 
 
-def lock_berry(provider, tracker) -> Optional[Tuple]:
+def lock_berry(provider, tracker, *, preview_first: bool = False) -> Optional[Tuple]:
+    if preview_first:
+        return lock_berry_from_preview(tracker)
     for _ in range(14):
         m = measure(provider, tracker, "http://127.0.0.1:8080", frames=2)
         if m:
@@ -391,6 +393,23 @@ def append_episode_to_learned(path: Path, label: str, result: Dict[str, Any]) ->
     write_learned(path, doc)
 
 
+def parse_target_sequence(raw: str, default_px: float, default_py: float) -> list[Tuple[str, float, float]]:
+    if not raw.strip():
+        return [("target", float(default_px), float(default_py))]
+    out = []
+    for item in raw.split(","):
+        parts = [p.strip() for p in item.split(":")]
+        if len(parts) == 2:
+            name = f"target{len(out) + 1}"
+            px, py = parts
+        elif len(parts) == 3:
+            name, px, py = parts
+        else:
+            raise ValueError(f"Bad --target-sequence item: {item!r}; expected name:px:py")
+        out.append((name or f"target{len(out) + 1}", float(px), float(py)))
+    return out
+
+
 def run_attempt(
     *,
     attempt_idx: int,
@@ -402,6 +421,7 @@ def run_attempt(
     args: argparse.Namespace,
     label: str,
     learned_path: Path,
+    target_name: str = "",
 ) -> Dict[str, Any]:
     q_home_move = JointState(
         base=q_home.base,
@@ -425,9 +445,17 @@ def run_attempt(
     print(
         f"[one] START b={q_start.base:.3f} s={q_start.shoulder:.3f} e={q_start.elbow:.3f}"
     )
+    if target_name:
+        print(f"[one] target selection: {target_name} px={args.target_px:.0f} py={args.target_py:.0f}")
+    if hasattr(tracker, "preferred_px"):
+        tracker.preferred_px = float(args.target_px)
+    if hasattr(tracker, "preferred_py"):
+        tracker.preferred_py = float(args.target_py)
+    if hasattr(tracker, "preferred_max_dist_px"):
+        tracker.preferred_max_dist_px = float(args.target_max_dist)
     if args.reset_target_each_attempt and hasattr(tracker, "reset_lock"):
         tracker.reset_lock()
-    m0 = lock_berry(provider, tracker)
+    m0 = lock_berry(provider, tracker, preview_first=bool(args.target_sequence))
     out_path = REPO / "runs/roarm_learn" / f"one_shot_{label}.json"
     lock_path = REPO / "runs/roarm_learn" / f"{label}_lock.json"
     if not m0:
@@ -435,6 +463,7 @@ def run_attempt(
             "ok": False,
             "label": label,
             "home_pose": args.home_pose,
+            "target_name": target_name,
             "attempt": attempt_idx,
             "error": "no_berry",
             "joints_start": q_start.as_dict(),
@@ -517,6 +546,7 @@ def run_attempt(
         "ok": False,
         "label": label,
         "home_pose": args.home_pose,
+        "target_name": target_name,
         "attempt": attempt_idx,
         "motion": "T102_one_shot",
         "spd": args.spd,
@@ -578,7 +608,10 @@ def run_attempt(
         wait_reach(
             execute_rpc,
             q_home_move,
-            timeout_s=est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 3.0,
+            timeout_s=min(
+                est_move_duration(q_final, q_home_move, spd=args.return_spd, acc=args.return_acc) + 3.0,
+                args.return_wait_s,
+            ),
             tol=args.return_tol,
         )
         time.sleep(args.settle_s)
@@ -600,7 +633,9 @@ def main() -> int:
     ap.add_argument("--repeat", type=int, default=1, help="Number of attempts from the fixed home pose")
     ap.add_argument("--target-px", type=float, default=250.0, help="Preferred berry x when multiple berries are visible")
     ap.add_argument("--target-py", type=float, default=145.0, help="Preferred berry y when multiple berries are visible")
+    ap.add_argument("--target-sequence", default="", help="Comma list name:px:py; runs all in one process")
     ap.add_argument("--target-max-dist", type=float, default=190.0, help="Reject initial lock farther than this from preferred target")
+    ap.add_argument("--lock-radius-px", type=float, default=85.0, help="After lock, ignore other berries outside this radius")
     ap.add_argument("--min-elbow-target", type=float, default=1.35, help="Clamp target elbow lower bound for DOM_FINAL standoff")
     ap.add_argument("--verify-min-conf", type=float, default=0.30, help="Minimum detector confidence for close-range verify")
     ap.add_argument("--verify-depth-max", type=float, default=0.17, help="Maximum accepted standoff depth")
@@ -608,6 +643,7 @@ def main() -> int:
     ap.add_argument("--return-tol", type=float, default=0.085, help="Joint tolerance for return-home completion")
     ap.add_argument("--settle-s", type=float, default=0.18, help="Short camera settle after each move")
     ap.add_argument("--verify-wait-s", type=float, default=3.5, help="Wait for camera depth to settle near standoff")
+    ap.add_argument("--return-wait-s", type=float, default=5.0, help="Max wait for return-home reach in sequence")
     ap.add_argument("--reset-target-each-attempt", dest="reset_target_each_attempt", action="store_true", default=True)
     ap.add_argument("--keep-target-between-attempts", dest="reset_target_each_attempt", action="store_false")
     ap.add_argument("--no-return-home", dest="return_home", action="store_false", help="Do not return home after each attempt")
@@ -638,6 +674,8 @@ def main() -> int:
         preferred_px=args.target_px,
         preferred_py=args.target_py,
         preferred_max_dist_px=args.target_max_dist,
+        strict_lock=True,
+        lock_radius_px=args.lock_radius_px,
     )
 
     print(
@@ -659,21 +697,28 @@ def main() -> int:
     results = []
     try:
         load_or_seed_learned(learned_path, label=label)
-        for attempt_idx in range(1, max(1, args.repeat) + 1):
-            result = run_attempt(
-                attempt_idx=attempt_idx,
-                execute_rpc=execute_rpc,
-                provider=provider,
-                tracker=tracker,
-                q_home=q_home,
-                cfg=cfg,
-                args=args,
-                label=label,
-                learned_path=learned_path,
-            )
-            results.append(result)
-            if not result.get("ok") and args.repeat > 1:
-                print(f"[one] attempt {attempt_idx} not OK; continuing repeat loop")
+        targets = parse_target_sequence(args.target_sequence, args.target_px, args.target_py)
+        attempt_idx = 0
+        for target_name, target_px, target_py in targets:
+            args.target_px = target_px
+            args.target_py = target_py
+            for _ in range(1, max(1, args.repeat) + 1):
+                attempt_idx += 1
+                result = run_attempt(
+                    attempt_idx=attempt_idx,
+                    execute_rpc=execute_rpc,
+                    provider=provider,
+                    tracker=tracker,
+                    q_home=q_home,
+                    cfg=cfg,
+                    args=args,
+                    label=label,
+                    learned_path=learned_path,
+                    target_name=target_name,
+                )
+                results.append(result)
+                if not result.get("ok") and (args.repeat > 1 or len(targets) > 1):
+                    print(f"[one] attempt {attempt_idx} ({target_name}) not OK; continuing sequence")
     finally:
         provider.close()
 
