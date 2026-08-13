@@ -33,11 +33,10 @@ git submodule update --init --recursive
 bash bootstrap/orin_bootstrap.sh
 ```
 
-Полный гайд: `docs/orin_new_device_setup.md` · Промпт для агента: `docs/NEW_ORIN_AGENT_PROMPT.md`
+Полный гайд: `docs/orin_new_device_setup.md`
 
 ## Структура репозитория
 
-- `AGENTS.md` — onboarding для Cursor-агента
 - `bootstrap/` — установка Orin (Python, CUDA, TensorRT, RealSense)
 - `pipelines/` — ensemble inference
 - `models/model_groups/` — группы моделей + manifest

@@ -115,6 +115,6 @@ PY
 echo ""
 echo "==> Bootstrap done."
 echo "    Activate: source $VENV/bin/activate"
-echo "    Read: AGENTS.md and docs/orin_new_device_setup.md"
+echo "    Read: docs/orin_new_device_setup.md"
 echo "    RealSense D405: bash bootstrap/realsense_d405_orin.sh"
 echo "    TensorRT export: COOLDOWN_SEC=60 bash tools/export_tensorrt/export_all_group02.sh"

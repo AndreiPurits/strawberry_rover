@@ -1,10 +1,10 @@
-# Orin 8GB: миграция на GitHub + пиковый FPS (50W) + onboarding агента
+# Orin 8GB: миграция на GitHub + пиковый FPS (50W)
 
 Дата: 2026-04-24  
 Контекст: собранный ровер (Orin 8GB @ 50W, стереокамера, LiDAR, навигация, Arduino, RoArm-M3).
 
 Цель в двух словах:
-1. **Один GitHub-репозиторий**, в котором агент в Cursor сразу понимает проект и может работать на Orin.
+1. **Один GitHub-репозиторий** с кодом и документацией для работы на Orin.
 2. **Пиковый FPS** vision pipeline на Orin при power cap 50W — узнать «пик силы» до/после TensorRT.
 3. **Три группы моделей** сравниваются честно на `data/ФПС ДАТАСЕТ/`.
 
@@ -33,11 +33,9 @@
 
 ```
 strawberry_rover/
-├── README.md                 # entry point для агента
-├── ORCHESTRATOR.md           # правила работы агента
+├── README.md
 ├── CURRENT_STATE.md
 ├── DEV_ROADMAP.md
-├── AGENTS.md                 # NEW: быстрый onboarding для Cursor
 ├── docs/
 ├── config/
 ├── models/model_groups/      # symlinks + group.json (без .pt в git)
@@ -68,25 +66,7 @@ strawberry_rover/
 
 **Weights manifest (NEW):** `models/weights_manifest.json` — пути и SHA256, без бинарников в git.
 
-### A3. Onboarding агента (`AGENTS.md`)
-
-Агент при старте читает (в порядке):
-1. `README.md`
-2. `AGENTS.md`
-3. `ORCHESTRATOR.md`
-4. `CURRENT_STATE.md`
-5. `docs/model_selection.md`
-6. `docs/orin_migration_and_optimization_plan.md` (этот файл)
-
-В `AGENTS.md` зафиксировать:
-- Jetson: `source scripts/jetson_gpu_env.sh`
-- CUDA check: `python3 -c "import torch; print(torch.cuda.is_available())"`
-- Запуск GUI камеры: `scripts/run_strawberry_gui_with_camera.sh`
-- Запуск FPS bench: `tools/benchmark_holdout_full_pipeline_fps.py --preset all`
-- Где лежат веса на Orin (manifest)
-- Power mode 50W: `sudo nvpmodel -m 0` + `sudo jetson_clocks` (уточнить на железе)
-
-### A4. Bootstrap на Orin (`install/orin_bootstrap.sh`)
+### A3. Bootstrap на Orin (`install/orin_bootstrap.sh`)
 
 Один скрипт:
 - ROS2 Foxy/Humble (что стоит на Orin)
@@ -96,7 +76,7 @@ strawberry_rover/
 - проверка камеры / lidar / arm HTTP
 - скачивание weights по manifest (rsync / gdrive)
 
-### A5. Third-party → submodules
+### A4. Third-party → submodules
 
 | Сейчас vendored | Действие |
 |-----------------|----------|
@@ -200,7 +180,6 @@ Classifier на MobileNet (group 01) может дать ≥40 FPS end-to-end, �
 
 ### Sprint 1 (сейчас): документы + infra оптимизации
 - [x] План (этот файл)
-- [ ] `AGENTS.md` — onboarding для Cursor на Orin
 - [ ] `models/weights_manifest.json` — manifest весов
 - [ ] `install/orin_bootstrap.sh` — bootstrap скрипт
 - [ ] `tools/export_tensorrt/` — каркас export + benchmark
@@ -272,7 +251,6 @@ python3 tools/roarm_local_gui/roarm_test_gui.py
 ## Definition of Done (миграция + оптимизация)
 
 - [ ] GitHub repo: clone → bootstrap → `colcon build` → camera GUI работает
-- [ ] Agent (`AGENTS.md`): новый чат понимает проект без объяснений
 - [ ] 3 model groups benchmarked на ФПС ДАТАСЕТ @ 50W
 - [ ] TensorRT engines для det+seg, FPS ≥30 end-to-end (group 02)
 - [ ] Отчёт с таблицей FPS + quality для всех групп

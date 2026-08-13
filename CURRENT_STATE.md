@@ -27,7 +27,6 @@ TensorRT export: `tools/export_tensorrt/export_all_group02.sh`
 
 - Bootstrap: `bootstrap/orin_bootstrap.sh`
 - Гайд: `docs/orin_new_device_setup.md`
-- Onboarding агента: `AGENTS.md`, `docs/NEW_ORIN_AGENT_PROMPT.md`
 
 ## Вне git
 
