@@ -1,40 +1,29 @@
-# Текущее состояние проекта
+# Реализованный контур
 
-## CV pipeline (production)
+## Восприятие
 
-- Ensemble: detector → classifier → segmenter → depth (`pipelines/strawberry_ensemble.py`)
-- Frozen weights: `docs/model_selection.md`, manifest: `models/weights_manifest.json`
-- 3 model groups: `models/model_groups/01_fast_initial`, `02_lightened_current`, `03_finetune_future`
+Конвейер на борту: детектор → классификатор зрелости → сегментация → расстояние по depth внутри маски.
 
-## FPS бенчмарк (ФПС ДАТАСЕТ, 8099 кадров, group 02)
+Код: `pipelines/strawberry_ensemble.py`  
+Веса: `docs/model_selection.md`  
+Датасет весов: https://huggingface.co/datasets/AndreiPurits/strawBerry (`models/`)
 
-| preset | PT FPS | TRT FPS |
-|--------|--------|---------|
-| baseline (640/384) | 21.8 | 31.9 |
-| fast (512/320) | 23.3 | 31.5 |
-| very_fast (480/320) | 23.1 | **38.0** |
-| ultra_low (416/256) | 23.1 | 34.1 |
+Production-набор:
 
-Отчёт: `reports/fps_dataset_trt_comparison.md`  
-TensorRT export: `tools/export_tensorrt/export_all_group02.sh`
+- детектор YOLOv8s v3
+- классификатор EfficientNet-B0
+- сегментатор YOLOv8n-seg
+- плодоножка YOLOv8n-OBB v2.1
 
-## Камеры
+На Jetson Orin (group 02, TensorRT, preset `very_fast`): около 38 FPS на holdout RGB.
 
-- Orbbec Gemini: `src/OrbbecSDK_ROS2/` (submodule)
-- RealSense D405: `bootstrap/realsense_d405_orin.sh`, `docs/realsense_d405_orin.md`
+## Захват по плодоножке
 
-## Миграция на новый Orin
+Код: `pipelines/peduncle_grasp/`  
+Конфиг: `config/peduncle_grasp_v1.yaml`
 
-- Bootstrap: `bootstrap/orin_bootstrap.sh`
-- Гайд: `docs/orin_new_device_setup.md`
-- Onboarding агента: `AGENTS.md`, `docs/NEW_ORIN_AGENT_PROMPT.md`
+Последовательность: оценка чашечки → close-up ROI → кандидаты OBB → ассоциация стебель–ягода → точка реза → проверка по кадрам.
 
-## Вне git
+## RGB-D
 
-- `data/`, `runs/`, `*.pt`, `*.engine`, torch wheel, `third_party/vision/`
-
-## Следующее
-
-1. Развернуть на новом Orin (git clone → bootstrap → weights → TRT export)
-2. Group 03 finetune (по запросу)
-3. TRT / оптимизация classifier
+Камера Orbbec Gemini 215. Дистанция — медиана depth по пикселям маски. Контракт: `reports/ensemble_pipeline/benchmark.md`.

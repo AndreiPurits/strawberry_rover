@@ -1,103 +1,60 @@
-# Патентный пакет — Strawberry Rover
+# Strawberry Rover — материалы к заявке
 
-Ветка `Патент` содержит **только** файлы для заявки. Полный репозиторий (разметка, train, ROS tooling): ветка `main`.
+Код этой ветки: https://github.com/AndreiPurits/strawberry_rover/tree/Патент  
+Полный репозиторий разработки: https://github.com/AndreiPurits/strawberry_rover/tree/main  
+Размеченные обучающие данные и веса моделей: https://huggingface.co/datasets/AndreiPurits/strawBerry
 
+Сторонние SDK (Orbbec, RPLidar, ROS `image_pipeline`) в объём изобретения не входят.
 
-Ветка: `Патент`  
-Код: https://github.com/AndreiPurits/strawberry_rover  
-Размеченные кадры и веса: https://huggingface.co/datasets/AndreiPurits/strawBerry
+## Предмет
 
-Этот файл — оглавление того, что считать своим вкладом для заявки. Сторонние SDK (Orbbec, RPLidar, ROS `image_pipeline`) сюда не входят.
+Бортовая система сбора клубники (Jetson Orin + RGB-D камера + манипулятор):
 
-## 1. Что заявляется по сути
+1. Обнаружение ягод на RGB-кадре.
+2. Классификация зрелости по кропу ягоды.
+3. Сегментация маски ягоды.
+4. Оценка расстояния по карте глубины **только внутри маски**.
+5. Построение close-up ROI у чашечки, детекция ориентированных боксов плодоножки, **ассоциация стебля с конкретной ягодой**, расчёт **точки реза**, проверка стабильности по нескольким кадрам.
+6. Передача цели манипулятору и шасси.
 
-Бортовая система сбора клубники на Jetson Orin:
+## Реализация в этой ветке
 
-1. Найти ягоды на RGB-кадре (детектор).
-2. Оценить зрелость кропа (классификатор).
-3. Получить маску ягоды (сегментация).
-4. Оценить расстояние по depth **только внутри маски**.
-5. Построить close-up ROI у чашечки, найти ориентированные боксы плодоножки, **ассоциировать стебель с конкретной ягодой**, выдать **точку реза**, проверить стабильность по нескольким кадрам.
-6. Передать цель манипулятору (RoArm-M3) и шасси (Arduino PWM + ROS2).
-
-## 2. Картинки и разметка (Hugging Face)
-
-Датасет (private): **https://huggingface.co/datasets/AndreiPurits/strawBerry**
-
-Ожидаемая раскладка после выгрузки:
-
-| Задача | Путь в датасете | Локальный источник |
-|---|---|---|
-| Детекция ягод (bbox + зрелость 0–3) | `images/detection_final/` | `data/final_detection_dataset/` |
-| Детекция, train v3 (1 класс) | `images/detection_v3/` | `data/yolo_detection_dataset_v3/` |
-| Классификация зрелости | `images/classification_v2/` | `data/classification_dataset_v2/` |
-| Ручная классификация | `images/classification_manual/` | `data/classification_manual/` |
-| Сегментация (полигоны) | `images/segmentation_yolo/` | `data/yolo_segmentation_dataset/` |
-| Сегментация COCO-поднабор | `images/segmentation_project/` | `data/segmentation_project_dataset/` |
-| Плодоножка approved | `images/peduncle_approved/` | `data/плодоножки апрувд/` |
-| Плодоножка OBB berry-anchored v2.1 | `images/peduncle_obb_v21/` | `data/peduncle_obb_berry_anchored_v21/` |
-| Holdout FPS | `images/fps_holdout/` | `data/ФПС ДАТАСЕТ/` |
-| Production-веса | `models/` | `runs/.../weights/best.pt` |
-
-Выгрузка с Orin (нужен SSH-ключ в [настройках HF](https://huggingface.co/settings/keys)):
-
-```bash
-python3 tools/upload_patent_dataset_to_hf.py
-```
-
-## 3. Код изобретения (этот репозиторий)
-
-| Компонент | Файлы |
+| Компонент | Путь |
 |---|---|
-| Ensemble detect → classify → seg → depth-in-mask | `pipelines/strawberry_ensemble.py` |
-| Захват по плодоножке | `pipelines/peduncle_grasp/` |
-| Конфиг ассоциации / реза | `config/peduncle_grasp_v1.yaml` |
+| Конвейер detect → classify → seg → distance-in-mask | `pipelines/strawberry_ensemble.py` |
+| Захват по плодоножке (calyx, ROI, OBB, ассоциация, рез, temporal) | `pipelines/peduncle_grasp/` |
+| Параметры ассоциации и реза | `config/peduncle_grasp_v1.yaml` |
 | Геометрия ягода–стебель | `scripts/peduncle_berry_geometry.py` |
 | Полевой демо-проход | `scripts/run_peduncle_grasp_field_demo.py` |
-| Обучение OBB плодоножки | `scripts/train_peduncle_obb_v2.py`, `scripts/train_peduncle_obb_v1.py` |
-| Тесты геометрии grasp | `tests/test_peduncle_grasp_v1.py` |
-| ROS perception / fusion | `src/rover_perception/` |
-| Навигация, FSM, bringup, web | `src/rover_navigation/`, `src/rover_fsm/`, `src/rover_bringup/`, `src/rover_web_interface/` |
-| Мост к руке | `src/roarm_ros2_http/` |
-| Прошивка шасси | `arduino/MEGA_Rover_4x_RC_PWM/` |
-| Выбор моделей | `docs/model_selection.md` |
-| Датасеты | `docs/datasets_overview.md`, `docs/final_detection_dataset_summary.md`, `docs/segmentation_dataset_plan.md` |
-| Дорожная карта | `DEV_ROADMAP.md` |
-| Бенчмарк ensemble + depth | `reports/ensemble_pipeline/benchmark.md` |
-| FPS / TensorRT | `reports/fps_dataset_trt_comparison.md` |
+| Юнит-тесты геометрии | `tests/test_peduncle_grasp_v1.py` |
+| Зафиксированные production-модели | `docs/model_selection.md` |
+| Описание датасетов | `docs/datasets_overview.md`, `docs/final_detection_dataset_summary.md`, `docs/segmentation_dataset_plan.md` |
+| RGB-D контракт и оценка дистанции | `reports/ensemble_pipeline/benchmark.md` |
+| Стадии системы | `DEV_ROADMAP.md` |
 
-## 4. Модели — да, их нужно выкладывать
+## Обучающие данные и веса
 
-Имеет смысл класть **свои** frozen-веса на тот же HF-датасет, не в git:
+Датасет (доступ по запросу / collaborator): https://huggingface.co/datasets/AndreiPurits/strawBerry
 
-- Это доказательство, что пайплайн доведён до работающих чекпоинтов (reduction to practice).
-- Заявка и экспертиза смогут воспроизвести вывод без переобучения.
-- Объём небольшой (~десятки МБ на production-набор), в отличие от 15 ГБ картинок.
-- В git их нет специально (`.gitignore`: `*.pt`).
+| Задача | Путь в датасете | Разметка |
+|---|---|---|
+| Детекция ягод, train v3 | `images/detection_v3/` | YOLO bbox, 1500 пар image+label |
+| Классификация зрелости | `images/classification_v2/` | класс = папка (green / turning / ripe / rotten), 2700 кропов |
+| Сегментация ягоды | `images/segmentation_yolo/` | YOLO-seg полигоны, 2300 пар |
+| Плодоножка OBB v2.1 | `images/peduncle_obb_v21/` | ориентированный бокс + berry labels + masks, 143 пары |
+| Production-веса | `models/` | detector, classifier, segmenter, peduncle OBB |
 
-Класть:
+Веса в датасете:
 
-- detector: `runs/detect_benchmark_v3/yolov8s_v3_lowdensity/weights/best.pt`
-- classifier: `runs/classification_benchmark_v2/efficientnet_b0/best.pt`
-- segmenter: `runs/segment_benchmark/yolov8n_seg_benchmark/weights/best.pt`
-- peduncle OBB: `runs/peduncle_obb/yolov8n_peduncle_v21_mask_calyx/weights/best.pt`
+- `models/detector_yolov8s_v3_lowdensity_best.pt`
+- `models/classifier_efficientnet_b0_best.pt`
+- `models/segmenter_yolov8n_seg_best.pt`
+- `models/peduncle_obb_yolov8n_v21_best.pt`
 
-Не класть:
+## Аппаратная реализация
 
-- чужие pretrained `yolov8m.pt` / `yolo11n.pt` с Ultralytics (не наши);
-- TensorRT `.engine` (привязаны к конкретной сборке Orin);
-- промежуточные `last.pt` и мусор `_trash_v1`.
-
-Опционально (если нужен запасной контур): MobileNetV3-Small, YOLOv8s-seg.
-
-## 5. Железо (контекст реализации)
-
-- Jetson Orin 8GB, power cap 50W  
-- Orbbec Gemini 215 RGB-D  
-- RPLidar C1  
-- RoArm-M3 (HTTP)  
-- Arduino Mega, PWM 4× моторы  
-
-## 6. Чего не считать своим датасетом
-
-Папки `data/roboflow_downloads/`, `V2_Strawberry Object Detection.*`, `strawberry rotten.*`, `strawberry ripeness detection.*` — сторонние выгрузки Roboflow. Для патента использовать только свои канонические наборы из таблицы в §2.
+- NVIDIA Jetson Orin 8 GB
+- RGB-D камера Orbbec Gemini 215
+- LiDAR RPLidar C1
+- манипулятор RoArm-M3
+- шасси Arduino Mega, PWM 4× моторы
