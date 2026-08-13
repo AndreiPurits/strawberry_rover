@@ -1,0 +1,55 @@
+# Peduncle grasp association v1 (safe first version)
+# Feature flag: set enabled: true to use new close-up association path.
+
+enabled: true
+legacy_large_crop: false  # keep old berry-anchored crop available for A/B
+
+mode: close  # far | close
+
+closeup_roi:
+  width_berry_scale: 1.4
+  height_above_calyx_scale: 0.55   # ~cuttable stem zone
+  height_below_calyx_scale: 0.35   # include calyx + top of berry
+  min_size_px: 96
+  max_size_px: 640
+
+association:
+  far_tau: 0.85
+  close_tau: 0.30
+  max_berry_iou: 0.40
+  max_obb_length_berry_scale: 0.70  # reject overlong stems
+  into_berry_max: 0.45
+  # weights; unavailable features are skipped and weights renormalized
+  w_confidence: 0.25
+  w_proximity: 0.35
+  w_contact: 0.20
+  w_direction: 0.20
+  w_continuity: 0.0   # unavailable in v1
+  w_depth: 0.0        # unavailable without depth map in offline demo
+  w_occlusion: 0.0
+  w_crossing: 0.10
+  min_score: 0.28
+  min_model_conf: 0.15
+
+cut:
+  offset_berry_scale: 0.22   # along axis from base toward tip
+  offset_px: null            # if set, overrides scale (px)
+  offset_mm: null            # preferred when depth+calib available
+  clearance_radius_berry_scale: 0.12
+  min_depth_valid_neighbors: 5
+
+calyx:
+  use_model: false           # no calyx model yet
+  geometry_fallback: true
+  tip_band_frac: 0.12
+  geometry_confidence: 0.35
+
+temporal_verification:
+  required_frames: 3
+  max_base_shift_px: 18
+  max_cut_shift_px: 22
+  max_cut_shift_mm: 8.0
+  max_angle_change_deg: 25.0
+
+viewpoint:
+  max_attempts: 3
