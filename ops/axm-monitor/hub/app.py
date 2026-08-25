@@ -868,6 +868,8 @@ async def api_roarm_rpc(body: RoArmRpcBody, user: str = Depends(require_user)) -
         timeout_s = float(_env("AXM_ROARM_MOVE_RPC_TIMEOUT_S", "35"))
         if body.op == "home_joints_staged":
             timeout_s = float(_env("AXM_ROARM_STAGED_RPC_TIMEOUT_S", "120"))
+    elif body.op in ("plastic_manual_snap",):
+        timeout_s = float(_env("AXM_ROARM_SNAP_RPC_TIMEOUT_S", "45"))
     if body.op in ("gripper_close", "gripper_close_force"):
         timeout_s = float(_env("AXM_ROARM_GRIP_RPC_TIMEOUT_S", "25"))
     try:

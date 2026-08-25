@@ -206,6 +206,26 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
         if op == "gripper_open":
             url, resp = client.gripper_open()
             return {"ok": True, "url": url, "response": resp}
+        if op == "gripper_ctrl":
+            url, resp = client.gripper_ctrl(
+                float(params.get("cmd", 2.2)),
+                spd=float(params.get("spd", 0)),
+                acc=float(params.get("acc", 0)),
+                timeout_sec=_grip_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp}
+        if op == "dynamic_torque_limits":
+            url, resp = client.dynamic_torque_limits(
+                mode=int(params.get("mode", 0)),
+                b=int(params.get("b", 1000)),
+                s=int(params.get("s", 1000)),
+                e=int(params.get("e", 1000)),
+                t=int(params.get("t", 1000)),
+                r=int(params.get("r", 1000)),
+                g=int(params.get("g", 300)),
+                timeout_sec=_grip_timeout(),
+            )
+            return {"ok": True, "url": url, "response": resp}
         if op == "gripper_close":
             url, resp = client.gripper_close(timeout_sec=_grip_timeout())
             return {"ok": True, "url": url, "response": resp, "force": True}
@@ -256,6 +276,42 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
             from roarm_sequence_runner import sequence_status
 
             return {"ok": True, **sequence_status()}
+        if op == "plastic_manual_snap":
+            # Capture-only: never moves joints / approach / grasp.
+            import sys
+            from pathlib import Path as _Path
+
+            repo = _Path(__file__).resolve().parents[3]
+            if str(repo) not in sys.path:
+                sys.path.insert(0, str(repo))
+            from pipelines.peduncle_v3.plastic_manual_snap import take_manual_snap
+
+            joints = None
+            try:
+                _url, fb = client.servo_feedback(timeout_sec=5.0)
+                if isinstance(fb, dict):
+                    joints = {
+                        "base": float(fb.get("b", fb.get("base", 0))),
+                        "shoulder": float(fb.get("s", fb.get("shoulder", 0))),
+                        "elbow": float(fb.get("e", fb.get("elbow", 0))),
+                        "wrist": float(fb.get("t", fb.get("wrist", 0))),
+                        "roll": float(fb.get("r", fb.get("roll", 0))),
+                        "hand": float(fb.get("g", fb.get("hand", 0))),
+                    }
+            except Exception:
+                joints = None
+            out = take_manual_snap(joints=joints)
+            return out
+        if op == "plastic_manual_count":
+            import sys
+            from pathlib import Path as _Path
+
+            repo = _Path(__file__).resolve().parents[3]
+            if str(repo) not in sys.path:
+                sys.path.insert(0, str(repo))
+            from pipelines.peduncle_v3.plastic_manual_snap import count_shots
+
+            return {"ok": True, "count": count_shots()}
         return {"ok": False, "error": f"unknown_op:{op}"}
     except RoArmClientError as exc:
         return {"ok": False, "error": str(exc)}

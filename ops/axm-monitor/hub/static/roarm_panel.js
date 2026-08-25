@@ -485,6 +485,38 @@
     return data.point;
   }
 
+  async function plasticManualSnap() {
+    const statusEl = document.getElementById("plastic-snap-status");
+    const prev = document.getElementById("plastic-snap-preview");
+    if (statusEl) statusEl.textContent = "Снимаю…";
+    const data = await rpc("plastic_manual_snap", {}, { blocking: true });
+    if (!data || data.ok === false) {
+      const err = (data && (data.error || data.detail)) || "fail";
+      if (statusEl) statusEl.textContent = `Ошибка снимка: ${err}`;
+      log(`plastic_manual_snap ERROR ${err}`);
+      return null;
+    }
+    const n = data.count ?? "—";
+    const name = data.shot_id || data.crop_path || "—";
+    if (statusEl) {
+      statusEl.textContent = `Снято кадров: ${n} · последний: ${name}`;
+    }
+    if (prev && data.crop_jpeg_b64) {
+      prev.src = `data:image/jpeg;base64,${data.crop_jpeg_b64}`;
+      prev.classList.remove("hidden");
+    }
+    log(`plastic_manual_snap OK ${name} n=${n}`);
+    return data;
+  }
+
+  async function refreshPlasticSnapCount() {
+    const statusEl = document.getElementById("plastic-snap-status");
+    const data = await rpc("plastic_manual_count", {}, { blocking: false, silent: true });
+    if (data && data.ok !== false && statusEl && !String(statusEl.textContent || "").includes("последний")) {
+      statusEl.textContent = `Снято кадров: ${data.count ?? 0}`;
+    }
+  }
+
   async function captureFromArm() {
     setPtStatus("Читаю позицию T:105…");
     const data = await rpc("feedback", {}, { blocking: true });
@@ -1072,6 +1104,7 @@
 
     document.getElementById("btn-refresh")?.addEventListener("click", () => refreshStatus(true));
     document.getElementById("btn-home")?.addEventListener("click", () => goHome());
+    document.getElementById("btn-plastic-snap")?.addEventListener("click", () => plasticManualSnap());
     document.getElementById("pt-save")?.addEventListener("click", () => savePoint());
     document.getElementById("pt-go")?.addEventListener("click", () => goToPoint(selectedPoint()));
     document.getElementById("pt-set-home")?.addEventListener("click", () => setSelectedAsHome());
@@ -1210,6 +1243,7 @@
       loadPoints();
       updateStereoCamera(device);
       updateApproachUi(device);
+      refreshPlasticSnapCount();
     },
     onFleetUpdate(device) {
       if (!device) return;
