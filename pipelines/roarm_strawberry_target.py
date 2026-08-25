@@ -24,6 +24,95 @@ _SRC_W = 848
 _SRC_H = 480
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _last_exclude_profile: Optional[str] = None
+_DEFAULT_MIN_BERRY_CONF = 0.70
+_DEFAULT_YOLO_INFER_CONF = 0.35
+_DEFAULT_COLOR_MAX_CY = 150.0
+_DEFAULT_COLOR_MAX_AREA_PX = 1100.0
+
+
+def min_berry_conf() -> float:
+    """Minimum detector confidence to treat a bbox as a strawberry."""
+    raw = os.environ.get("AXM_BERRY_MIN_CONF", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return _DEFAULT_MIN_BERRY_CONF
+
+
+def yolo_infer_conf() -> float:
+    """YOLO proposal threshold (recall); final gate uses min_berry_conf()."""
+    raw = os.environ.get("AXM_BERRY_YOLO_CONF", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return _DEFAULT_YOLO_INFER_CONF
+
+
+def color_max_cy() -> float:
+    raw = os.environ.get("AXM_BERRY_COLOR_MAX_CY", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return _DEFAULT_COLOR_MAX_CY
+
+
+def color_max_area_px() -> float:
+    raw = os.environ.get("AXM_BERRY_COLOR_MAX_AREA_PX", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return _DEFAULT_COLOR_MAX_AREA_PX
+
+
+def color_fallback_enabled() -> bool:
+    return os.environ.get("AXM_BERRY_COLOR_FALLBACK", "merge_only").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+        "disabled",
+    )
+
+
+def filter_berry_confidence(
+    detections: List[dict],
+    *,
+    min_conf: Optional[float] = None,
+) -> List[dict]:
+    floor = min_berry_conf() if min_conf is None else float(min_conf)
+    return [d for d in detections if float(d.get("conf", 0.0)) >= floor]
+
+
+def _filter_static_obstacles(detections: List[dict], width: int, height: int) -> List[dict]:
+    """Drop detections on fixed in-frame obstacles (cable bundle)."""
+    cable_x1 = float(os.environ.get("AXM_BERRY_CABLE_X1", "0")) * width
+    cable_y1 = float(os.environ.get("AXM_BERRY_CABLE_Y1", "0")) * height
+    cable_x2 = float(os.environ.get("AXM_BERRY_CABLE_X2", "0.34")) * width
+    cable_y2 = float(os.environ.get("AXM_BERRY_CABLE_Y2", "0.68")) * height
+    kept: List[dict] = []
+    for det in detections:
+        cx, cy = _bbox_center(det)
+        if cable_x1 <= cx <= cable_x2 and cable_y1 <= cy <= cable_y2:
+            continue
+        kept.append(det)
+    return kept
+
+
+def _apply_detection_excludes(detections: List[dict], bgr) -> List[dict]:
+    h, w = bgr.shape[:2]
+    _, regions = _resolve_exclude_for_frame(bgr)
+    if regions:
+        _, _, filter_detections_exclude_regions, _ = _brightness_mask_module()
+        detections = filter_detections_exclude_regions(detections, regions, w, h)
+    return _filter_static_obstacles(detections, w, h)
 
 
 def _brightness_mask_module():
@@ -249,11 +338,7 @@ def _pick_detection(
     ]
     if near:
         return max(near, key=lambda d: _score_detection(d, last_px, last_py))
-    conf_min = 0.40
-    cx, cy = _bbox_center(best)
-    if cx > 560 or cx < 80 or cy < 70 or cy > 410:
-        conf_min = 0.32
-    return best if float(best.get("conf", 0)) >= conf_min else None
+    return best if float(best.get("conf", 0)) >= min_berry_conf() else None
 
 
 def _infer_on_bgr(det_model, bgr) -> List[dict]:
@@ -274,7 +359,7 @@ def _infer_on_bgr(det_model, bgr) -> List[dict]:
     if regions:
         _, _, filter_detections_exclude_regions, _ = _brightness_mask_module()
         out = filter_detections_exclude_regions(out, regions, w, h)
-    return out
+    return _filter_static_obstacles(out, w, h)
 
 
 def _center_distance(a: dict, b: dict) -> float:
@@ -284,15 +369,23 @@ def _center_distance(a: dict, b: dict) -> float:
 
 
 def _color_fallback_detections(bgr) -> List[dict]:
-    """Detect red berry-like blobs that YOLO misses; used for multi-berry preview."""
+    """Red-blob hints — only merged into an existing YOLO hit (never standalone)."""
+    if not color_fallback_enabled():
+        return []
     from pipelines.strawberry_color_detect import detect_red_berry_bboxes
 
+    masked = _apply_exclude_mask(bgr)
     out = []
+    max_cy = color_max_cy()
+    max_area = color_max_area_px()
     for x1, y1, x2, y2, score in detect_red_berry_bboxes(
-        bgr,
+        masked,
         min_area_px=int(os.environ.get("AXM_BERRY_COLOR_MIN_AREA", "18")),
-        max_area_frac=float(os.environ.get("AXM_BERRY_COLOR_MAX_AREA_FRAC", "0.08")),
+        max_area_frac=float(os.environ.get("AXM_BERRY_COLOR_MAX_AREA_FRAC", "0.04")),
     ):
+        area = float((x2 - x1) * (y2 - y1))
+        if area > max_area:
+            continue
         det = {
             "x1": float(x1),
             "y1": float(y1),
@@ -303,11 +396,11 @@ def _color_fallback_detections(bgr) -> List[dict]:
             "source": "color",
         }
         cx, cy = _bbox_center(det)
-        # Bench berries hang in the upper/mid frame; this rejects red gripper/table artifacts.
-        if cy > float(os.environ.get("AXM_BERRY_COLOR_MAX_CY", "230")):
+        if cy > max_cy:
             continue
         out.append(det)
-    return _filter_work_band(_filter_padding(out))
+    out = _filter_work_band(_filter_padding(out))
+    return _apply_detection_excludes(out, bgr)
 
 
 def _merge_color_fallback(yolo_dets: List[dict], color_dets: List[dict]) -> List[dict]:
@@ -315,20 +408,19 @@ def _merge_color_fallback(yolo_dets: List[dict], color_dets: List[dict]) -> List
     overlap_px = float(os.environ.get("AXM_BERRY_COLOR_MERGE_DIST_PX", "45"))
     for cdet in color_dets:
         near = [yd for yd in merged if _center_distance(yd, cdet) <= overlap_px]
-        if near:
-            for yd in near:
-                yd["color_score"] = max(float(yd.get("color_score", 0.0)), float(cdet.get("color_score", 0.0)))
+        if not near:
             continue
-        merged.append(cdet)
+        for yd in near:
+            yd["color_score"] = max(float(yd.get("color_score", 0.0)), float(cdet.get("color_score", 0.0)))
+            yd["color_merged"] = True
+            if float(cdet.get("conf", 0.0)) > float(yd.get("conf", 0.0)):
+                yd["conf"] = cdet["conf"]
     return sorted(merged, key=lambda d: float(d.get("conf", 0.0)), reverse=True)
 
 
 def _infer_full_and_roi(det_model, bgr, tracker: Optional["StrawberryTargetTracker"]) -> List[dict]:
-    import cv2
-
-    raw = _infer_on_bgr(det_model, bgr)
     if tracker is None or tracker.last_px is None or tracker.last_py is None:
-        return raw
+        return _infer_on_bgr(det_model, bgr)
 
     h, w = bgr.shape[:2]
     pad = int(tracker.roi_pad_px)
@@ -339,7 +431,7 @@ def _infer_full_and_roi(det_model, bgr, tracker: Optional["StrawberryTargetTrack
     x2 = min(w, cx + pad)
     y2 = min(h, cy + pad)
     if x2 - x1 < 40 or y2 - y1 < 40:
-        return raw
+        return _infer_on_bgr(det_model, bgr)
 
     crop = bgr[y1:y2, x1:x2]
     roi_dets = _infer_on_bgr(det_model, crop)
@@ -349,6 +441,15 @@ def _infer_full_and_roi(det_model, bgr, tracker: Optional["StrawberryTargetTrack
         det["y1"] = float(det["y1"]) + y1
         det["y2"] = float(det["y2"]) + y1
         det["from_roi"] = True
+
+    # During a locked approach the ROI normally contains the selected berry.
+    # Returning it immediately avoids the old full-frame + ROI double inference.
+    # A full-frame pass is still used when ROI inference misses, so recovery
+    # behavior remains available.
+    if roi_dets:
+        return roi_dets
+
+    raw = _infer_on_bgr(det_model, bgr)
     merged = {(
         round(float(d["x1"]), 0),
         round(float(d["y1"]), 0),
@@ -416,6 +517,14 @@ class StrawberryTargetTracker:
         self.hold_streak = 0
         self.lock_count = 0
 
+    def reanchor(self, px: float, py: float) -> None:
+        """Move the strict-lock ROI after a known eye-in-hand camera motion."""
+        self.last_px = float(px)
+        self.last_py = float(py)
+        self.last_bbox = None
+        self.lost_streak = 0
+        self.hold_streak = 0
+
     @property
     def is_lost(self) -> bool:
         return self.lost_streak >= 8 and self.hold_streak >= self.hold_max
@@ -437,7 +546,9 @@ def _get_detector(repo_root):
     from pipelines.strawberry_ensemble import YoloDetector, default_production_config
 
     cfg = default_production_config(Path(repo_root))
-    _detector = YoloDetector(cfg.detector_weights, "cuda", 480, 0.28, 0.6, 8)
+    _detector = YoloDetector(
+        cfg.detector_weights, "cuda", 480, yolo_infer_conf(), 0.6, 8
+    )
     return _detector
 
 
@@ -473,7 +584,30 @@ def detect_strawberries_in_frame(
     raw_dets = _infer_full_and_roi(det_model, bgr, tracker)
     yolo_dets = _filter_work_band(_filter_padding(raw_dets))
     color_dets = _color_fallback_detections(bgr)
-    return _merge_color_fallback(yolo_dets, color_dets)
+    merged = _merge_color_fallback(yolo_dets, color_dets)
+    if not yolo_dets:
+        seen = {
+            (
+                round(float(d["x1"]), 0),
+                round(float(d["y1"]), 0),
+                round(float(d["x2"]), 0),
+                round(float(d["y2"]), 0),
+            )
+            for d in merged
+        }
+        for cdet in color_dets:
+            if float(cdet.get("conf", 0.0)) < min_berry_conf():
+                continue
+            key = (
+                round(float(cdet["x1"]), 0),
+                round(float(cdet["y1"]), 0),
+                round(float(cdet["x2"]), 0),
+                round(float(cdet["y2"]), 0),
+            )
+            if key not in seen:
+                merged.append(cdet)
+        merged = sorted(merged, key=lambda d: float(d.get("conf", 0.0)), reverse=True)
+    return filter_berry_confidence(merged)
 
 
 def measure_strawberry_hub(
@@ -500,6 +634,9 @@ def measure_strawberry_hub(
         wh = (w, h)
         det = detect_strawberry_in_frame(bgr, det_model, tracker)
         if det is None and tracker and tracker.can_hold and depth_m_native is not None:
+            if float(tracker.last_conf) < min_berry_conf():
+                tracker.hold_streak += 1
+                continue
             cx = int(round(tracker.last_px))
             cy = int(round(tracker.last_py))
             depth_hub = _letterbox_array(depth_m_native, w, h)
@@ -508,7 +645,7 @@ def measure_strawberry_hub(
                 pxs.append(cx)
                 pys.append(cy)
                 ds.append(depth_val)
-                confs.append(max(0.2, tracker.last_conf * 0.85))
+                confs.append(float(tracker.last_conf))
                 tracker.hold_streak += 1
             continue
         if det is None:
