@@ -16,6 +16,9 @@
   /** Ожидаемые радианы после ручного ввода — не откатывать UI на устаревший feedback. */
   const pendingJointRad = {};
   const JOINT_FEEDBACK_TOL = 0.015;
+  /** Пока тянем слайдер / только что отправили joint_move — не синхронизировать с telemetry. */
+  let jointUiHoldUntil = 0;
+  const JOINT_UI_HOLD_MS = 15000;
 
   const JOINT_DEFS = [
     { id: 1, key: "b", label: "Основание", min: -3.14, max: 3.14 },
@@ -228,12 +231,13 @@
     const next = Number(value);
     pendingJointRad[joint.key] = next;
     patchFeedbackJoint(joint, next);
+    jointUiHoldUntil = Date.now() + JOINT_UI_HOLD_MS;
     const key = joint.key;
     setTimeout(() => {
       if (pendingJointRad[key] !== undefined && Math.abs(pendingJointRad[key] - next) < 0.0001) {
         delete pendingJointRad[key];
       }
-    }, 12000);
+    }, JOINT_UI_HOLD_MS);
   }
 
   function sendJointMove(joint, value) {
@@ -354,7 +358,10 @@
   function applyArmFeedback(fb) {
     if (!fb || typeof fb !== "object") return;
     lastFeedback = fb;
-    if (!motionBusy) syncJointSlidersFromFeedback(fb);
+    // Fleet telemetry приходит часто; после ручного joint_move не откатывать слайдеры.
+    if (!motionBusy && Date.now() >= jointUiHoldUntil) {
+      syncJointSlidersFromFeedback(fb);
+    }
     if (jsonEl) jsonEl.textContent = JSON.stringify(fb, null, 2);
   }
 

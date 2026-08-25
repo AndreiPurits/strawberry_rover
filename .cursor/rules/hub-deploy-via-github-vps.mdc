@@ -1,0 +1,48 @@
+---
+description: Деплой hub/UI — только через GitHub push и SSH на geekom (git pull + docker)
+alwaysApply: true
+---
+
+# Деплой: GitHub → geekom → сервис
+
+Любые изменения кода (hub, UI, fleet-agent, ops) **не считаются применёнными**, пока не пройден полный цикл ниже.
+
+**Нельзя** считать задачу выполненной после только локального редактирования или `docker build` без push.
+
+## Обязательный порядок
+
+1. **Commit** на Orin/PC (только нужные файлы, без `runs/`, `data/`, весов).
+2. **Push в GitHub** (`main`):
+   ```bash
+   cd ~/project
+   ~/project/scripts/git_push.sh
+   ```
+   Токен: `~/.config/axm/github.env` (`GITHUB_TOKEN`).
+3. **Деплой на VPS** (SSH `geekom_vlad` → `git pull` → пересборка hub):
+   ```bash
+   bash ops/axm-monitor/scripts/deploy_site_from_orin.sh
+   ```
+   Или с PC: `bash ops/axm-monitor/scripts/deploy_site_from_pc.sh`
+
+Скрипт на VPS выполняет `scripts/deploy_hub_vps.sh`:
+`git pull origin main` → `docker compose build hub` → `docker compose up -d hub` → `healthz`.
+
+## Ручной вариант (если скрипт недоступен)
+
+```bash
+ssh geekom_vlad
+cd /c/Users/redro/project/ops/axm-monitor   # или ~/project/ops/axm-monitor на VPS
+bash scripts/deploy_hub_vps.sh
+```
+
+## После деплоя
+
+- Сообщить оператору сделать **Ctrl+F5** на https://rover.axm.tech (кэш статики).
+- При смене версии ассетов — bump `?v=` в `dashboard.html`.
+- Проверить, что на VPS подтянулся нужный commit (`git log -1` в `ops/axm-monitor`).
+
+## Исключения
+
+- Только **Orin-local** (без hub): `systemctl --user restart axm-rover-online`, `ROARM_IP` в `~/.config/axm/fleet-agent.env` — push не нужен для fleet-agent, но hub/UI **всегда** через GitHub+VPS.
+
+Полная инструкция: `ops/axm-monitor/UPDATE_SITE.md`, `docs/agents_current_stack_instructions.md`.
