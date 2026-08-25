@@ -169,18 +169,31 @@ def nearest_demo(doc: Dict[str, Any], q_start: Dict[str, float], berry: Dict[str
     demos = [d for d in doc.get("demos") or [] if d.get("success")]
     if not demos:
         return None
-    return min(demos, key=lambda d: _demo_distance(d, q_start, berry))
+    # Keep DOM_FINAL priors: ignore demos whose start shoulder is far from current
+    # (legacy_v1 starts at ≈−0.84 and yields tgt_s≈1.02 from DOM −0.69).
+    q_s = float(q_start.get("shoulder", 0.0))
+    close = [
+        d
+        for d in demos
+        if abs(float((d.get("q_start") or {}).get("shoulder", q_s)) - q_s) <= 0.12
+    ]
+    pool = close or demos
+    return min(pool, key=lambda d: _demo_distance(d, q_start, berry))
 
 
-def load_local_jacobian(doc: Dict[str, Any], calib_path: Optional[Path] = None) -> Optional[np.ndarray]:
+def diagnose_local_jacobian(
+    doc: Dict[str, Any], calib_path: Optional[Path] = None
+) -> Tuple[Optional[np.ndarray], str]:
+    """Return (matrix_or_None, reason). reason is 'ok' when matrix is usable."""
     block = doc.get("local_jacobian") or {}
     matrix = block.get("matrix") if isinstance(block, dict) else None
     if matrix:
         if block.get("quality_ok") is not True:
-            return None
+            return None, "learned_local_jacobian_quality_ok_false"
         arr = np.array(matrix, dtype=np.float64)
         if arr.shape == (3, 3):
-            return arr
+            return arr, "ok"
+        return None, f"learned_local_jacobian_bad_shape:{arr.shape}"
     if calib_path and calib_path.is_file():
         cal = json.loads(calib_path.read_text(encoding="utf-8"))
         diag = cal.get("stage1", {}).get("diagnostic_3joint") or {}
@@ -189,15 +202,23 @@ def load_local_jacobian(doc: Dict[str, Any], calib_path: Optional[Path] = None) 
             for out in ("dpx", "dpy", "ddepth_m")
         ]
         if min(r2_values or [0.0]) < 0.25:
-            return None
+            return None, f"calib_jacobian_r2_below_0.25:min={min(r2_values or [0.0]):.3f}"
         rows = []
         for out in ("dpx", "dpy", "ddepth_m"):
             coef = (diag.get(out) or {}).get("coef")
             if coef and len(coef) == 3:
                 rows.append([float(coef[0]), float(coef[1]), float(coef[2])])
         if len(rows) == 3:
-            return np.array(rows, dtype=np.float64)
-    return None
+            return np.array(rows, dtype=np.float64), "ok"
+        return None, "calib_jacobian_incomplete_coef"
+    if not block:
+        return None, "no_local_jacobian_in_learned"
+    return None, "local_jacobian_unavailable"
+
+
+def load_local_jacobian(doc: Dict[str, Any], calib_path: Optional[Path] = None) -> Optional[np.ndarray]:
+    jac, _reason = diagnose_local_jacobian(doc, calib_path)
+    return jac
 
 
 def solve_delta_with_prior(
@@ -238,9 +259,14 @@ def plan_one_shot(
     prior_weight: float = 1.4,
 ) -> Dict[str, Any]:
     q0 = _as_float_dict(q_start)
+    demos = [d for d in learned.get("demos") or [] if d.get("success")]
     demo = nearest_demo(learned, q0, berry_lock)
     demo_start_px: Optional[float] = None
+    demo_dist: Optional[float] = None
+    demo_meta: Optional[Dict[str, Any]] = None
     if demo:
+        demo_dist = float(_demo_distance(demo, q0, berry_lock))
+        demo_idx = next((i for i, d in enumerate(demos) if d is demo), -1)
         dq_demo = np.array(
             [
                 float(demo.get("delta_q", {}).get("shoulder", 0.0)),
@@ -257,6 +283,16 @@ def plan_one_shot(
         target_py = float(target.get("py", berry_lock.get("py", 240.0)))
         target_depth = float(target.get("depth_m", standoff_m))
         reason = f"nearest_demo:{demo.get('source', 'unknown')}"
+        demo_meta = {
+            "id": demo_idx,
+            "source": demo.get("source"),
+            "distance": round(demo_dist, 4),
+            "q_start": dict(demo.get("q_start") or {}),
+            "q_success": dict(demo.get("q_success") or {}),
+            "delta_q": dict(demo.get("delta_q") or {}),
+            "berry_start": dict(demo_start),
+            "berry_success": dict(target),
+        }
     else:
         dq_demo = np.zeros(3, dtype=np.float64)
         target_px = 320.0
@@ -272,11 +308,15 @@ def plan_one_shot(
         ],
         dtype=np.float64,
     )
-    jacobian = load_local_jacobian(learned, calib_path)
+    jacobian, jac_reason = diagnose_local_jacobian(learned, calib_path)
     dq_s, dq_e, dq_b = solve_delta_with_prior(error, dq_demo, jacobian, prior_weight=prior_weight)
     adjustments: List[str] = []
-    if jacobian is None and demo_start_px is not None:
-        current_px = float(berry_lock.get("px", demo_start_px))
+    # Base-centering fallback is ONLY for no-demo. With a success demo, prior_only
+    # must keep the demonstrated base Δ (working DOM_FINAL → berry used ~+0.27 rad).
+    # Replacing it with pixel-center (commits after 870239d) zeroed base motion and
+    # left the final shoulder/FOV pose wrong relative to the trained approach.
+    if jacobian is None and demo is None:
+        current_px = float(berry_lock.get("px", FALLBACK_CENTER_PX))
         px_per_base = float(learned.get("fallback_px_per_base_rad") or FALLBACK_PX_PER_BASE_RAD)
         center_px = float(learned.get("fallback_center_px") or FALLBACK_CENTER_PX)
         default_gain = FALLBACK_BASE_CENTER_GAIN_RIGHT if current_px > center_px else FALLBACK_BASE_CENTER_GAIN
@@ -292,11 +332,24 @@ def plan_one_shot(
     q_target = apply_delta(q0, delta_q)
     dq_plan = np.array([delta_q["shoulder"], delta_q["elbow"], delta_q["base"]], dtype=np.float64)
     prediction = predict_berry(berry_lock, dq_plan, jacobian)
+    depth0 = float(berry_lock.get("depth_m", standoff_m))
+    expected_depth_change = float(prediction.get("depth_m", depth0)) - depth0
+    if jacobian is not None:
+        planner_mode = "learned_jacobian"
+        reason_suffix = " + local_jacobian_projection"
+    elif demo is not None:
+        planner_mode = "prior_only"
+        reason_suffix = " + prior_only"
+    else:
+        # Zero demo prior and no J — not a silent "fallback motion".
+        planner_mode = "no_demo_zero_prior"
+        reason_suffix = " + prior_only"
     warnings = [
         f"{name}_near_hard_limit"
         for name in JOINT_KEYS
         if near_hard_limit(name, q_target[name])
     ]
+    max_abs_dq = max(abs(float(delta_q[k])) for k in JOINT_KEYS)
     return {
         "schema": "roarm_berry_plan_v1",
         "q_start": q0,
@@ -305,11 +358,52 @@ def plan_one_shot(
         "delta_q": delta_q,
         "prediction": prediction,
         "confidence": 0.85 if demo else 0.35,
-        "reason": reason + (" + local_jacobian_projection" if jacobian is not None else " + prior_only"),
+        "reason": reason + reason_suffix,
+        "planner_mode": planner_mode,
+        "n_demos": len(demos),
+        "demo": demo_meta,
+        "jacobian_used": jacobian is not None,
+        "jacobian_reason": jac_reason if jacobian is not None else jac_reason,
         "target_image": {"px": target_px, "py": target_py, "depth_m": target_depth},
+        "expected_depth_change_m": round(expected_depth_change, 4),
+        "max_abs_delta_q": round(max_abs_dq, 4),
         "warnings": warnings,
         "adjustments": adjustments,
     }
+
+
+def validate_plan_motion(
+    plan: Dict[str, Any],
+    *,
+    min_abs_delta_q: float = 0.08,
+    require_approach_depth: bool = True,
+    standoff_max_m: float = 0.17,
+) -> Tuple[bool, str]:
+    """Reject zero / non-approach commands before sending joints."""
+    delta = plan.get("delta_q") or {}
+    max_dq = max(abs(float(delta.get(k, 0.0))) for k in JOINT_KEYS)
+    if plan.get("planner_mode") == "no_demo_zero_prior" or int(plan.get("n_demos") or 0) <= 0:
+        return False, "no_successful_demo_for_label"
+    if max_dq < min_abs_delta_q:
+        return False, f"near_zero_delta_q max_abs={max_dq:.4f}"
+    # Approach should extend arm toward berry: typically shoulder+, elbow-
+    d_sh = float(delta.get("shoulder", 0.0))
+    d_el = float(delta.get("elbow", 0.0))
+    if d_sh < 0.05 and d_el > -0.05:
+        return False, f"delta_not_approach_like sh={d_sh:+.3f} el={d_el:+.3f}"
+    berry = plan.get("berry_lock") or {}
+    depth0 = float(berry.get("depth_m", 9.0))
+    target_depth = float((plan.get("target_image") or {}).get("depth_m", standoff_max_m))
+    if require_approach_depth and depth0 > standoff_max_m + 0.02:
+        if target_depth >= depth0 - 0.02:
+            return False, f"target_depth_not_closer depth0={depth0:.3f} target={target_depth:.3f}"
+    q_target = plan.get("q_target") or {}
+    for name in JOINT_KEYS:
+        lo, hi = HARD_JOINT_LIMITS[name]
+        v = float(q_target.get(name, 0.0))
+        if v < lo - 1e-6 or v > hi + 1e-6:
+            return False, f"joint_limit_{name}={v:.3f}"
+    return True, "ok"
 
 
 def verify_success(
@@ -321,7 +415,7 @@ def verify_success(
     *,
     expected_px: Optional[float] = None,
     expected_py: Optional[float] = None,
-    min_conf: float = 0.5,
+    min_conf: float = 0.70,
     depth_min_m: float = 0.10,
     depth_max_m: float = 0.17,
 ) -> Tuple[bool, Dict[str, Any]]:
