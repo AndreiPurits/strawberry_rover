@@ -1,0 +1,9 @@
+schema: roarm_m3_handeye_calibration_v1
+status: NOT_CALIBRATED
+mount:
+  type: eye_in_hand
+  parent_frame: link5
+  camera_frame: stereo_camera_color_optical_frame
+T_link5_camera: null
+independent_known_point_validation: NOT_RUN
+kin_gate: FAIL
