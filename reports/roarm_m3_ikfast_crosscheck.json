@@ -1,0 +1,61 @@
+{
+  "schema": "roarm_m3_ikfast_crosscheck_v1",
+  "samples": 2000,
+  "sample_range": {
+    "base": [
+      -1.2,
+      1.2
+    ],
+    "shoulder": [
+      -1.2,
+      1.2
+    ],
+    "elbow": [
+      0.45,
+      2.9
+    ],
+    "wrist": [
+      -1.2,
+      1.2
+    ],
+    "roll": [
+      -1.2,
+      1.2
+    ]
+  },
+  "analytic": {
+    "success": 2000,
+    "nearest_seed_joint_error_rad": {
+      "mean": 7.940925746728202e-16,
+      "median": 6.843874359417885e-16,
+      "p95": 1.6383109057980729e-15,
+      "max": 5.440376033450541e-15
+    },
+    "fk_residual_mm_max": 3.639754730461873e-13
+  },
+  "official_ikfast": {
+    "source": "waveshareteam/roarm_ws roarm_m3_hand_ikfast_solver.cpp",
+    "success": 2000,
+    "solution_count": {
+      "min": 2,
+      "median": 4.0,
+      "max": 8
+    },
+    "nearest_seed_joint_error_rad": {
+      "mean": 7.751871113687104e-15,
+      "median": 3.823876992728835e-15,
+      "p95": 2.9919756547942324e-14,
+      "max": 1.5945079356016285e-13
+    }
+  },
+  "frame_note": "IKFast targets official URDF hand_tcp; firmware FK targets its edge/tool endpoint, so raw XYZ are not expected to match without a fixed-frame/tool mapping.",
+  "raw_urdf_hand_tcp_minus_firmware_endpoint_mm": {
+    "mean": [
+      -0.939397374008586,
+      0.00662204658865277,
+      51.38059651516239
+    ],
+    "p95_norm": 54.74112826861912,
+    "max_norm": 54.84611544258157
+  }
+}

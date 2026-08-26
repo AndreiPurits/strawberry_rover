@@ -1,0 +1,44 @@
+{
+  "schema": "roarm_m3_t105_fk_samples_v1",
+  "captured_at": "2026-08-26",
+  "capture_mode": "read_only_T105_no_motion",
+  "notes": [
+    "Repository run logs contain many joint states but no saved firmware x/y/z/tit fields.",
+    "Ten feedback reads were attempted at the unchanged physical pose; two identical replies arrived before the ESP32 reset the next connection.",
+    "The duplicate reply is retained so repeated-feedback statistics are explicit; unique-pose count is one."
+  ],
+  "samples": [
+    {
+      "id": "orin_new_t105_20260826_1",
+      "feedback": {
+        "T": 1051,
+        "x": 450.4222311,
+        "y": 271.8544835,
+        "z": -167.7932026,
+        "tit": 0.360485485,
+        "b": 0.543029199,
+        "s": 1.636757501,
+        "e": 0.279184503,
+        "t": 0.015339808,
+        "r": -0.003067962,
+        "g": 1.153553552
+      }
+    },
+    {
+      "id": "orin_new_t105_20260826_2_duplicate",
+      "feedback": {
+        "T": 1051,
+        "x": 450.4222311,
+        "y": 271.8544835,
+        "z": -167.7932026,
+        "tit": 0.360485485,
+        "b": 0.543029199,
+        "s": 1.636757501,
+        "e": 0.279184503,
+        "t": 0.015339808,
+        "r": -0.003067962,
+        "g": 1.153553552
+      }
+    }
+  ]
+}
