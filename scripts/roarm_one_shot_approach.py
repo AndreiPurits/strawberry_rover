@@ -1695,12 +1695,28 @@ def main() -> int:
         ),
     )
     ap.add_argument(
+        "--peduncle-model",
+        default="v3",
+        choices=("v3", "v31_plastic"),
+        help=(
+            "Peduncle OBB pack: v3=production (default); "
+            "v31_plastic=lab domain-adaptation (config/peduncle_v3_1_plastic_lab.yaml). "
+            "Does not change berry approach / calyx / association JSON."
+        ),
+    )
+    ap.add_argument(
         "--plan-only",
         action="store_true",
         help="Go to home pose, lock berry, run planner STATUS/dry-run gate, do not move to target.",
     )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    # Lab peduncle pack via dedicated config (production peduncle.* untouched).
+    if str(getattr(args, "peduncle_model", "v3")) == "v31_plastic":
+        os.environ["PEDUNCLE_V3_CONFIG"] = str(
+            (REPO / "config/peduncle_v3_1_plastic_lab.yaml").resolve()
+        )
+        print(f"[one] peduncle-model=v31_plastic → {os.environ['PEDUNCLE_V3_CONFIG']}")
     if args.peduncle_grasp:
         # Keep calibrated DOM_FINAL start (has demos). Do NOT rewrite to HOME:
         # home_learned has 0 demos → zero prior → zero motion.

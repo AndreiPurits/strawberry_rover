@@ -1,0 +1,119 @@
+# Peduncle v3 runtime on Orin New (after successful berry approach).
+# Prefer TensorRT .engine (built for TRT 8.5.2). Association threshold is config-only.
+
+enabled: true
+runtime_preference: engine   # engine > onnx > pt
+device: "0"
+precision: fp16
+
+model_roots:
+  - runs/deploy_orin_new
+  - models/hf_peduncle_v3
+  - models/hf_strawberry
+
+models:
+  calyx:
+    engine: models/calyx.engine
+    onnx: models/calyx.onnx
+    pt: models/calyx.pt
+    imgsz: 640
+  peduncle:
+    engine: models/peduncle.engine
+    onnx: models/peduncle.onnx
+    pt: models/peduncle.pt
+    imgsz: 640
+  association:
+    json: models/association_logreg_v3.json
+    threshold: 0.1   # deployment default (see configs/inference_v3.yaml)
+
+association:
+  threshold: 0.1
+  ambiguity_margin: 0.05
+
+# Gate: only run after berry approach confirms close standoff.
+depth_min_m: 0.08
+depth_max_m: 0.17
+require_approach_ok: true
+
+# Pre-calyx framing: berry fully in FOV with headroom for stem/calyx (normalized image coords).
+# y increases downward; target_ny > 0.5 leaves space above the berry for calyx ROI.
+framing:
+  target_nx: 0.50
+  target_ny: 0.58
+  tol_nx: 0.08
+  tol_ny: 0.08
+  edge_margin_px: 12
+  headroom_berry_scale: 0.85
+  headroom_min_px: 40
+  side_pad_berry_scale: 0.25
+  max_center_iters: 6
+  max_step_rad: 0.10
+  center_gain: 0.90
+  max_move_px: 160
+  settle_s: 0.28
+  lookup_iters: 3
+  depth_aim_m: 0.14
+  depth_slack_m: 0.030
+
+infer:
+  calyx_conf: 0.15
+  peduncle_conf: 0.15
+  peduncle_iou: 0.45
+  peduncle_max_det: 15
+
+focus_roi:
+  width_scale: 1.6
+  height_above_scale: 0.85
+  height_below_scale: 0.45
+  min_size_px: 160
+  max_size_px: 640
+  pad_px: 8
+
+# Safe stem standoff (no cut). Off unless CLI --peduncle-standoff / --peduncle-grasp.
+standoff:
+  enabled_default: false
+  offset_berry_scale: 0.22
+  standoff_depth_m: 0.12
+
+# Grasp point on stem centerline (separate from cut; no cut in this stage).
+grasp_point:
+  offset_berry_scale: 0.32
+  min_offset_berry_scale: 0.28
+  min_offset_px: 8.0
+  tip_margin_scale: 0.18
+  tip_margin_px: 6.0
+  min_calyx_clearance_berry_scale: 0.18
+  min_stem_length_px: 12.0
+
+temporal_verification:
+  required_frames: 3
+  max_acquire_frames: 7
+  frame_gap_s: 0.12
+  max_base_shift_px: 18
+  max_grasp_shift_px: 22
+  max_calyx_shift_px: 20
+  max_angle_change_deg: 25
+  max_obb_switch_px: 28
+
+# Opt-in --peduncle-grasp: standoff → approach → gentle T:106 close → verify → STOP (no cut).
+grasp:
+  pre_acquire_settle_s: 0.35
+  post_standoff_settle_s: 0.40
+  pre_close_settle_s: 0.25
+  standoff_spd: 0.10
+  standoff_acc: 6.0
+  approach_spd: 0.08
+  approach_acc: 5.0
+  final_approach_depth_m: 0.09
+  max_grasp_depth_m: 0.22
+  # Gentle close: existing T:106 gripper_ctrl (NOT gripper_close force path).
+  close_cmd: 2.2
+  close_spd: 0
+  close_acc: 8
+  torque_g: 300
+  settle_s: 0.8
+  verify_g_min: 1.45
+  verify_g_tol: 0.55
+
+logging:
+  dir: runs/peduncle_v3_runtime

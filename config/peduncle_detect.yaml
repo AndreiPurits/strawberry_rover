@@ -1,0 +1,24 @@
+# Peduncle OBB detector — only when berry standoff is confirmed close.
+
+enabled: true
+
+# Camera→berry depth gate (meters). Outside this range the model is not run.
+depth_min_m: 0.08
+depth_max_m: 0.15
+
+weights: models/peduncle/peduncle_obb_yolov8n_v21_best.pt
+# HF source (gated): AndreiPurits/strawBerry → models/peduncle_obb_yolov8n_v21_best.pt
+
+infer:
+  conf: 0.15
+  iou: 0.45
+  imgsz: 640
+  max_det: 10
+
+# Close-up ROI around berry before OBB (relative to berry bbox height).
+roi:
+  width_berry_scale: 1.4
+  height_above_scale: 0.55
+  height_below_scale: 0.35
+  min_size_px: 96
+  max_size_px: 640
