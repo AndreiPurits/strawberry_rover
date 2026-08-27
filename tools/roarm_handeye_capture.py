@@ -124,12 +124,16 @@ def main() -> int:
     capture_dir.mkdir(parents=True, exist_ok=True)
     image_path = capture_dir / (args.id + ".png")
     overlay_path = capture_dir / (args.id + "_overlay.png")
+    depth_path = capture_dir / (args.id + "_depth_m.npy")
     if not cv2.imwrite(str(image_path), frame.rgb_bgr):
         raise RuntimeError("failed to save raw image")
     cv2.imwrite(
         str(overlay_path),
         draw_detection(frame.rgb_bgr, detection, cols=args.cols, rows=args.rows),
     )
+    if frame.depth_m is None:
+        raise RuntimeError("aligned depth unavailable")
+    np.save(str(depth_path), np.asarray(frame.depth_m, dtype=np.float32))
 
     payload = {
         "schema": SCHEMA,
@@ -162,6 +166,7 @@ def main() -> int:
                 "q": q.as_dict(),
                 "raw_image": str(image_path),
                 "overlay": str(overlay_path),
+                "aligned_depth_m": str(depth_path),
             }
         )
     )
