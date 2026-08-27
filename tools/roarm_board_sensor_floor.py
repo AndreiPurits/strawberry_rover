@@ -95,12 +95,15 @@ def main() -> int:
     depth_points = []
     reprojection = []
     depth_vs_pnp = []
+    frame_stamps = []
     failed = 0
     try:
         intrinsics = wait_intrinsics(provider, args.timeout_s)
         fx, fy = intrinsics.camera_matrix[0, 0], intrinsics.camera_matrix[1, 1]
         cx, cy = intrinsics.camera_matrix[0, 2], intrinsics.camera_matrix[1, 2]
         for _ in range(args.frames):
+            provider._rgb_buf.clear()
+            provider._depth_buf.clear()
             frame = provider.read(timeout_s=args.timeout_s)
             detection = detect_chessboard(
                 frame.rgb_bgr,
@@ -129,6 +132,7 @@ def main() -> int:
             depth_points.append(depth_point)
             reprojection.append(detection.reprojection_rmse_px)
             depth_vs_pnp.append(float(np.linalg.norm(depth_point - pnp_corner)))
+            frame_stamps.append(float(frame.stamp_s))
             time.sleep(args.interval_s)
     finally:
         provider.close()
@@ -149,6 +153,7 @@ def main() -> int:
         "status": "MEASURED_STATIC_NO_MOTION",
         "requested_frames": args.frames,
         "valid_54_corner_frames": len(pnp_points),
+        "unique_rgb_frame_stamps": len(set(frame_stamps)),
         "failed_frames": failed,
         "feedback_before": before,
         "feedback_after": after,

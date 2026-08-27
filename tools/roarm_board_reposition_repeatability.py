@@ -116,6 +116,8 @@ def main() -> int:
             move(away[index % 2], args.settle_s)
             move(anchor, args.settle_s)
             fresh = feedback()
+            provider._rgb_buf.clear()
+            provider._depth_buf.clear()
             frame = provider.read(timeout_s=args.timeout_s)
             detection = detect_chessboard(
                 frame.rgb_bgr,
