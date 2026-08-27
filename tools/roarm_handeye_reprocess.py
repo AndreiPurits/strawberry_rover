@@ -68,6 +68,7 @@ def main() -> int:
                 transform_camera_board=detection.transform_camera_board,
                 split=observation.split,
                 reprojection_rmse_px=detection.reprojection_rmse_px,
+                q_rad=observation.q_rad,
             )
         )
         cv2.imwrite(

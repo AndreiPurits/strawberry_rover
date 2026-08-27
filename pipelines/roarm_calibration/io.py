@@ -21,6 +21,7 @@ def observation_to_dict(observation: HandEyeObservation) -> Dict[str, object]:
         "T_base_link5": observation.transform_base_link5.to_dict(),
         "T_camera_board": observation.transform_camera_board.to_dict(),
         "reprojection_rmse_px": observation.reprojection_rmse_px,
+        "q_rad": None if observation.q_rad is None else list(observation.q_rad),
     }
 
 
@@ -42,6 +43,11 @@ def observation_from_dict(value: Mapping[str, object]) -> HandEyeObservation:
             None
             if value.get("reprojection_rmse_px") is None
             else float(value["reprojection_rmse_px"])
+        ),
+        q_rad=(
+            None
+            if value.get("q_rad") is None
+            else tuple(float(item) for item in value["q_rad"])
         ),
     )
 

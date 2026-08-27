@@ -27,6 +27,7 @@ class HandEyeObservation:
     transform_camera_board: RigidTransform
     split: str = "train"
     reprojection_rmse_px: Optional[float] = None
+    q_rad: Optional[Tuple[float, float, float, float, float]] = None
 
     def __post_init__(self) -> None:
         if self.transform_base_link5.parent != "base_link" or self.transform_base_link5.child != "link5":
@@ -38,6 +39,11 @@ class HandEyeObservation:
             raise ValueError("expected T_stereo_camera_color_optical_frame_calibration_board")
         if self.split not in ("train", "validation"):
             raise ValueError("split must be train or validation")
+        if self.q_rad is not None:
+            values = tuple(float(value) for value in self.q_rad)
+            if len(values) != 5 or not np.isfinite(values).all():
+                raise ValueError("q_rad must contain five finite pose joints")
+            object.__setattr__(self, "q_rad", values)
 
 
 @dataclass(frozen=True)

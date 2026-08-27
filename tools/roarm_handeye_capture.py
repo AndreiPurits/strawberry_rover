@@ -114,6 +114,7 @@ def main() -> int:
         transform_base_link5=base_to_link5(q.as_array()),
         transform_camera_board=detection.transform_camera_board,
         reprojection_rmse_px=detection.reprojection_rmse_px,
+        q_rad=tuple(map(float, q.as_array())),
     )
     existing = load_dataset(args.dataset) if args.dataset.exists() else []
     if any(item.observation_id == args.id for item in existing):
