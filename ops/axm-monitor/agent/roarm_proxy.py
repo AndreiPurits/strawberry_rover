@@ -319,3 +319,82 @@ def execute_rpc(op: str, params: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": str(exc)}
     finally:
         _rpc_end()
+
+
+def _repo_root():
+    from pathlib import Path as _Path
+
+    return _Path(__file__).resolve().parents[3]
+
+
+def load_named_home_joints(pose_name: str) -> Dict[str, float]:
+    """Load joint pose from config/roarm_home_joints.yaml (e.g. DOM_FINAL)."""
+    import yaml
+
+    path = _repo_root() / "config" / "roarm_home_joints.yaml"
+    cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    pose = cfg.get(str(pose_name).strip().upper())
+    if not isinstance(pose, dict):
+        raise KeyError(f"unknown_home_pose:{pose_name}")
+    return {
+        "base": float(pose.get("base", 0)),
+        "shoulder": float(pose.get("shoulder", 0)),
+        "elbow": float(pose.get("elbow", 1.57)),
+        "wrist": float(pose.get("wrist", 0)),
+        "roll": float(pose.get("roll", 0)),
+        "hand": float(pose.get("hand", 3.14)),
+    }
+
+
+def startup_home_pose_name() -> Optional[str]:
+    """ROARM_STARTUP_HOME: pose name (default DOM_FINAL) or off/0/false to disable."""
+    raw = _env("ROARM_STARTUP_HOME", "DOM_FINAL")
+    if not raw or raw.lower() in ("0", "false", "no", "off", "none", "disable", "disabled"):
+        return None
+    return raw.strip().upper()
+
+
+def go_named_home_staged(pose_name: str, *, acc: float = 12.0) -> Dict[str, Any]:
+    joints = load_named_home_joints(pose_name)
+    params = {**joints, "spd": 0.0, "acc": float(acc)}
+    return execute_rpc("home_joints_staged", params)
+
+
+def start_roarm_startup_home_thread() -> Optional[threading.Thread]:
+    """On Orin boot / fleet-agent start: staged move to DOM_FINAL (or ROARM_STARTUP_HOME)."""
+    pose = startup_home_pose_name()
+    if not pose or not roarm_enabled():
+        return None
+
+    delay_s = float(_env("ROARM_STARTUP_HOME_DELAY_S", "4"))
+    retries = max(1, int(float(_env("ROARM_STARTUP_HOME_RETRIES", "6"))))
+    retry_s = float(_env("ROARM_STARTUP_HOME_RETRY_S", "5"))
+
+    def _run() -> None:
+        print(f"[fleet-agent] roarm startup home → {pose} (delay={delay_s:.1f}s)")
+        if delay_s > 0:
+            time.sleep(delay_s)
+        last_err = "unreachable"
+        for attempt in range(1, retries + 1):
+            try:
+                st = probe_status(force=True)
+                if not st.get("reachable"):
+                    last_err = str(st.get("error") or "not_reachable")
+                    print(f"[fleet-agent] startup home wait {attempt}/{retries}: {last_err}")
+                    time.sleep(retry_s)
+                    continue
+                out = go_named_home_staged(pose)
+                if out.get("ok"):
+                    print(f"[fleet-agent] startup home OK → {pose}")
+                    return
+                last_err = str(out.get("error") or "move_failed")
+                print(f"[fleet-agent] startup home fail {attempt}/{retries}: {last_err}")
+            except Exception as exc:
+                last_err = str(exc)
+                print(f"[fleet-agent] startup home error {attempt}/{retries}: {last_err}")
+            time.sleep(retry_s)
+        print(f"[fleet-agent] startup home ABORT → {pose}: {last_err}")
+
+    t = threading.Thread(target=_run, daemon=True, name="roarm-startup-home")
+    t.start()
+    return t

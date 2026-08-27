@@ -19,7 +19,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from gnss_reader import gnss_snapshot, start_gnss_reader
 from ntrip_client import ntrip_configured
 from mega_client import port_busy, port_exists, probe_mega, send_command, twist_to_pwm
-from roarm_proxy import execute_rpc, roarm_enabled, telemetry_snapshot as roarm_telemetry
+from roarm_proxy import (
+    execute_rpc,
+    roarm_enabled,
+    start_roarm_startup_home_thread,
+    telemetry_snapshot as roarm_telemetry,
+)
 from roarm_strawberry_preview import (
     collect_roarm_strawberry_preview,
     last_strawberry_overlay,
@@ -1122,6 +1127,7 @@ def main() -> int:
     )
     if roarm_enabled():
         print(f"[fleet-agent] roarm enabled ip={_env('ROARM_IP', '192.168.1.87')}")
+        start_roarm_startup_home_thread()
     cam_thread = threading.Thread(
         target=_camera_stream_loop,
         args=(args.hub_url, args.rover_id, args.token, args.local_web, cam_stop),
