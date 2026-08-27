@@ -45,6 +45,24 @@ class ChessboardDetection:
     reprojection_rmse_px: float
 
 
+def canonicalize_corner_order(corners_px: np.ndarray) -> np.ndarray:
+    """Resolve the checkerboard's 180-degree indexing ambiguity.
+
+    The physical board has no asymmetric marker. Within the approved RoArm
+    calibration envelope (camera never rolls through 90 degrees), the
+    lower-right image corner is a stable canonical board origin. OpenCV SB can
+    otherwise return the exact same grid in reverse order on an occasional
+    frame, producing a valid reprojection error but a 180-degree board-frame
+    flip that corrupts hand-eye calibration.
+    """
+    corners = np.asarray(corners_px, dtype=np.float64).reshape(-1, 2)
+    if len(corners) < 2:
+        raise ValueError("at least two corners are required")
+    if float(np.sum(corners[0])) < float(np.sum(corners[-1])):
+        corners = corners[::-1].copy()
+    return corners
+
+
 def object_points(cols: int, rows: int, square_size_mm: float) -> np.ndarray:
     if cols < 3 or rows < 3:
         raise ValueError("cols and rows are inner-corner counts and must be >= 3")
@@ -90,7 +108,7 @@ def detect_chessboard(
         return None
 
     board_points = object_points(cols, rows, square_size_mm)
-    image_points = np.asarray(corners, dtype=np.float64).reshape(-1, 2)
+    image_points = canonicalize_corner_order(corners)
     ok, rvec, tvec = cv2.solvePnP(
         board_points,
         image_points,

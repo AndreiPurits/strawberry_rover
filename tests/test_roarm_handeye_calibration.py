@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from pipelines.roarm_calibration.handeye import HandEyeObservation, solve_handeye
+from pipelines.roarm_calibration.chessboard import canonicalize_corner_order
 from pipelines.roarm_calibration.se3 import (
     RigidTransform,
     rotation_angle_rad,
@@ -53,6 +54,11 @@ def synthetic_observations():
 
 
 class RoArmHandEyeCalibrationTests(unittest.TestCase):
+    def test_chessboard_corner_order_is_canonical(self):
+        canonical = np.asarray([[500.0, 300.0], [450.0, 250.0], [300.0, 100.0]])
+        np.testing.assert_allclose(canonicalize_corner_order(canonical), canonical)
+        np.testing.assert_allclose(canonicalize_corner_order(canonical[::-1]), canonical)
+
     def test_named_transform_composition_and_frame_gate(self):
         a_b = RigidTransform.from_rt("a", "b", np.eye(3), [1, 2, 3])
         b_c = RigidTransform.from_rt("b", "c", np.eye(3), [4, 5, 6])
