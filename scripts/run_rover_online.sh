@@ -21,9 +21,33 @@ fi
 source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
 pip install -q pyserial 2>/dev/null || true
 
+# OpenBLAS for torch/YOLO berry overlay on hub stereo
+_OPENBLAS="$REPO_ROOT/.local_libs/usr/lib/aarch64-linux-gnu/openblas-pthread"
+_LOCAL_LIBS="$REPO_ROOT/.local_libs/usr/lib/aarch64-linux-gnu"
+if [[ -d "$_OPENBLAS" ]]; then
+  export LD_LIBRARY_PATH="${_OPENBLAS}:${_LOCAL_LIBS}:${LD_LIBRARY_PATH:-}"
+fi
+
 MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
 LOG_DIR="${AXM_LOG_DIR:-$HOME/.local/log/axm}"
 mkdir -p "$LOG_DIR"
+
+wait_for_hub() {
+  local hub="${AXM_HUB_URL%/}"
+  local tries="${AXM_HUB_WAIT_TRIES:-40}"
+  local i
+  echo "[rover_online] waiting for hub ${hub} (telemetry)…"
+  for i in $(seq 1 "$tries"); do
+    if wget -qO- --timeout=4 "${hub}/login" >/dev/null 2>&1 \
+      || curl -fsS --max-time 4 "${hub}/login" >/dev/null 2>&1; then
+      echo "[rover_online] hub reachable → telemetry will link via fleet-agent"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "[rover_online] WARN: hub not reachable yet — fleet-agent will keep retrying heartbeats" >&2
+  return 0
+}
 
 run_chassis() {
   exec MEGA_PORT="$MEGA_PORT" "$REPO_ROOT/scripts/run_chassis_web.sh"
@@ -51,24 +75,26 @@ case "${1:-all}" in
 
     echo "[rover_online] logs: $LOG_DIR"
     echo "[rover_online] hub: $AXM_HUB_URL rover: ${AXM_ROVER_ID:-rover-01}"
+    wait_for_hub
     LIDAR_PORT="${LIDAR_PORT:-/dev/ttyUSB1}"
     CAMERA_DEVICE="${CAMERA_DEVICE:-0}"
     STEREO_CAMERA_DEVICE="${STEREO_CAMERA_DEVICE:-4}"
+    STEREO_SOURCE="${STEREO_SOURCE:-realsense}"
     MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB0}"
     if [ ! -e "$LIDAR_PORT" ] && detected="$(axm_detect_lidar_port "$MEGA_PORT" 2>/dev/null || true)"; then
       LIDAR_PORT="$detected"
     fi
-    echo "[rover_online] perception camera=${CAMERA_DEVICE} stereo=${STEREO_CAMERA_DEVICE} lidar=${LIDAR_PORT}"
+    echo "[rover_online] perception camera=${CAMERA_DEVICE} stereo=${STEREO_CAMERA_DEVICE} source=${STEREO_SOURCE} lidar=${LIDAR_PORT}"
 
     axm_stop_fleet_chassis
 
     LIDAR_PORT="$LIDAR_PORT" CAMERA_DEVICE="$CAMERA_DEVICE" STEREO_CAMERA_DEVICE="$STEREO_CAMERA_DEVICE" \
-      USE_FAKE_LIDAR="${USE_FAKE_LIDAR:-}" \
+      STEREO_SOURCE="$STEREO_SOURCE" USE_FAKE_LIDAR="${USE_FAKE_LIDAR:-}" \
       bash "$REPO_ROOT/scripts/run_perception_sensors.sh" >>"$LOG_DIR/perception.log" 2>&1 &
     PERC_PID=$!
-    sleep 6
+    sleep 8
     if ! kill -0 "$PERC_PID" 2>/dev/null; then
-      PERC_PID="$(pgrep -f 'perception_sensors.launch.py' | head -1 || true)"
+      PERC_PID="$(pgrep -f 'stereo_realsense_depth.launch.py|perception_sensors.launch.py|run_perception_realsense' | head -1 || true)"
     fi
 
     if groups | grep -q dialout; then
@@ -82,6 +108,7 @@ case "${1:-all}" in
     "$REPO_ROOT/scripts/run_fleet_agent.sh" >>"$LOG_DIR/fleet-agent.log" 2>&1 &
     AG_PID=$!
     echo "[rover_online] chassis pid=$CH_PID agent pid=$AG_PID perception pid=${PERC_PID:-skipped}"
+    echo "[rover_online] telemetry → ${AXM_HUB_URL} (fleet-agent heartbeat + stereo)"
 
     sleep 3
     if ! wget -qO- --timeout=3 http://127.0.0.1:8080/api/health >/dev/null 2>&1; then
@@ -99,6 +126,15 @@ case "${1:-all}" in
       tail -10 "$LOG_DIR/chassis.log" 2>/dev/null || true
       exit 1
     fi
+
+    # Confirm hub heartbeats started (best-effort).
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      if rg -a -q "\\[fleet-agent\\] ok mode=" "$LOG_DIR/fleet-agent.log" 2>/dev/null; then
+        echo "[rover_online] hub telemetry linked (fleet heartbeat OK)"
+        break
+      fi
+      sleep 2
+    done
 
     cleanup() {
       kill "$AG_PID" 2>/dev/null || true

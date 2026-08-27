@@ -22,6 +22,11 @@ fi
 
 source "$REPO_ROOT/scripts/activate_orin_env.sh" 2>/dev/null || true
 export PYTHONPATH="${REPO_ROOT}/.venv_cuda/lib/python3.8/site-packages:${PYTHONPATH:-}"
+_OPENBLAS="$REPO_ROOT/.local_libs/usr/lib/aarch64-linux-gnu/openblas-pthread"
+_LOCAL_LIBS="$REPO_ROOT/.local_libs/usr/lib/aarch64-linux-gnu"
+if [[ -d "$_OPENBLAS" ]]; then
+  export LD_LIBRARY_PATH="${_OPENBLAS}:${_LOCAL_LIBS}:${LD_LIBRARY_PATH:-}"
+fi
 AXM_DEVICES_ENV="${AXM_DEVICES_ENV:-$HOME/.config/axm/devices.env}"
 if [ -f "$AXM_DEVICES_ENV" ]; then
   set -a
@@ -38,6 +43,8 @@ fi
 : "${AXM_HUB_URL:?Set AXM_HUB_URL e.g. https://rover.axm.tech}"
 : "${AXM_ROVER_ID:?Set AXM_ROVER_ID e.g. rover-01}"
 : "${AXM_ROVER_TOKEN:?Set AXM_ROVER_TOKEN (same as in hub .env on VPS)}"
+
+echo "[fleet-agent] linking telemetry → ${AXM_HUB_URL} rover=${AXM_ROVER_ID}"
 
 export AXM_LOCAL_WEB="${AXM_LOCAL_WEB:-http://127.0.0.1:8080}"
 export MEGA_PORT="${MEGA_PORT:-/dev/ttyUSB1}"

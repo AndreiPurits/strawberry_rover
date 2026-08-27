@@ -50,7 +50,12 @@ if [ "$prep_rc" -eq 2 ]; then
   exit 0
 fi
 
-echo "[perception] front=${ENABLE_RGB_CAMERA} camera=/dev/video${CAMERA_DEVICE} stereo=${ENABLE_STEREO_CAMERA} stereo=/dev/video${STEREO_CAMERA_DEVICE} lidar=${LIDAR_PORT} fake_lidar=${USE_FAKE_LIDAR}"
+echo "[perception] front=${ENABLE_RGB_CAMERA} camera=/dev/video${CAMERA_DEVICE} stereo=${ENABLE_STEREO_CAMERA} stereo=/dev/video${STEREO_CAMERA_DEVICE} lidar=${LIDAR_PORT} fake_lidar=${USE_FAKE_LIDAR} source=${STEREO_SOURCE:-realsense}"
+
+STEREO_SOURCE="${STEREO_SOURCE:-realsense}"
+if [[ "${STEREO_SOURCE}" == "realsense" ]]; then
+  exec bash "$REPO_ROOT/scripts/run_perception_realsense_stack.sh"
+fi
 
 exec ros2 launch rover_bringup perception_sensors.launch.py \
   lidar_serial_port:="$LIDAR_PORT" \
