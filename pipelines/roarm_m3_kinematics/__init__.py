@@ -33,6 +33,7 @@ from .model import (
     select_ik_solution,
     wrap_to_pi,
 )
+from .grasp import GraspIKResult, grasp_fk, grasp_ik, grasp_jacobian
 
 __all__ = [
     "FIRMWARE_LIMITS",
@@ -45,6 +46,7 @@ __all__ = [
     "POSE_NAMES",
     "SOFT_LIMITS",
     "Geometry",
+    "GraspIKResult",
     "JointVector",
     "Pose5",
     "angular_distance",
@@ -52,6 +54,9 @@ __all__ = [
     "as_pose5",
     "damped_pseudoinverse",
     "fk",
+    "grasp_fk",
+    "grasp_ik",
+    "grasp_jacobian",
     "ik",
     "jacobian",
     "jacobian_condition",

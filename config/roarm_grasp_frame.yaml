@@ -1,0 +1,28 @@
+version: link5_grasp_v1
+enabled_in_production: false
+
+T_link5_grasp:
+  parent: link5
+  child: grasp
+  units: mm
+  translation_mm: [-8.0046325, 0.0, 115.428]
+  rpy_rad: [1.5708, -1.5708, 0.0]
+  axes:
+    x: approach_forward
+    y: jaw_closing_positive
+    z: right_handed_normal
+
+source:
+  repository: https://github.com/waveshareteam/roarm_ws
+  branch: ros2-humble
+  commit: 40dbd84b553695212fab713e8465f817ba95454d
+  xacro_hand_tcp_translation_mm: [0.0, 0.0, 115.428]
+  fixed_inner_face_x_mm: -10.025849
+  moving_inner_face_x_mm: -5.983416
+  jaw_midplane_x_mm: -8.0046325
+
+validation:
+  physical_known_point_error_mean_mm: 1.5200
+  physical_known_point_error_max_mm: 1.6279
+  conservative_tcp_uncertainty_mm: 3.0
+  artifact_dir: runs/roarm_grasp_frame_e_20260827
