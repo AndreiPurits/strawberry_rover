@@ -52,8 +52,16 @@ def feedback_joints() -> JointVector:
     )
 
 
-def camera_intrinsics(provider: Ros2RgbDepthProvider, frame_shape) -> CameraIntrinsics:
+def camera_intrinsics(
+    provider: Ros2RgbDepthProvider,
+    frame_shape,
+    timeout_s: float,
+) -> CameraIntrinsics:
+    deadline = time.monotonic() + timeout_s
     msg = provider._color_info_msg  # cached immutable ROS CameraInfo
+    while msg is None and time.monotonic() < deadline:
+        time.sleep(0.02)
+        msg = provider._color_info_msg
     if msg is None:
         raise RuntimeError("CameraInfo unavailable")
     frame = str(msg.header.frame_id) or "stereo_camera_color_optical_frame"
@@ -95,7 +103,7 @@ def main() -> int:
         if joint_drift > args.max_joint_drift_rad:
             raise RuntimeError("arm was not static; max joint drift {:.6f} rad".format(joint_drift))
         q = JointVector(*map(float, 0.5 * (q_before.as_array() + q_after.as_array())))
-        intrinsics = camera_intrinsics(provider, frame.rgb_bgr.shape)
+        intrinsics = camera_intrinsics(provider, frame.rgb_bgr.shape, args.timeout_s)
         detection = detect_chessboard(
             frame.rgb_bgr,
             intrinsics,
