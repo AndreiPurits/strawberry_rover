@@ -74,14 +74,15 @@ FIRMWARE_LIMITS: Dict[str, Tuple[float, float]] = {
 }
 
 # Conservative operational envelope for the new stack. It is the intersection
-# of firmware limits and already-used project limits. Roll remains restricted
-# to the historical +/-pi/2 until cable/tool clearance is physically validated.
+# of firmware limits and already-used project limits. The replacement arm's
+# DOM_FINAL was physically established at roll=1.89 rad, so only the positive
+# roll envelope is extended; the unvalidated negative side stays at -pi/2.
 HARD_LIMITS: Dict[str, Tuple[float, float]] = {
     "base": (-1.57, 1.57),
     "shoulder": (-math.pi / 2.0, math.pi / 2.0),
     "elbow": (0.20, math.pi),
     "wrist": (-math.pi / 2.0, math.pi / 2.0),
-    "roll": (-math.pi / 2.0, math.pi / 2.0),
+    "roll": (-math.pi / 2.0, 2.20),
 }
 
 # Planning preference only. Hard-limit checks always remain authoritative.
@@ -90,7 +91,7 @@ SOFT_LIMITS: Dict[str, Tuple[float, float]] = {
     "shoulder": (-1.35, 1.45),
     "elbow": (0.35, 3.05),
     "wrist": (-1.30, 1.30),
-    "roll": (-1.30, 1.30),
+    "roll": (-1.30, 2.05),
 }
 
 
