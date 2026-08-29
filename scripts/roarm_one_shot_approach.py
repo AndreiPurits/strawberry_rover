@@ -29,6 +29,7 @@ except Exception:
 
 import yaml  # noqa: E402
 
+from pipelines.roarm_calibration.se3 import RigidTransform  # noqa: E402
 from pipelines.roarm_kinematics import JointState  # noqa: E402
 from pipelines.roarm_berry_planner import (  # noqa: E402
     load_learned,
@@ -42,6 +43,10 @@ from pipelines.peduncle_v3 import PeduncleV3Pipeline, StageState  # noqa: E402
 from pipelines.peduncle_v3.pipeline import load_config as load_peduncle_v3_config  # noqa: E402
 from pipelines.roarm_strawberry_target import min_berry_conf  # noqa: E402
 from pipelines.ros_rgb_depth import Ros2RgbDepthProvider  # noqa: E402
+from pipelines.roarm_m3_kinematics.stereo_safety import (  # noqa: E402
+    feedback_motion_health,
+    stereo_motion_gate,
+)
 from scripts.roarm_jacobian_probe import (  # noqa: E402
     STEREO_DEPTH,
     STEREO_INFO,
@@ -65,10 +70,87 @@ LEARNED = REPO / "runs/roarm_learn/manual_success_pose.json"
 LAST_RUN = REPO / "runs/roarm_learn/home2_to_manual_run.json"
 LOCK_REF = REPO / "runs/roarm_learn/new_position_lock.json"
 CALIB = REPO / "runs/roarm_kinematics/calibration.json"
+HAND_EYE_CALIB = REPO / "runs/roarm_handeye_real_20260827/calibration_canonical_result.json"
 ATTEMPT_DIR = REPO / "runs/roarm_learn/dom_final_attempts"
 SUMMARY = REPO / "runs/roarm_learn/dom_final_repeat_summary.json"
 PREVIEW_CACHE = REPO / "runs/roarm_learn/strawberry_preview.json"
 GRIPPER_OPEN = 1.08
+
+
+def _fresh_feedback_health(execute_rpc) -> Tuple[Optional[JointState], Dict[str, Any]]:
+    """Read T:105 and reject servo-bus sentinel values before motion."""
+    response = execute_rpc("feedback", {})
+    raw = response.get("feedback") if isinstance(response, dict) else None
+    if not isinstance(raw, dict):
+        return None, {"status": "FAIL", "reason": "T105_UNAVAILABLE"}
+    values = [raw.get(key) for key in ("b", "s", "e", "t", "r")]
+    flags = [raw.get(key) for key in (
+        "torswitchB", "torswitchS", "torswitchE", "torswitchT", "torswitchR", "torswitchG"
+    )]
+    try:
+        health = feedback_motion_health(values, flags)
+    except Exception as exc:
+        return None, {"status": "FAIL", "reason": f"T105_PARSE:{type(exc).__name__}"}
+    payload = health.as_dict()
+    payload["voltage_v"] = float(raw.get("v", 0.0)) / 100.0
+    payload["torque_flags"] = [int(value) for value in flags]
+    if not health.ok:
+        return None, payload
+    return JointState(
+        base=float(raw["b"]), shoulder=float(raw["s"]), elbow=float(raw["e"]),
+        wrist=float(raw["t"]), roll=float(raw["r"]), hand=float(raw.get("g", GRIPPER_OPEN)),
+    ), payload
+
+
+def _load_link5_camera() -> RigidTransform:
+    document = json.loads(HAND_EYE_CALIB.read_text(encoding="utf-8"))
+    value = document["report"]["T_link5_camera"]
+    import numpy as np
+
+    return RigidTransform(value["parent"], value["child"], np.asarray(value["matrix"]))
+
+
+def _fresh_stereo_gate(
+    provider,
+    q_start: JointState,
+    q_target: JointState,
+    *,
+    target_px: float,
+    target_py: float,
+    clearance_mm: float,
+    target_half_px: int,
+) -> Dict[str, Any]:
+    """Acquire a new RGB-D pair and check the predicted camera/TCP sweep."""
+    try:
+        provider._rgb_buf.clear()
+        provider._depth_buf.clear()
+        pair = provider.read(timeout_s=2.0)
+        intrinsics = provider.get_intrinsics()
+        if pair is None or pair.depth_m is None or intrinsics is None:
+            return {"status": "FAIL", "reason": "FRESH_STEREO_UNAVAILABLE"}
+        h, w = pair.depth_m.shape[:2]
+        half = max(24, int(target_half_px))
+        roi = (
+            max(0, int(round(target_px)) - half),
+            max(0, int(round(target_py)) - half),
+            min(w - 1, int(round(target_px)) + half),
+            min(h - 1, int(round(target_py)) + half),
+        )
+        result = stereo_motion_gate(
+            pair.depth_m,
+            intrinsics,
+            [q_start.base, q_start.shoulder, q_start.elbow, q_start.wrist, q_start.roll],
+            [q_target.base, q_target.shoulder, q_target.elbow, q_target.wrist, q_target.roll],
+            _load_link5_camera(),
+            target_roi=roi,
+            minimum_clearance_mm=float(clearance_mm),
+        )
+        payload = result.as_dict()
+        payload["target_roi"] = list(roi)
+        payload["fresh_frame_stamp_s"] = float(pair.stamp_s)
+        return payload
+    except Exception as exc:
+        return {"status": "FAIL", "reason": f"STEREO_GATE_ERROR:{type(exc).__name__}:{exc}"}
 
 
 def _status(stage: str, **kw: Any) -> None:
@@ -330,6 +412,9 @@ def move_t102_smooth(
     spd: float,
     acc: float,
 ) -> None:
+    _, health = _fresh_feedback_health(execute_rpc)
+    if health.get("status") != "PASS":
+        raise RuntimeError(f"MOTION_HEALTH_GATE:{health.get('reason')}")
     q.hand = GRIPPER_OPEN
     execute_rpc("joints_move", _joints_params(q, acc=acc, spd=spd))
 
@@ -887,6 +972,18 @@ def run_attempt(
     )
     print(f"[one] attempt {attempt_idx}/{args.repeat} → {args.home_pose} (open grip)")
     _status("HOME", attempt=attempt_idx, pose=args.home_pose)
+    _, startup_health = _fresh_feedback_health(execute_rpc)
+    if startup_health.get("status") != "PASS":
+        _status("SAFETY_STOP", reason=startup_health.get("reason"))
+        print(f"[one] SAFETY STOP before motion: {startup_health.get('reason')}")
+        return {
+            "ok": False,
+            "label": label,
+            "attempt": attempt_idx,
+            "error": f"motion_health_gate:{startup_health.get('reason')}",
+            "motion_health": startup_health,
+            "updated_at": time.time(),
+        }
     # Feedback after move (logging / reach check). Planning for DOM_FINAL prior_only
     # must use commanded home — demo Δ is relative to that pose; a drifted start
     # overshoots shoulder (e.g. −0.59+1.56→0.97 instead of −0.69+1.56→0.86).
@@ -1106,8 +1203,42 @@ def run_attempt(
     print(f"[one] est ~{est_s:.1f}s → ONE move")
     t_move = time.time()
     print("[one] ▶ ONE smooth T:102 move")
-    _status("BERRY_APPROACH", moving=1)
     q_cmd = approach_command_joints(q_start, q_end)
+    q_actual, pre_move_health = _fresh_feedback_health(execute_rpc)
+    if q_actual is None:
+        _status("SAFETY_STOP", reason=pre_move_health.get("reason"))
+        return {
+            "ok": False,
+            "label": label,
+            "attempt": attempt_idx,
+            "error": f"motion_health_gate:{pre_move_health.get('reason')}",
+            "motion_health": pre_move_health,
+            "updated_at": time.time(),
+        }
+    stereo_safety = _fresh_stereo_gate(
+        provider,
+        q_actual,
+        q_cmd,
+        target_px=float(px0),
+        target_py=float(py0),
+        clearance_mm=float(args.stereo_safety_clearance_mm),
+        target_half_px=int(args.stereo_safety_target_half_px),
+    )
+    print(f"[one] stereo safety: {json.dumps(stereo_safety, sort_keys=True)}", flush=True)
+    if stereo_safety.get("status") != "PASS":
+        _status("STEREO_SAFETY_STOP", reason=stereo_safety.get("reason"))
+        return {
+            "ok": False,
+            "label": label,
+            "attempt": attempt_idx,
+            "error": f"stereo_safety_gate:{stereo_safety.get('reason')}",
+            "motion_health": pre_move_health,
+            "stereo_safety": stereo_safety,
+            "berry_before": {"px": px0, "py": py0, "depth_m": d0, "conf": conf0},
+            "joints_target": q_cmd.as_dict(),
+            "updated_at": time.time(),
+        }
+    _status("BERRY_APPROACH", moving=1, stereo_gate="PASS")
     move_t102_smooth(execute_rpc, q_cmd, spd=args.spd, acc=args.acc)
     q_done = wait_reach(
         execute_rpc,
@@ -1641,6 +1772,18 @@ def main() -> int:
         help="Cap for one explicit_reach_delta micro step",
     )
     ap.add_argument("--reach-tol", type=float, default=0.045, help="Joint tolerance for approach completion")
+    ap.add_argument(
+        "--stereo-safety-clearance-mm",
+        type=float,
+        default=55.0,
+        help="Fail-closed centerline clearance including the camera/gripper collision envelope",
+    )
+    ap.add_argument(
+        "--stereo-safety-target-half-px",
+        type=int,
+        default=70,
+        help="Half-size of selected berry ROI excluded while fitting the background plane",
+    )
     ap.add_argument("--return-tol", type=float, default=0.085, help="Joint tolerance for return-home completion")
     ap.add_argument("--settle-s", type=float, default=0.12, help="Short camera settle after each move")
     ap.add_argument("--verify-wait-s", type=float, default=0.9,
