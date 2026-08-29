@@ -153,6 +153,7 @@ def stereo_motion_gate(
     target_roi: Optional[Tuple[int, int, int, int]] = None,
     minimum_clearance_mm: float = 25.0,
     samples: int = 25,
+    roll_zero_offset_rad: float = 0.0,
 ) -> StereoSafetyResult:
     """Check the predicted camera/tool path against the observed wall plane."""
     start = as_joint_vector(q_start)
@@ -180,13 +181,18 @@ def stereo_motion_gate(
             plane_rmse_mm=rmse, valid_depth_fraction=valid_fraction,
         )
 
-    base_camera0 = base_to_link5(start.as_array()).then(transform_link5_camera)
+    def physical_values(values: np.ndarray) -> np.ndarray:
+        adjusted = np.asarray(values, dtype=np.float64).copy()
+        adjusted[4] -= float(roll_zero_offset_rad)
+        return adjusted
+
+    base_camera0 = base_to_link5(physical_values(start.as_array())).then(transform_link5_camera)
     camera0_base = base_camera0.inverse()
     clearances = []
     start_values, target_values = start.as_array(), target.as_array()
     # Camera origin, TCP, and intermediate tool-shaft points are checked.
     for alpha in np.linspace(0.0, 1.0, max(2, int(samples))):
-        q = start_values + alpha * (target_values - start_values)
+        q = physical_values(start_values + alpha * (target_values - start_values))
         base_link5 = base_to_link5(q)
         base_camera = base_link5.then(transform_link5_camera)
         base_grasp = base_to_grasp(q)

@@ -20,12 +20,23 @@ for item in (REPO_ROOT, REPO_ROOT / "ops/axm-monitor/agent"):
 from pipelines.roarm_calibration.chessboard import CameraIntrinsics, detect_chessboard  # noqa: E402
 from pipelines.roarm_calibration.se3 import RigidTransform  # noqa: E402
 from pipelines.roarm_calibration.urdf_fk import base_to_link5  # noqa: E402
-from pipelines.roarm_m3_kinematics import JointVector, Pose5, fk, pose_error, within_limits  # noqa: E402
+from pipelines.roarm_m3_kinematics import (  # noqa: E402
+    JointVector,
+    Pose5,
+    fk,
+    jacobian_condition,
+    pose_error,
+    within_limits,
+)
 from pipelines.roarm_m3_kinematics.cartesian import (  # noqa: E402
     EMPIRICAL_GATES_MM,
     JOINT_DEADBAND_RAD,
     MAX_JACOBIAN_CONDITION,
     plan_cartesian_pose,
+)
+from pipelines.roarm_m3_kinematics.stereo_safety import (  # noqa: E402
+    feedback_motion_health,
+    stereo_motion_gate,
 )
 from pipelines.ros_rgb_depth import Ros2RgbDepthProvider  # noqa: E402
 from roarm_proxy import execute_rpc  # noqa: E402
@@ -45,20 +56,23 @@ def transform(value: dict) -> RigidTransform:
 def feedback() -> dict:
     response = execute_rpc("feedback", {})
     value = response.get("feedback") if isinstance(response, dict) else None
-    if not isinstance(value, dict):
+    if not isinstance(value, dict) or int(value.get("T", -1)) != 1051:
         raise RuntimeError("fresh T:105 unavailable")
-    return {key: float(value[key]) for key in (*JOINT_FEEDBACK_KEYS, "x", "y", "z")}
+    keys = (*JOINT_FEEDBACK_KEYS, "g", "x", "y", "z", "tit", "v")
+    result = {key: float(value[key]) for key in keys}
+    result["torque"] = [int(value["torswitch{}".format(name)]) for name in "BSETRG"]
+    return result
 
 
 def q_from_feedback(value: dict) -> JointVector:
     return JointVector(*(value[key] for key in JOINT_FEEDBACK_KEYS))
 
 
-def move_all(q: JointVector, settle_s: float) -> None:
+def command_all(q: JointVector, hand: float, settle_s: float) -> None:
     if not within_limits(q, "hard"):
         raise RuntimeError("hard limit gate")
     params = q.as_dict()
-    params.update({"hand": 1.08, "spd": 0.0, "acc": 6.0})
+    params.update({"hand": float(hand), "spd": 0.0, "acc": 6.0})
     result = execute_rpc("joints_move", params)
     if not result.get("ok"):
         raise RuntimeError("T:102 failed")
@@ -98,8 +112,48 @@ def observe(provider, intrinsics, timeout_s):
         frame = provider.read(timeout_s=max(0.2, deadline - time.monotonic()))
         board = detect_chessboard(frame.rgb_bgr, intrinsics, cols=9, rows=6, square_size_mm=18.0)
         if board is not None:
-            return fresh, board
+            health = feedback_motion_health(q_from_feedback(fresh), fresh["torque"])
+            if not health.ok:
+                raise RuntimeError("feedback health gate: {}".format(health.reason))
+            return fresh, board, frame
     raise RuntimeError("fresh camera verification failed")
+
+
+def gated_move(
+    provider, intrinsics, link5_camera, q_target, settle_s, timeout_s,
+    minimum_clearance_mm, roll_zero_offset_rad,
+):
+    """Fail closed before T:102; return only after fresh T:105 and 54/54 board."""
+    before, before_board, frame = observe(provider, intrinsics, timeout_s)
+    q_start = q_from_feedback(before)
+    max_joint_step = float(np.max(np.abs(q_target.as_array() - q_start.as_array())))
+    if max_joint_step > 0.20:
+        raise RuntimeError("joint step gate: {:.6f}".format(max_joint_step))
+    condition = float(jacobian_condition(q_target))
+    if not np.isfinite(condition) or condition > MAX_JACOBIAN_CONDITION:
+        raise RuntimeError("Jacobian gate: {:.6f}".format(condition))
+    gate = stereo_motion_gate(
+        frame.depth_m,
+        (
+            intrinsics.camera_matrix[0, 0], intrinsics.camera_matrix[1, 1],
+            intrinsics.camera_matrix[0, 2], intrinsics.camera_matrix[1, 2],
+        ),
+        q_start,
+        q_target,
+        link5_camera,
+        minimum_clearance_mm=minimum_clearance_mm,
+        roll_zero_offset_rad=roll_zero_offset_rad,
+    )
+    print(json.dumps({
+        "motion_gate": gate.as_dict(), "q_start": q_start.as_dict(),
+        "q_target": q_target.as_dict(), "max_joint_step_rad": max_joint_step,
+        "jacobian_condition": condition,
+    }), flush=True)
+    if not gate.ok:
+        raise RuntimeError("stereo gate: {}".format(gate.reason))
+    command_all(q_target, before["g"], settle_s)
+    after, after_board, after_frame = observe(provider, intrinsics, timeout_s)
+    return after, after_board, after_frame, gate
 
 
 def rotation_vector(rotation):
@@ -107,8 +161,10 @@ def rotation_vector(rotation):
     return value.reshape(3)
 
 
-def camera_motion_base(q0, board0, board1, link5_camera):
-    base_board = base_to_link5(q0.as_array()).then(link5_camera).then(board0)
+def camera_motion_base(q0, board0, board1, link5_camera, roll_zero_offset_rad):
+    physical_q0 = q0.as_array().copy()
+    physical_q0[4] -= float(roll_zero_offset_rad)
+    base_board = base_to_link5(physical_q0).then(link5_camera).then(board0)
     board_camera0 = np.linalg.inv(board0.matrix)
     board_camera1 = np.linalg.inv(board1.matrix)
     delta_board = board_camera1[:3, 3] - board_camera0[:3, 3]
@@ -150,6 +206,9 @@ def main() -> int:
     parser.add_argument("--preload-rad", type=float, default=0.03)
     parser.add_argument("--settle-s", type=float, default=3.2)
     parser.add_argument("--timeout-s", type=float, default=10.0)
+    parser.add_argument("--minimum-clearance-mm", type=float, default=55.0)
+    parser.add_argument("--roll-zero-offset-rad", type=float, default=0.0)
+    parser.add_argument("--roll-deadband-rad", type=float, default=JOINT_DEADBAND_RAD["roll"])
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -158,15 +217,20 @@ def main() -> int:
 
     calibration = json.loads(args.calibration.read_text(encoding="utf-8"))
     link5_camera = transform(calibration["report"]["T_link5_camera"])
-    work_q = JointVector(0.0, -0.65, 2.75, 0.0, 0.0)
     provider = Ros2RgbDepthProvider(rgb_topic=RGB_TOPIC, depth_topic=DEPTH_TOPIC, sync_slop_s=0.15)
     provider.open(camera_info_topic=INFO_TOPIC)
     repetitions = []
     try:
         intrinsics = wait_intrinsics(provider, args.timeout_s)
+        home_feedback, _, _ = observe(provider, intrinsics, args.timeout_s)
+        work_q = q_from_feedback(home_feedback)
         for repeat in range(args.repeats):
-            move_all(work_q, args.settle_s)
-            baseline_feedback, baseline_board = observe(provider, intrinsics, args.timeout_s)
+            if repeat:
+                gated_move(
+                    provider, intrinsics, link5_camera, work_q, args.settle_s,
+                    args.timeout_s, args.minimum_clearance_mm, args.roll_zero_offset_rad,
+                )
+            baseline_feedback, baseline_board, _ = observe(provider, intrinsics, args.timeout_s)
             baseline_q = q_from_feedback(baseline_feedback)
             baseline_pose = fk(baseline_q)
             requested = np.zeros(5, dtype=np.float64)
@@ -198,21 +262,27 @@ def main() -> int:
                         initial_plan.raw_q.roll,
                     )
                 else:
+                    # Put shoulder, elbow and wrist on the same side of the IK
+                    # target.  The replacement arm under-runs shoulder/elbow;
+                    # preloading elbow alone does not establish direction.
                     preload_q = JointVector(
                         initial_plan.raw_q.base,
-                        initial_plan.raw_q.shoulder,
+                        initial_plan.raw_q.shoulder + sign * args.preload_rad,
                         preload_target,
                         initial_plan.raw_q.wrist - sign * args.preload_rad,
                         initial_plan.raw_q.roll,
                     )
-                move_all(preload_q, args.settle_s)
-                current_feedback, current_board = observe(provider, intrinsics, args.timeout_s)
+                current_feedback, current_board, _, preload_gate = gated_move(
+                    provider, intrinsics, link5_camera, preload_q, args.settle_s,
+                    args.timeout_s, args.minimum_clearance_mm, args.roll_zero_offset_rad,
+                )
                 after_preload_q = q_from_feedback(current_feedback)
                 preload = {
                     "strategy": args.strategy,
                     "target_elbow": preload_target,
                     "target_q": preload_q.as_dict(),
                     "fresh_T105": current_feedback,
+                    "stereo": preload_gate.as_dict(),
                     "joints": joint_log(before_preload_q, preload_q, after_preload_q),
                 }
 
@@ -233,14 +303,17 @@ def main() -> int:
                     q_start,
                     stage="visual",
                     max_joint_step_rad=0.20,
+                    deadband_rad=dict(JOINT_DEADBAND_RAD, roll=args.roll_deadband_rad),
                 )
                 if not plan.ok or plan.executable_q is None:
                     stop_reason = "PLAN_{}".format(plan.reason)
                     break
                 q_target = plan.executable_q
                 print(json.dumps({"repeat": repeat + 1, "iteration": iteration, "dry_run": plan.as_dict()}), flush=True)
-                move_all(q_target, args.settle_s)
-                next_feedback, next_board = observe(provider, intrinsics, args.timeout_s)
+                next_feedback, next_board, _, motion_gate = gated_move(
+                    provider, intrinsics, link5_camera, q_target, args.settle_s,
+                    args.timeout_s, args.minimum_clearance_mm, args.roll_zero_offset_rad,
+                )
                 q_actual = q_from_feedback(next_feedback)
                 residual_after = pose_error(fk(q_actual), fixed_target)
                 score_after = task_score(residual_after)
@@ -252,7 +325,9 @@ def main() -> int:
                     and abs(row["actual_delta"]) < row["deadband"]
                 ]
                 camera_delta, camera_rotation = camera_motion_base(
-                    baseline_q, baseline_board.transform_camera_board, next_board.transform_camera_board, link5_camera
+                    baseline_q, baseline_board.transform_camera_board,
+                    next_board.transform_camera_board, link5_camera,
+                    args.roll_zero_offset_rad,
                 )
                 row = {
                     "iteration": iteration,
@@ -270,6 +345,7 @@ def main() -> int:
                     "camera_rotation_deg": math.degrees(float(np.linalg.norm(camera_rotation))),
                     "fresh_T105": next_feedback,
                     "board_reprojection_px": next_board.reprojection_rmse_px,
+                    "stereo": motion_gate.as_dict(),
                 }
                 iterations.append(row)
                 print(json.dumps({"closed_loop": row}), flush=True)
@@ -311,12 +387,12 @@ def main() -> int:
                     "PASS": passed,
                 }
             )
-            move_all(work_q, args.settle_s)
+            gated_move(
+                provider, intrinsics, link5_camera, work_q, args.settle_s,
+                args.timeout_s, args.minimum_clearance_mm, args.roll_zero_offset_rad,
+            )
     finally:
-        try:
-            move_all(work_q, args.settle_s)
-        except Exception as exc:
-            print(json.dumps({"restore_work_pose_error": str(exc)}), flush=True)
+        # Never issue a blind restore: the normal path above is stereo-gated.
         provider.close()
 
     report = {
@@ -326,6 +402,10 @@ def main() -> int:
         "strategy": args.strategy,
         "repeats": args.repeats,
         "transform": "T_link5_camera_v1",
+        "minimum_clearance_mm": args.minimum_clearance_mm,
+        "roll_zero_offset_rad": args.roll_zero_offset_rad,
+        "roll_deadband_rad": args.roll_deadband_rad,
+        "no_berry_grasp_cut": True,
         "repetitions": repetitions,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
