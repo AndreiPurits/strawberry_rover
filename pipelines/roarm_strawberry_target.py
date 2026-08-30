@@ -264,6 +264,17 @@ def _fetch_hub_bgr(local_web: str = "http://127.0.0.1:8080"):
         return None, st
     raw = base64.b64decode(st["jpeg_b64"])
     bgr = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
+    # This module's detector filters, tracker coordinates, and depth letterbox
+    # use the explicit 640x480 hub contract above.  The web API may publish a
+    # larger preview (currently 800x600); normalize at the adapter boundary so
+    # valid detections are not discarded by 640x480 work-band limits.
+    if bgr is not None and (bgr.shape[1], bgr.shape[0]) != (_HUB_W, _HUB_H):
+        st = dict(st)
+        st["native_width"] = int(bgr.shape[1])
+        st["native_height"] = int(bgr.shape[0])
+        bgr = cv2.resize(bgr, (_HUB_W, _HUB_H), interpolation=cv2.INTER_AREA)
+        st["width"] = _HUB_W
+        st["height"] = _HUB_H
     return bgr, st
 
 

@@ -158,9 +158,17 @@ def stereo_motion_gate(
     """Check the predicted camera/tool path against the observed wall plane."""
     start = as_joint_vector(q_start)
     target = as_joint_vector(q_target)
-    if not within_limits(start, "hard"):
+
+    def physical_values(values: np.ndarray) -> np.ndarray:
+        adjusted = np.asarray(values, dtype=np.float64).copy()
+        adjusted[4] -= float(roll_zero_offset_rad)
+        return adjusted
+
+    # Replacement-arm T:105/T:102 exposes roll in a raw servo convention.
+    # Limits and geometry must both see the calibrated physical angle.
+    if not within_limits(physical_values(start.as_array()), "hard"):
         return StereoSafetyResult("FAIL", "START_JOINTS_OUT_OF_LIMITS")
-    if not within_limits(target, "hard"):
+    if not within_limits(physical_values(target.as_array()), "hard"):
         return StereoSafetyResult("FAIL", "TARGET_JOINTS_OUT_OF_LIMITS")
     points, valid_fraction = _depth_points(
         depth_m, intrinsics, target_roi=target_roi, stride=8
@@ -180,11 +188,6 @@ def stereo_motion_gate(
             "FAIL", "PLANE_QUALITY_LOW", plane_inlier_ratio=ratio,
             plane_rmse_mm=rmse, valid_depth_fraction=valid_fraction,
         )
-
-    def physical_values(values: np.ndarray) -> np.ndarray:
-        adjusted = np.asarray(values, dtype=np.float64).copy()
-        adjusted[4] -= float(roll_zero_offset_rad)
-        return adjusted
 
     base_camera0 = base_to_link5(physical_values(start.as_array())).then(transform_link5_camera)
     camera0_base = base_camera0.inverse()

@@ -28,13 +28,38 @@ HOME2:
   roll: 0.0
   hand: 1.08
 
-# Replacement-arm final home captured from fresh T:105 on 2026-08-30.
+# Replacement-arm observation home captured from fresh T:105 on 2026-08-30.
+# Keep this pose for strawberry perception; it is intentionally not used as a
+# local Cartesian/Jacobian baseline.  The configured roll is the operator's
+# required FINAL HOME value (raw replacement-arm servo convention).
 DOM_FINAL:
   base: 0.004601942
-  shoulder: -0.826815645
-  elbow: 3.015806229
-  wrist: -0.148796136
-  roll: 1.891398311
+  shoulder: -1.259398227
+  elbow: 3.095573230
+  wrist: -0.161067983
+  roll: 1.960000000
+  hand: 1.552388557
+
+# Explicit alias: perception entrypoint.  Kept as a separate block so tools do
+# not silently reinterpret DOM_FINAL as a Cartesian-ready pose.
+OBSERVE_HOME:
+  base: 0.004601942
+  shoulder: -1.259398227
+  elbow: 3.095573230
+  wrist: -0.161067983
+  roll: 1.960000000
+  hand: 1.552388557
+
+# Operator-selected close-range Cartesian pose, captured from fresh T:105 on
+# 2026-08-30.  It keeps both plastic berries and all 54 checkerboard corners in
+# view while giving scaled Jacobian condition 17.22.  Raw roll maps to a nearly
+# neutral physical roll using replacement-arm roll_zero_offset=1.89.
+CARTESIAN_READY:
+  base: 0.004601942
+  shoulder: -0.572174834
+  elbow: 2.715145995
+  wrist: -0.161067983
+  roll: 1.888330350
   hand: 1.552388557
 
 # Dashboard point «тест3» (saved 2026-07-10).
