@@ -28,14 +28,14 @@ HOME2:
   roll: 0.0
   hand: 1.08
 
-# Dashboard/Home pose «дом_финал» captured from T:105 on 2026-07-10.
+# Replacement-arm final home captured from fresh T:105 on 2026-08-30.
 DOM_FINAL:
-  base: 0.012271846
-  shoulder: -0.691825335
-  elbow: 2.867010093
-  wrist: 0.018407769
-  roll: 1.89
-  hand: 1.537048749
+  base: 0.004601942
+  shoulder: -0.826815645
+  elbow: 3.015806229
+  wrist: -0.148796136
+  roll: 1.891398311
+  hand: 1.552388557
 
 # Dashboard point «тест3» (saved 2026-07-10).
 TEST3:
