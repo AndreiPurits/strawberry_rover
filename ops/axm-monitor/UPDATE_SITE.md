@@ -1,17 +1,18 @@
 # Обновление сайта rover.axm.tech
 
-Технология после утверждения изменений в коде.
+Каноническая инструкция. Агенту: skill `.cursor/skills/hub-deploy-geekom/SKILL.md`
+и правило `.cursor/rules/hub-deploy-via-github-vps.mdc`.
 
 ## Участники
 
 | Машина | Роль |
 |--------|------|
 | **Orin** | разработка, commit, **git push** |
-| **GitHub** | хранение `main` |
-| **PC или Orin** | SSH на VPS (`geekom_vlad`), деплой hub |
-| **VPS geekom** | `git pull` + Docker hub + Caddy |
+| **GitHub** | `main` → https://github.com/AndreiPurits/strawberry_rover |
+| **Orin или PC** | SSH на VPS (`geekom_vlad`), деплой hub |
+| **VPS geekom** | `git pull` + `docker compose` hub + Caddy |
 
-SSH-конфиг на **PC и Orin** (`~/.ssh/config`, ключ `id_ed25519`):
+SSH (`~/.ssh/config`, ключ `~/.ssh/id_ed25519`):
 
 ```
 Host geekom_vlad
@@ -24,53 +25,47 @@ Host geekom_vlad
 
 ---
 
-## Шаг 1 — Orin: push в GitHub (1 команда)
-
-После commit на Orin:
+## Шаг 1 — Orin: push в GitHub
 
 ```bash
 cd ~/project
-git add …
+git add …   # только нужные файлы (без runs/, data/, весов, .local_*)
 git commit -m "…"
 ~/project/scripts/git_push.sh
 ```
 
-Требуется `~/.config/axm/github.env` с `GITHUB_TOKEN` (fine-grained, Contents: write).
+Токен: `~/.config/axm/github.env` → `GITHUB_TOKEN` (Contents: write).
+
+Проверка: `git status` показывает `main` синхрон с `origin/main` (не ahead).
 
 ---
 
-## Шаг 2 — деплой hub на VPS (одна команда)
+## Шаг 2 — деплой hub на geekom
 
-### Вариант A — с Orin (рекомендуется)
+### С Orin (рекомендуется)
 
 ```bash
 bash ops/axm-monitor/scripts/deploy_site_from_orin.sh
 ```
 
-### Вариант B — с PC (Git Bash)
+### С PC (Git Bash)
 
 ```bash
 bash ops/axm-monitor/scripts/deploy_site_from_pc.sh
 ```
 
-Пути VPS заданы по умолчанию (`/c/Users/redro/project/ops/axm-monitor`).  
+Путь на VPS по умолчанию: `/c/Users/redro/project/ops/axm-monitor`.  
 Переопределение: `~/pc_deploy.env` (см. `scripts/pc_deploy.env.example`).
 
-### Вариант B — вручную по SSH
+### Вручную
 
 ```bash
 ssh geekom_vlad
-```
-
-На VPS:
-
-```bash
-cd ~/project/ops/axm-monitor
+cd /c/Users/redro/project/ops/axm-monitor   # или ~/project/ops/axm-monitor
 bash scripts/deploy_hub_vps.sh
-exit
 ```
 
-### Что делает deploy_hub_vps.sh
+`deploy_hub_vps.sh` делает:
 
 ```bash
 git pull origin main
@@ -79,38 +74,42 @@ docker compose up -d hub
 curl https://rover.axm.tech/healthz
 ```
 
-При проблемах с HTTPS: `docker restart n8n-caddy`
-
 ---
 
 ## Шаг 3 — проверка
 
-- https://rover.axm.tech — новый UI / healthz
-- Orin: fleet-agent без перезапуска (если менялся только hub)
+- https://rover.axm.tech — Ctrl+F5 (кэш статики)
+- На VPS: `git log -1` в `ops/axm-monitor` == ожидаемый commit
+- При смене ассетов — bump `?v=` в `dashboard.html`
 
----
-
-## Orin после обновления hub
-
-Fleet-agent перезапускать **только** если менялся `ops/axm-monitor/agent/`:
+Fleet-agent на Orin перезапускать **только** если менялся `ops/axm-monitor/agent/`:
 
 ```bash
-pkill -f fleet_agent.py
-nohup ~/project/scripts/run_fleet_agent.sh >> ~/.local/log/axm/fleet-agent.log 2>&1 &
+systemctl --user restart axm-rover-online
+# или: scripts/restart_fleet_agent.sh
 ```
 
 ---
 
-## Краткая шпаргалка
+## Если Orin не достучится до GitHub / geekom
+
+Симптом: ICMP до хоста есть, TCP (`443`/`2222`) → `No route to host`.
+
+Тогда push/deploy **с PC** в той же сети/VPN, где открыт исходящий TCP:
+
+```bash
+git push origin main
+bash ops/axm-monitor/scripts/deploy_site_from_pc.sh
+```
+
+На Orin после появления сети: `~/project/scripts/git_push.sh && bash ops/axm-monitor/scripts/deploy_site_from_orin.sh`.
+
+---
+
+## Шпаргалка
 
 ```text
-[Orin]  commit → ~/project/scripts/git_push.sh
-[Orin]  bash ops/axm-monitor/scripts/deploy_site_from_orin.sh
-[Браузер] https://rover.axm.tech
+[Orin] commit → ~/project/scripts/git_push.sh
+[Orin] bash ops/axm-monitor/scripts/deploy_site_from_orin.sh
+[Браузер] https://rover.axm.tech  (Ctrl+F5)
 ```
-
----
-
-## Автодеплой (опционально)
-
-Чтобы **не заходить с PC каждый раз** — cron на VPS (см. `scripts/install_vps_autodeploy_cron.sh` после push в git).

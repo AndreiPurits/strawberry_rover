@@ -355,6 +355,25 @@ def startup_home_pose_name() -> Optional[str]:
 
 
 def go_named_home_staged(pose_name: str, *, acc: float = 12.0) -> Dict[str, Any]:
+    name = str(pose_name).strip().upper()
+    # DOM aliases: always verify T:105 and compensate undershoot.
+    if name in ("DOM_FINAL", "OBSERVE_HOME", "CARTESIAN_READY"):
+        import sys
+
+        root = str(_repo_root())
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from pipelines.roarm_m3_kinematics.dom_final_home import ensure_dom_final
+
+        result = ensure_dom_final(
+            execute_rpc,
+            settle_s=2.5,
+            tol_rad=0.012,
+            hold_hand=False,
+            max_attempts=6,
+        )
+        return {"ok": True, "ensure_dom_final": result, "t102": True, "pose": name}
+
     joints = load_named_home_joints(pose_name)
     params = {**joints, "spd": 0.0, "acc": float(acc)}
     return execute_rpc("home_joints_staged", params)

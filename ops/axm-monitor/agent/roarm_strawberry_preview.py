@@ -322,40 +322,58 @@ def _fetch_hub_stereo_bgr(
     return _decode_stereo_jpeg(st)
 
 
-def _fetch_ros_depth(timeout_s: float = 0.5):
+def _fetch_ros_pair(timeout_s: float = 0.5):
     try:
         provider = _get_ros_provider()
         if provider is None:
             return None
         pair = provider.read(timeout_s=timeout_s)
-        if pair is None:
-            return None
-        return pair.depth_m
+        return pair
     except Exception:
         return None
 
 
-def _attach_depth(detections: List[dict], depth_m, *, rgb_w: int, rgb_h: int) -> None:
-    from pipelines.roarm_perception import sample_depth_median
+def _attach_depth(
+    detections: List[dict],
+    depth_m,
+    *,
+    rgb_w: int,
+    rgb_h: int,
+    frame_id: str = "",
+    stamp_s: float = 0.0,
+    stamp_ros=None,
+) -> None:
+    from pipelines.berry_depth import canonical_berry_depth, depth_consistency
 
-    cfg = _perception_cfg()
     depth_aligned = depth_m
     if depth_m is not None and depth_m.shape[:2] != (rgb_h, rgb_w):
         depth_aligned = _align_depth_to_hub_bgr(depth_m, rgb_w, rgb_h)
     for det in detections:
-        cx = int(round((det["x1"] + det["x2"]) * 0.5))
-        cy = int(round((det["y1"] + det["y2"]) * 0.5))
+        bbox = tuple(float(det[k]) for k in ("x1", "y1", "x2", "y2"))
+        cx = int(round((bbox[0] + bbox[2]) * 0.5))
+        cy = int(round((bbox[1] + bbox[3]) * 0.5))
         det["px"] = cx
         det["py"] = cy
         if depth_aligned is None:
             det["depth_m"] = None
             continue
-        depth_val, reject = sample_depth_median(
-            depth_aligned, cx, cy, cfg.depth_median_radius, cfg
+        sample = canonical_berry_depth(
+            depth_aligned,
+            bbox,
+            frame_id=frame_id,
+            stamp_s=stamp_s,
+            stamp_ros=stamp_ros,
         )
-        det["depth_m"] = round(depth_val, 3) if depth_val is not None else None
-        if reject:
-            det["depth_reject"] = reject
+        depth_val = sample.canonical_depth_m
+        det["depth_m"] = round(depth_val, 6) if depth_val is not None else None
+        det["control_depth_m"] = det["depth_m"]
+        det["overlay_depth_m"] = det["depth_m"]
+        det["depth_diagnostic"] = sample.to_dict()
+        ok, reason = depth_consistency(det["control_depth_m"], det["overlay_depth_m"])
+        det["depth_consistency_ok"] = bool(ok)
+        det["depth_consistency_reason"] = reason
+        if depth_val is None:
+            det["depth_reject"] = sample.canonical_source
 
 
 def _status_from_detections(detections: List[dict], mode: str) -> Tuple[str, str]:
@@ -379,13 +397,21 @@ def _status_from_detections(detections: List[dict], mode: str) -> Tuple[str, str
     return "ok", " · ".join(parts)
 
 
-def _build_overlay(bgr, depth_m) -> Dict[str, Any]:
+def _build_overlay(bgr, depth_m, *, frame_id: str = "", stamp_s: float = 0.0, stamp_ros=None) -> Dict[str, Any]:
     h, w = bgr.shape[:2]
     mode = _get_detector_mode()
     detections = _run_detector(bgr)
     detections = _filter_detections_in_padding(detections, w, h)
     depth_hub = _align_depth_to_hub_bgr(depth_m, w, h) if depth_m is not None else None
-    _attach_depth(detections, depth_hub, rgb_w=w, rgb_h=h)
+    _attach_depth(
+        detections,
+        depth_hub,
+        rgb_w=w,
+        rgb_h=h,
+        frame_id=frame_id,
+        stamp_s=stamp_s,
+        stamp_ros=stamp_ros,
+    )
     status, status_text = _status_from_detections(detections, mode)
     with_depth = sum(1 for d in detections if d.get("depth_m") is not None)
     if detections and depth_hub is not None:
@@ -401,6 +427,9 @@ def _build_overlay(bgr, depth_m) -> Dict[str, Any]:
         "depth_ok": depth_hub is not None,
         "status": status,
         "status_text": status_text,
+        "frame_id": frame_id,
+        "frame_stamp_s": stamp_s,
+        "frame_stamp_ros": stamp_ros,
         "updated_at": time.time(),
     }
 
@@ -425,10 +454,21 @@ def update_strawberry_overlay_from_jpeg(
     if bgr is None:
         return dict(_cache) if _cache else {}
 
-    depth_m = _fetch_ros_depth(timeout_s=0.35)
+    pair = _fetch_ros_pair(timeout_s=0.35)
+    if pair is not None:
+        bgr, _ = _letterbox_array(pair.rgb_bgr, bgr.shape[1], bgr.shape[0])
+        depth_m = pair.depth_m
+    else:
+        depth_m = None
 
     try:
-        _cache = _build_overlay(bgr, depth_m)
+        _cache = _build_overlay(
+            bgr,
+            depth_m,
+            frame_id=getattr(pair, "frame_id", "") if pair is not None else "",
+            stamp_s=getattr(pair, "stamp_s", 0.0) if pair is not None else 0.0,
+            stamp_ros=getattr(pair, "stamp_ros", None) if pair is not None else None,
+        )
         _last_at = now
     except Exception as exc:
         _push_log(f"detect error: {exc}")
@@ -457,9 +497,14 @@ def collect_roarm_strawberry_preview(
     if _cache and (now - _last_at) < interval_s:
         return {**dict(_cache), "log": list(_log)}
 
-    # Detect on the same hub JPEG (640×480 letterbox), not native ROS 848×480.
-    bgr = _fetch_hub_stereo_bgr(local_web, fetch_json)
-    depth_m = _fetch_ros_depth(timeout_s=0.5)
+    # Canonical source: one synchronized ROS RGB-D pair, letterboxed together.
+    pair = _fetch_ros_pair(timeout_s=0.5)
+    if pair is not None:
+        bgr, _ = _letterbox_array(pair.rgb_bgr, 640, 480)
+        depth_m, _ = _letterbox_array(pair.depth_m, 640, 480) if pair.depth_m is not None else (None, {})
+    else:
+        bgr = None
+        depth_m = None
 
     if bgr is None:
         _push_log("камера: no_stereo_frame")
@@ -477,7 +522,13 @@ def collect_roarm_strawberry_preview(
     try:
         if bgr is None:
             raise RuntimeError("frame_decode_failed")
-        _cache = _build_overlay(bgr, depth_m)
+        _cache = _build_overlay(
+            bgr,
+            depth_m,
+            frame_id=getattr(pair, "frame_id", "") if pair is not None else "",
+            stamp_s=getattr(pair, "stamp_s", 0.0) if pair is not None else 0.0,
+            stamp_ros=getattr(pair, "stamp_ros", None) if pair is not None else None,
+        )
         _last_at = now
         return {**_cache, "log": list(_log)}
     except Exception as exc:
