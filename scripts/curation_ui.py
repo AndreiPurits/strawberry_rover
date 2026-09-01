@@ -53,8 +53,11 @@ from curation_new_straw import (
     save_annotation as new_straw_save_annotation,
 )
 from curation_peduncle_obb import (
+    dataset_stats as peduncle_obb_dataset_stats,
+    delete_frame as peduncle_obb_delete_frame,
     ensure_layout as peduncle_obb_ensure_layout,
     get_annotation as peduncle_obb_get_annotation,
+    migrate_relations as peduncle_obb_migrate_relations,
     render_peduncle_obb_html,
     render_raw_jpeg as peduncle_obb_render_raw_jpeg,
     save_annotation as peduncle_obb_save_annotation,
@@ -495,7 +498,16 @@ def api_peduncle_obb_save(filename: str) -> Response:
     peduncle_obbs = payload.get("peduncle_obbs")
     if not isinstance(peduncle_obbs, list):
         return jsonify({"ok": False, "error": "peduncle_obbs must be a list"}), 400
-    ok, msg = peduncle_obb_save_annotation(filename, peduncle_obbs)
+    calyx_visible = payload.get("calyx_visible")
+    calyx_point = payload.get("calyx_point")
+    berry_boxes = payload.get("berry_boxes")
+    ok, msg = peduncle_obb_save_annotation(
+        filename,
+        peduncle_obbs,
+        calyx_visible=calyx_visible,
+        calyx_point=calyx_point,
+        berry_boxes=berry_boxes if isinstance(berry_boxes, list) else None,
+    )
     if not ok:
         return jsonify({"ok": False, "error": msg}), 400
     _log(
@@ -503,9 +515,24 @@ def api_peduncle_obb_save(filename: str) -> Response:
             "action": "peduncle_obb_save",
             "filename": Path(filename).name,
             "n_obb": len(peduncle_obbs),
+            "calyx_visible": calyx_visible,
         }
     )
     return jsonify({"ok": True, "n_obb": len(peduncle_obbs)})
+
+
+@app.delete("/api/peduncle_obb/frame/<path:filename>")
+def api_peduncle_obb_delete_frame(filename: str) -> Response:
+    ok, msg = peduncle_obb_delete_frame(filename)
+    if not ok:
+        return jsonify({"ok": False, "error": msg}), 400
+    _log({"action": "peduncle_obb_delete_frame", "filename": Path(filename).name})
+    return jsonify({"ok": True})
+
+
+@app.get("/api/peduncle_obb/stats")
+def api_peduncle_obb_stats() -> Response:
+    return jsonify(peduncle_obb_dataset_stats())
 
 
 @app.post("/classifier/do")
@@ -625,7 +652,7 @@ def main() -> int:
         f"Bind: {args.host}:{args.port}",
         flush=True,
     )
-    app.run(host=args.host, port=args.port, debug=False)
+    app.run(host=args.host, port=args.port, debug=False, threaded=True)
     return 0
 
 

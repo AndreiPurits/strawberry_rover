@@ -76,6 +76,13 @@ class CanonTransform:
     def map_pts(self, pts: Sequence[Tuple[float, float]]) -> List[Tuple[float, float]]:
         return [self.map_xy(float(x), float(y)) for x, y in pts]
 
+    def inv_map_xy(self, x: float, y: float) -> Tuple[float, float]:
+        s = float(self.scale) if abs(self.scale) > 1e-9 else 1.0
+        return ((x - self.tx) / s, (y - self.ty) / s)
+
+    def inv_map_pts(self, pts: Sequence[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        return [self.inv_map_xy(float(x), float(y)) for x, y in pts]
+
 
 def parse_berry_yolo_aabb(label_file, w: int, h: int) -> Optional[BerryBox]:
     if not label_file.is_file():
